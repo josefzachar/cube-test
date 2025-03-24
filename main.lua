@@ -1,24 +1,22 @@
 -- Square Golf Game
--- A simple golf game where the ball is a square
+-- A simple golf game where the ball is a square and the level is made of cells
 
--- Load the Love2D physics module
-love.physics = require("love.physics")
+-- Load modules
+local Ball = require("ball")
+local Cell = require("cell")
+local Level = require("level")
+local Input = require("input")
 
 -- Game variables
 local world
-local boundaries = {}
 local ball
-local ballBody
-local ballShape
-local ballFixture
-local isLaunched = false
+local level
+local input
 local attempts = 0
 local debug = false -- Set to true to see physics bodies
-local aimDirection = {x = 0, y = 0}
-local aimPower = 0
-local maxPower = 800
-local minPower = 100
-local aiming = false
+local sandToStone = {} -- Table to track sand cells converted to stone
+local sandToConvert = {} -- Table to store sand cells that need to be converted to flying sand
+local tempStoneCells = {} -- Table to store temporary stone cells for ball collision
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
@@ -27,166 +25,224 @@ function love.load()
     -- Set up the physics world with gravity
     world = love.physics.newWorld(0, 9.81 * 64, true)
     
-    -- Create boundaries (ground, ceiling, left wall, right wall)
-    boundaries = {
-        -- Ground
-        {
-            body = love.physics.newBody(world, 400, 590, "static"),
-            shape = love.physics.newEdgeShape(-400, 0, 400, 0),
-        },
-        -- Left wall
-        {
-            body = love.physics.newBody(world, 0, 300, "static"),
-            shape = love.physics.newEdgeShape(0, -300, 0, 290),
-        },
-        -- Right wall
-        {
-            body = love.physics.newBody(world, 800, 300, "static"),
-            shape = love.physics.newEdgeShape(0, -300, 0, 290),
-        },
-        -- Ceiling
-        {
-            body = love.physics.newBody(world, 400, 0, "static"),
-            shape = love.physics.newEdgeShape(-400, 0, 400, 0),
-        },
-        -- Some obstacles
-        {
-            body = love.physics.newBody(world, 400, 400, "static"),
-            shape = love.physics.newEdgeShape(-100, 0, 100, 0),
-        },
-        {
-            body = love.physics.newBody(world, 600, 300, "static"),
-            shape = love.physics.newEdgeShape(-50, 50, 50, -50),
-        }
-    }
+    -- Set up collision callbacks
+    world:setCallbacks(beginContact, endContact, preSolve, postSolve)
     
-    -- Create fixtures for all boundaries
-    for i, boundary in ipairs(boundaries) do
-        boundary.fixture = love.physics.newFixture(boundary.body, boundary.shape)
-        boundary.fixture:setRestitution(0.5) -- Bouncy boundaries
-    end
+    -- Create the level (80x60 cells, each 10x10 pixels)
+    level = Level.new(world, 80, 60)
+    level:createTestLevel()
     
     -- Create the square ball
-    ballBody = love.physics.newBody(world, 100, 500, "dynamic")
-    ballShape = love.physics.newRectangleShape(20, 20) -- 20x20 square
-    ballFixture = love.physics.newFixture(ballBody, ballShape, 2) -- Increased density for better physics
-    ballFixture:setRestitution(0.3) -- Slightly less bouncy
-    ballFixture:setFriction(0.5) -- Add friction for more natural movement
+    ball = Ball.new(world, 100, 500)
+    
+    -- Create input handler
+    input = Input.new()
 end
 
--- Calculate aim direction and power based on mouse position
-function calculateAim()
-    local ballX, ballY = ballBody:getPosition()
-    local mouseX, mouseY = love.mouse.getPosition()
+-- Collision callbacks
+function beginContact(a, b, coll)
+    local aData = a:getUserData()
+    local bData = b:getUserData()
     
-    -- Calculate direction vector
-    aimDirection.x = mouseX - ballX
-    aimDirection.y = mouseY - ballY
-    
-    -- Calculate power based on distance (clamped between min and max)
-    local distance = math.sqrt(aimDirection.x^2 + aimDirection.y^2)
-    aimPower = math.min(maxPower, math.max(minPower, distance * 2))
-    
-    -- Normalize direction vector
-    if distance > 0 then
-        aimDirection.x = aimDirection.x / distance
-        aimDirection.y = aimDirection.y / distance
-    end
-end
-
-function love.update(dt)
-    -- Update the physics world
-    world:update(dt)
-    
-    -- Get ball velocity
-    local vx, vy = ballBody:getLinearVelocity()
-    local speed = math.sqrt(vx*vx + vy*vy)
-    
-    -- Update aim if ball is stationary (ready for next shot)
-    if speed < 5 then
-        isLaunched = false
-        calculateAim()
-    else
-        -- Apply a small torque to make the square rotate more naturally when moving
-        if speed > 50 then
-            -- Apply torque proportional to speed and direction
-            ballBody:applyTorque(vx * 0.1)
+    -- Handle collisions between ball and stone/temp_stone cells
+    if (aData == "ball" and (bData == "stone" or bData == "temp_stone")) or 
+       ((aData == "stone" or aData == "temp_stone") and bData == "ball") then
+        -- Ball hit stone or temporary stone - normal physics collision
+        
+        -- Get the ball's velocity
+        local ballFixture = aData == "ball" and a or b
+        local ballBody = ballFixture:getBody()
+        local vx, vy = ballBody:getLinearVelocity()
+        local speed = math.sqrt(vx*vx + vy*vy)
+        
+        -- If the ball is moving fast enough and hit a temporary stone (sand), create a crater
+        if speed > 50 and (aData == "temp_stone" or bData == "temp_stone") then
+            -- Get the stone cell position
+            local stoneFixture = aData == "temp_stone" and a or b
+            local stoneBody = stoneFixture:getBody()
+            local stoneX, stoneY = stoneBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(stoneX, stoneY)
+            
+            print("Ball hit temp_stone at", gridX, gridY, "with speed", speed)
+            
+            -- Queue up nearby cells for conversion to flying sand
+            local craterRadius = math.min(3, math.floor(speed / 100) + 1)
+            for dy = -craterRadius, craterRadius do
+                for dx = -craterRadius, craterRadius do
+                    local distance = math.sqrt(dx*dx + dy*dy)
+                    if distance <= craterRadius then
+                        local checkX = gridX + dx
+                        local checkY = gridY + dy
+                        
+                        -- Only affect sand cells
+                        if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
+                            if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
+                                -- Calculate velocity based on impact
+                                local impactFactor = (1 - distance/craterRadius) * math.min(1.0, speed / 300)
+                                
+                                -- Direction away from impact
+                                local dirX = dx
+                                local dirY = dy
+                                if dx == 0 and dy == 0 then
+                                    dirX, dirY = 0, -1 -- Default upward
+                                else
+                                    local dirLen = math.sqrt(dirX*dirX + dirY*dirY)
+                                    dirX = dirX / dirLen
+                                    dirY = dirY / dirLen
+                                end
+                                
+                                -- Calculate velocity with much stronger effect
+                                local flyVx = dirX * speed * 1.0 * impactFactor
+                                local flyVy = dirY * speed * 1.0 * impactFactor - 200 -- Extra upward boost
+                                
+                                -- Add randomness
+                                flyVx = flyVx + math.random(-50, 50)
+                                flyVy = flyVy + math.random(-50, 50)
+                                
+                                -- Queue up for conversion
+                                table.insert(sandToConvert, {
+                                    x = checkX,
+                                    y = checkY,
+                                    vx = flyVx,
+                                    vy = flyVy
+                                })
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 end
 
-function love.draw()
-    -- Draw all boundaries
-    love.graphics.setColor(WHITE)
-    for i, boundary in ipairs(boundaries) do
-        love.graphics.push()
-        love.graphics.translate(boundary.body:getX(), boundary.body:getY())
-        love.graphics.rotate(boundary.body:getAngle())
-        love.graphics.line(boundary.shape:getPoints())
-        love.graphics.pop()
+function endContact(a, b, coll)
+    -- Not used but required by LÖVE
+end
+
+function preSolve(a, b, coll)
+    -- Not used but required by LÖVE
+end
+
+function postSolve(a, b, coll, normalImpulse, tangentImpulse)
+    -- Not used but required by LÖVE
+end
+
+function love.update(dt)
+    -- Clear any temporary stone cells from the previous frame
+    for _, cell in ipairs(tempStoneCells) do
+        if cell.body then
+            cell.body:destroy()
+        end
+    end
+    tempStoneCells = {}
+    
+    -- Process sand cells that need to be converted to flying sand
+    -- This is done outside of collision callbacks to avoid Box2D errors
+    if #sandToConvert > 0 then
+        print("Converting", #sandToConvert, "sand cells to flying sand")
+        for _, sand in ipairs(sandToConvert) do
+            print("  Converting sand at", sand.x, sand.y, "to flying sand with velocity", sand.vx, sand.vy)
+            level:convertSandToFlying(sand.x, sand.y, sand.vx, sand.vy)
+        end
+        sandToConvert = {} -- Clear the queue
     end
     
-    -- Draw aim line if not launched
-    if not isLaunched then
-        local ballX, ballY = ballBody:getPosition()
-        local lineLength = aimPower / 10 -- Scale down for visual purposes
-        love.graphics.setColor(WHITE)
-        love.graphics.line(
-            ballX, 
-            ballY, 
-            ballX + aimDirection.x * lineLength, 
-            ballY + aimDirection.y * lineLength
-        )
+    -- Convert temporary stone cells back to sand
+    local i = 1
+    while i <= #sandToStone do
+        local cell = sandToStone[i]
+        if cell.timer > 0 then
+            cell.timer = cell.timer - dt
+            i = i + 1
+        else
+            -- Convert back to sand if it's still temporary stone
+            if level:getCellType(cell.x, cell.y) == Cell.TYPES.TEMP_STONE then
+                level:setCellType(cell.x, cell.y, Cell.TYPES.SAND)
+            end
+            -- Remove from the list
+            table.remove(sandToStone, i)
+            -- Don't increment i since we removed an element
+        end
+    end
+    
+    -- Update the physics world
+    world:update(dt)
+    
+    -- Update the ball
+    local ballStopped = ball:update(dt)
+    
+    -- Check for ball collisions with sand
+    if ball.body then
+        local vx, vy = ball.body:getLinearVelocity()
+        local speed = math.sqrt(vx*vx + vy*vy)
+        local ballX, ballY = ball.body:getPosition()
+        local gridX, gridY = level:getGridCoordinates(ballX, ballY)
         
-        -- Draw power indicator
-        local powerPercentage = (aimPower - minPower) / (maxPower - minPower)
-        love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
+        -- Convert sand to temporary stone when the ball is about to hit it
+        -- Use a larger radius to catch more sand cells in the ball's path
+        local radius = 4
+        for dy = -radius, radius do
+            for dx = -radius, radius do
+                local checkX = gridX + dx
+                local checkY = gridY + dy
+                
+                if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
+                    if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
+                        -- Always convert all sand cells within the radius to temporary stone
+                        -- This ensures the ball always has something to collide with
+                        level:setCellType(checkX, checkY, Cell.TYPES.TEMP_STONE)
+                        
+                        -- Add to the list of converted cells
+                        table.insert(sandToStone, {
+                            x = checkX,
+                            y = checkY,
+                            timer = 0.5 -- Convert back after 0.5 seconds
+                        })
+                    end
+                end
+            end
+        end
     end
     
-    -- Draw the square ball
-    love.graphics.push()
-    love.graphics.setColor(WHITE)
-    love.graphics.translate(ballBody:getX(), ballBody:getY())
-    love.graphics.rotate(ballBody:getAngle())
-    love.graphics.rectangle("line", -10, -10, 20, 20) -- Draw a 20x20 square centered at the body position
-    love.graphics.pop()
+    -- Update the level
+    level:update(dt)
     
-    -- Display game status
+    -- Update input
+    input:update(ball, level)
+end
+
+function love.draw()
+    -- Draw the level
+    level:draw()
+    
+    -- Draw the ball
+    ball:draw()
+    
+    -- Draw input (aim line, power indicator)
+    input:draw(ball)
+    
+    -- Display attempts counter
     love.graphics.setColor(WHITE)
-    love.graphics.print("Shots: " .. attempts .. " - Click to shoot, 'R' to reset to start", 250, 30)
+    love.graphics.print("Shots: " .. attempts, 250, 30)
+    
+    -- Debug info
+    if debug then
+        love.graphics.setColor(1, 0, 0, 1)
+        love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
+    end
 end
 
 function love.mousepressed(x, y, button)
-    if button == 1 and not isLaunched then -- Left mouse button
-        -- Launch the ball in the aimed direction
-        ballBody:applyLinearImpulse(
-            aimDirection.x * aimPower,
-            aimDirection.y * aimPower
-        )
-        
-        -- Apply angular impulse for rotation
-        ballBody:applyAngularImpulse(aimDirection.x * 50)
-        
-        isLaunched = true
+    if input:handleMousePressed(button, ball) then
         attempts = attempts + 1
     end
 end
 
 function love.keypressed(key)
-    if key == "r" then
-        -- Reset the game
-        resetBall()
+    if input:handleKeyPressed(key, ball) then
+        -- Reset was performed
     elseif key == "d" then
         -- Toggle debug mode
         debug = not debug
     end
-end
-
-function resetBall()
-    -- Reset the ball to the starting position
-    ballBody:setPosition(100, 500)
-    ballBody:setLinearVelocity(0, 0)
-    ballBody:setAngularVelocity(0)
-    ballBody:setAngle(0) -- Reset rotation
-    isLaunched = false
 end

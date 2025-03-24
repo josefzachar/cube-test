@@ -1,6 +1,6 @@
-# Square Golf
+# Square Golf with Cellular Automata
 
-A simple 2D golf game where the ball is a square. The game is viewed from the side and all elements are drawn with simple white lines.
+A physics-based golf game where the ball is a square and the level is made of cells that behave like cellular automata. The game is viewed from the side and features interactive sand that can be disrupted by the ball.
 
 ## How to Play
 
@@ -11,16 +11,37 @@ A simple 2D golf game where the ball is a square. The game is viewed from the si
 
 ## Game Controls
 
-- **Space**: Shoot the square ball in a random direction
+- **Mouse**: Aim the ball (direction and power)
+- **Left Click**: Shoot the square ball
 - **R**: Reset the ball to the starting position
-
-## Game Objective
-
-Get the square ball into the circular hole with as few attempts as possible. The game tracks your number of attempts.
+- **D**: Toggle debug mode
 
 ## Game Features
 
-- Physics-based gameplay with realistic bouncing
-- Simple white line graphics
-- Obstacles to make the game challenging
-- Score tracking
+### Physics-Based Square Ball
+- The ball is a square that rotates and bounces realistically
+- Aim and shoot with the mouse to navigate through the level
+
+### Cellular Automata Sand
+- Sand cells behave like traditional sand simulations:
+  - Sand falls downward due to gravity
+  - Sand piles up naturally at angles of repose
+  - When hit by the ball, sand can be disrupted and sent flying
+
+### Two Types of Terrain
+- **Sand**: Can be disrupted by the ball, behaves like cellular automata
+- **Stone**: Solid obstacles that the ball bounces off of
+
+### Hybrid Physics System
+- Sand normally follows cellular automata rules
+- When sand is hit by the ball with enough force, it temporarily becomes physics-based
+- Flying sand eventually settles back into cellular automata behavior
+
+## Code Structure
+
+The game is organized into multiple modules:
+- **ball.lua**: Square ball implementation
+- **cell.lua**: Cell types and behavior (sand and stone)
+- **level.lua**: Level generation and management
+- **input.lua**: Mouse and keyboard handling
+- **main.lua**: Game initialization and main loop

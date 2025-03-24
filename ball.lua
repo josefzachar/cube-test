@@ -1,0 +1,127 @@
+-- ball.lua - Square ball implementation
+
+local Ball = {}
+Ball.__index = Ball
+
+-- Colors
+local WHITE = {1, 1, 1, 1}
+
+function Ball.new(world, x, y)
+    local self = setmetatable({}, Ball)
+    
+    -- Create the square ball
+    self.body = love.physics.newBody(world, x, y, "dynamic")
+    self.shape = love.physics.newRectangleShape(20, 20) -- 20x20 square
+    self.fixture = love.physics.newFixture(self.body, self.shape, 2) -- Increased density for better physics
+    self.fixture:setRestitution(0.3) -- Slightly less bouncy
+    self.fixture:setFriction(0.5) -- Add friction for more natural movement
+    self.fixture:setUserData("ball")
+    
+    self.isLaunched = false
+    self.size = 20 -- Store the ball size for collision detection
+    
+    return self
+end
+
+function Ball:update(dt)
+    -- Get ball velocity
+    local vx, vy = self.body:getLinearVelocity()
+    local speed = math.sqrt(vx*vx + vy*vy)
+    
+    -- Apply a small torque to make the square rotate more naturally when moving
+    if speed > 50 then
+        -- Apply torque proportional to speed and direction
+        self.body:applyTorque(vx * 0.1)
+    end
+    
+    -- Check if ball has stopped
+    if speed < 5 then
+        self.isLaunched = false
+        return true -- Ball is stationary
+    else
+        return false -- Ball is still moving
+    end
+end
+
+-- Check if the ball is colliding with a cell at the given position
+function Ball:isCollidingWithCell(cellX, cellY, cellSize)
+    local ballX, ballY = self.body:getPosition()
+    local ballHalfWidth = self.size / 2
+    
+    -- Get ball velocity for predictive collision
+    local vx, vy = self.body:getLinearVelocity()
+    local speed = math.sqrt(vx*vx + vy*vy)
+    
+    -- For fast-moving balls, use velocity to predict collision
+    local predictiveDistance = 0
+    if speed > 100 then
+        -- Normalize velocity
+        local nvx = vx / speed
+        local nvy = vy / speed
+        
+        -- Add a predictive factor based on speed
+        predictiveDistance = math.min(speed * 0.05, cellSize * 2)
+        
+        -- Adjust ball position based on velocity
+        ballX = ballX + nvx * predictiveDistance
+        ballY = ballY + nvy * predictiveDistance
+    end
+    
+    -- Simple AABB collision check with the predicted position
+    local ballLeft = ballX - ballHalfWidth
+    local ballRight = ballX + ballHalfWidth
+    local ballTop = ballY - ballHalfWidth
+    local ballBottom = ballY + ballHalfWidth
+    
+    local cellLeft = cellX * cellSize
+    local cellRight = cellLeft + cellSize
+    local cellTop = cellY * cellSize
+    local cellBottom = cellTop + cellSize
+    
+    -- Check for overlap
+    return ballRight > cellLeft and
+           ballLeft < cellRight and
+           ballBottom > cellTop and
+           ballTop < cellBottom
+end
+
+function Ball:draw()
+    love.graphics.push()
+    love.graphics.setColor(WHITE)
+    love.graphics.translate(self.body:getX(), self.body:getY())
+    love.graphics.rotate(self.body:getAngle())
+    love.graphics.rectangle("fill", -10, -10, 20, 20) -- Draw a filled 20x20 square centered at the body position
+    love.graphics.pop()
+end
+
+function Ball:shoot(direction, power)
+    -- Apply both linear impulse and angular impulse for more natural movement
+    self.body:applyLinearImpulse(
+        direction.x * power,
+        direction.y * power
+    )
+    
+    -- Apply angular impulse for rotation
+    self.body:applyAngularImpulse(direction.x * 50)
+    
+    self.isLaunched = true
+end
+
+function Ball:reset(x, y)
+    -- Reset the ball to the starting position
+    self.body:setPosition(x, y)
+    self.body:setLinearVelocity(0, 0)
+    self.body:setAngularVelocity(0)
+    self.body:setAngle(0) -- Reset rotation
+    self.isLaunched = false
+end
+
+function Ball:getPosition()
+    return self.body:getPosition()
+end
+
+function Ball:isMoving()
+    return self.isLaunched
+end
+
+return Ball
