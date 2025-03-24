@@ -133,104 +133,71 @@ function Level:updateActiveClusters(dt, ball)
         end
     end
     
+    -- Store active cells for debug visualization
+    self.debugActiveCells = {}
+    for _, cell in ipairs(self.activeCells) do
+        table.insert(self.debugActiveCells, {x = cell.x, y = cell.y, time = love.timer.getTime()})
+    end
+    
     -- Clear active cells list for next frame
     self.activeCells = {}
 end
 
 -- Update cells in active clusters
 function Level:updateCellsInActiveClusters(dt)
-    local clusterRows = math.ceil(self.height / self.clusterSize)
-    local clusterCols = math.ceil(self.width / self.clusterSize)
+    -- IMPORTANT: Disable cluster-based optimization for sand cells
+    -- Update all sand cells every frame to eliminate horizontal lines
     
-    -- Process active clusters
-    for cy = 0, clusterRows - 1 do
-        for cx = 0, clusterCols - 1 do
-            local cluster = self.clusters[cy][cx]
-            
-            -- Update active clusters every frame
-            -- Update inactive clusters every few frames (staggered)
-            if cluster.active or (self.frameCount % 10 == (cy * clusterCols + cx) % 10) then
-                -- Update cells in this cluster
-                local startY = cy * self.clusterSize
-                local endY = math.min(startY + self.clusterSize - 1, self.height - 1)
-                local startX = cx * self.clusterSize
-                local endX = math.min(startX + self.clusterSize - 1, self.width - 1)
-                
-                -- Process from bottom to top for natural falling
-                for y = endY, startY, -1 do
-                    -- Alternate direction each row for more natural movement
-                    if y % 2 == 0 then
-                        -- Process left to right
-                        for x = startX, endX do
-                            if self.cells[y] and self.cells[y][x] then
-                                -- Update visual sand cells
-                                if self.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
-                                    self.cells[y][x]:update(dt, self)
-                                end
-                                
-                                -- Update sand cells
-                                if self.cells[y][x].type == Cell.TYPES.SAND then
-                                    -- Check if this cell needs updating
-                                    local needsUpdate = true
-                                    
-                                    -- Only update if active or if it's been a while
-                                    if not cluster.active then
-                                        local timeSinceLastUpdate = love.timer.getTime() - (self.lastUpdateTime[y][x] or 0)
-                                        needsUpdate = timeSinceLastUpdate > 0.5 -- Update inactive cells every 0.5 seconds
-                                    end
-                                    
-                                    if needsUpdate then
-                                        local changed = self.cells[y][x]:update(dt, self)
-                                        
-                                        -- If the cell changed, mark it as active for next frame
-                                        if changed then
-                                            table.insert(self.activeCells, {x = x, y = y})
-                                        end
-                                        
-                                        -- Update last update time
-                                        self.lastUpdateTime[y][x] = love.timer.getTime()
-                                    end
-                                end
-                            end
+    -- Process from bottom to top for natural falling
+    for y = self.height - 1, 0, -1 do
+        -- Alternate direction each row for more natural movement
+        if y % 2 == 0 then
+            -- Process left to right
+            for x = 0, self.width - 1 do
+                if self.cells[y] and self.cells[y][x] then
+                    -- Update visual sand cells
+                    if self.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
+                        self.cells[y][x]:update(dt, self)
+                    end
+                    
+                    -- Update sand cells - ALWAYS update ALL sand cells
+                    if self.cells[y][x].type == Cell.TYPES.SAND then
+                        local changed = self.cells[y][x]:update(dt, self)
+                        
+                        -- If the cell changed, mark it as active for next frame
+                        if changed then
+                            table.insert(self.activeCells, {x = x, y = y})
                         end
-                    else
-                        -- Process right to left
-                        for x = endX, startX, -1 do
-                            if self.cells[y] and self.cells[y][x] then
-                                -- Update visual sand cells
-                                if self.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
-                                    self.cells[y][x]:update(dt, self)
-                                end
-                                
-                                -- Update sand cells
-                                if self.cells[y][x].type == Cell.TYPES.SAND then
-                                    -- Check if this cell needs updating
-                                    local needsUpdate = true
-                                    
-                                    -- Only update if active or if it's been a while
-                                    if not cluster.active then
-                                        local timeSinceLastUpdate = love.timer.getTime() - (self.lastUpdateTime[y][x] or 0)
-                                        needsUpdate = timeSinceLastUpdate > 0.5 -- Update inactive cells every 0.5 seconds
-                                    end
-                                    
-                                    if needsUpdate then
-                                        local changed = self.cells[y][x]:update(dt, self)
-                                        
-                                        -- If the cell changed, mark it as active for next frame
-                                        if changed then
-                                            table.insert(self.activeCells, {x = x, y = y})
-                                        end
-                                        
-                                        -- Update last update time
-                                        self.lastUpdateTime[y][x] = love.timer.getTime()
-                                    end
-                                end
-                            end
+                    end
+                end
+            end
+        else
+            -- Process right to left
+            for x = self.width - 1, 0, -1 do
+                if self.cells[y] and self.cells[y][x] then
+                    -- Update visual sand cells
+                    if self.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
+                        self.cells[y][x]:update(dt, self)
+                    end
+                    
+                    -- Update sand cells - ALWAYS update ALL sand cells
+                    if self.cells[y][x].type == Cell.TYPES.SAND then
+                        local changed = self.cells[y][x]:update(dt, self)
+                        
+                        -- If the cell changed, mark it as active for next frame
+                        if changed then
+                            table.insert(self.activeCells, {x = x, y = y})
                         end
                     end
                 end
             end
         end
+    end
+    
+    -- Keep track of active cells for debug visualization
+    self.debugActiveCells = {}
+    for _, cell in ipairs(self.activeCells) do
+        table.insert(self.debugActiveCells, {x = cell.x, y = cell.y, time = love.timer.getTime()})
     end
 end
 

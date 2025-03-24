@@ -289,6 +289,32 @@ end
     input:update(ball, level)
 end
 
+-- Debug variables
+local showActiveCells = false
+
+function love.keypressed(key)
+    if input:handleKeyPressed(key, ball) then
+        -- Reset was performed
+    elseif key == "d" then
+        -- Toggle debug mode
+        debug = not debug
+    elseif key == "s" then
+        -- Add more sand for performance testing
+        level:addLotsOfSand(1000)
+        print("Added 1000 sand cells for performance testing")
+    elseif key == "p" then
+        -- Add a sand pile
+        local x, y = ball.body:getPosition()
+        local gridX, gridY = level:getGridCoordinates(x, y)
+        level:addSandPile(gridX, gridY, 10, 20)
+        print("Added a sand pile at ball position")
+    elseif key == "a" then
+        -- Toggle active cells visualization
+        showActiveCells = not showActiveCells
+        print("Active cells visualization: " .. (showActiveCells and "ON" or "OFF"))
+    end
+end
+
 function love.draw()
     -- Draw the level
     level:draw(debug) -- Pass debug flag to level:draw
@@ -395,19 +421,34 @@ function love.draw()
         love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 240)
         love.graphics.print("Active Cells: " .. #level.activeCells, 10, 260)
         
-        -- Draw active clusters
-        love.graphics.setColor(0, 1, 0, 0.2)
-        for cy = 0, clusterRows - 1 do
-            for cx = 0, clusterCols - 1 do
-                if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
-                    love.graphics.rectangle(
-                        "fill", 
-                        cx * level.clusterSize * Cell.SIZE, 
-                        cy * level.clusterSize * Cell.SIZE, 
-                        level.clusterSize * Cell.SIZE, 
-                        level.clusterSize * Cell.SIZE
-                    )
+        -- Only draw active clusters if specifically requested
+        if showActiveCells then
+            love.graphics.setColor(0, 1, 0, 0.2)
+            for cy = 0, clusterRows - 1 do
+                for cx = 0, clusterCols - 1 do
+                    if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
+                        love.graphics.rectangle(
+                            "fill", 
+                            cx * level.clusterSize * Cell.SIZE, 
+                            cy * level.clusterSize * Cell.SIZE, 
+                            level.clusterSize * Cell.SIZE, 
+                            level.clusterSize * Cell.SIZE
+                        )
+                    end
                 end
+            end
+        end
+    end
+    
+    -- Draw active cells for debugging
+    if showActiveCells and level.debugActiveCells then
+        love.graphics.setColor(0, 1, 0, 0.7)
+        for _, cell in ipairs(level.debugActiveCells) do
+            -- Fade out based on time
+            local age = love.timer.getTime() - cell.time
+            if age < 0.5 then
+                love.graphics.setColor(0, 1, 0, 0.7 * (1 - age / 0.5))
+                love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
             end
         end
     end
@@ -416,24 +457,5 @@ end
 function love.mousepressed(x, y, button)
     if input:handleMousePressed(button, ball) then
         attempts = attempts + 1
-    end
-end
-
-function love.keypressed(key)
-    if input:handleKeyPressed(key, ball) then
-        -- Reset was performed
-    elseif key == "d" then
-        -- Toggle debug mode
-        debug = not debug
-    elseif key == "s" then
-        -- Add more sand for performance testing
-        level:addLotsOfSand(1000)
-        print("Added 1000 sand cells for performance testing")
-    elseif key == "p" then
-        -- Add a sand pile
-        local x, y = ball.body:getPosition()
-        local gridX, gridY = level:getGridCoordinates(x, y)
-        level:addSandPile(gridX, gridY, 10, 20)
-        print("Added a sand pile at ball position")
     end
 end

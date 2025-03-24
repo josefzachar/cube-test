@@ -172,6 +172,13 @@ function Cell:update(dt, level)
             return false
         end
         
+        -- IMPORTANT: Mark cells below as active to ensure continuous falling
+        -- This is critical to prevent horizontal lines
+        if y < levelHeight - 2 then
+            -- Mark the cell two rows below as active to ensure continuous falling
+            table.insert(level.activeCells, {x = x, y = y + 2})
+        end
+        
         -- Optimize: Get cell types once
         local belowType = level:getCellType(x, y + 1)
         
@@ -185,6 +192,11 @@ function Cell:update(dt, level)
             local activeCells = level.activeCells
             table.insert(activeCells, {x = x, y = y})
             table.insert(activeCells, {x = x, y = y + 1})
+            
+            -- IMPORTANT: Mark cells below as active to ensure continuous falling
+            if y < levelHeight - 2 then
+                table.insert(activeCells, {x = x, y = y + 2})
+            end
             
             return true -- Cell changed
         end
@@ -203,8 +215,8 @@ function Cell:update(dt, level)
         
         if leftEmpty and rightEmpty then
             -- Both diagonal spaces are empty, choose randomly
-            -- Optimize: Use a faster random check
-            if (x + y) % 2 == 0 then
+            -- Use true random instead of deterministic pattern to avoid visual artifacts
+            if math.random() < 0.5 then
                 -- Fall diagonally left
                 level:setCellType(x, y, EMPTY)
                 level:setCellType(x - 1, y + 1, SAND)
@@ -212,6 +224,11 @@ function Cell:update(dt, level)
                 -- Mark cells as active for next frame
                 table.insert(activeCells, {x = x, y = y})
                 table.insert(activeCells, {x = x - 1, y = y + 1})
+                
+                -- IMPORTANT: Mark cells below as active to ensure continuous falling
+                if y < levelHeight - 2 then
+                    table.insert(activeCells, {x = x - 1, y = y + 2})
+                end
             else
                 -- Fall diagonally right
                 level:setCellType(x, y, EMPTY)
@@ -220,6 +237,11 @@ function Cell:update(dt, level)
                 -- Mark cells as active for next frame
                 table.insert(activeCells, {x = x, y = y})
                 table.insert(activeCells, {x = x + 1, y = y + 1})
+                
+                -- IMPORTANT: Mark cells below as active to ensure continuous falling
+                if y < levelHeight - 2 then
+                    table.insert(activeCells, {x = x + 1, y = y + 2})
+                end
             end
             
             return true -- Cell changed
@@ -232,6 +254,11 @@ function Cell:update(dt, level)
             table.insert(activeCells, {x = x, y = y})
             table.insert(activeCells, {x = x - 1, y = y + 1})
             
+            -- IMPORTANT: Mark cells below as active to ensure continuous falling
+            if y < levelHeight - 2 then
+                table.insert(activeCells, {x = x - 1, y = y + 2})
+            end
+            
             return true -- Cell changed
         elseif rightEmpty then
             -- Fall diagonally right
@@ -241,6 +268,11 @@ function Cell:update(dt, level)
             -- Mark cells as active for next frame
             table.insert(activeCells, {x = x, y = y})
             table.insert(activeCells, {x = x + 1, y = y + 1})
+            
+            -- IMPORTANT: Mark cells below as active to ensure continuous falling
+            if y < levelHeight - 2 then
+                table.insert(activeCells, {x = x + 1, y = y + 2})
+            end
             
             return true -- Cell changed
         end
