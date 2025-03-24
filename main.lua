@@ -291,6 +291,7 @@ end
 
 -- Debug variables
 local showActiveCells = false
+local vsyncEnabled = false -- Start with VSync disabled (as set in conf.lua)
 
 function love.keypressed(key)
     if input:handleKeyPressed(key, ball) then
@@ -312,6 +313,11 @@ function love.keypressed(key)
         -- Toggle active cells visualization
         showActiveCells = not showActiveCells
         print("Active cells visualization: " .. (showActiveCells and "ON" or "OFF"))
+    elseif key == "v" then
+        -- Toggle VSync
+        vsyncEnabled = not vsyncEnabled
+        love.window.setVSync(vsyncEnabled and 1 or 0)
+        print("VSync: " .. (vsyncEnabled and "ON" or "OFF"))
     end
 end
 
