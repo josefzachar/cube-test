@@ -29,7 +29,7 @@ function love.load()
     world:setCallbacks(beginContact, endContact, preSolve, postSolve)
     
     -- Create the level (80x60 cells, each 10x10 pixels)
-    level = Level.new(world, 80, 60)
+    level = Level.new(world, 160, 100)
     level:createTestLevel()
     
     -- Create the square ball
@@ -235,34 +235,55 @@ end
         local ballX, ballY = ball.body:getPosition()
         local gridX, gridY = level:getGridCoordinates(ballX, ballY)
         
-        -- Always convert sand to temporary stone for collisions
-        -- This ensures the ball doesn't go through sand like butter
-        local radius = 4
-        for dy = -radius, radius do
-            for dx = -radius, radius do
-                local checkX = gridX + dx
-                local checkY = gridY + dy
-                
-                if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
-                    if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
-                        -- Always convert all sand cells within the radius to temporary stone
-                        -- This ensures the ball always has something to collide with
-                        level:setCellType(checkX, checkY, Cell.TYPES.TEMP_STONE)
+        -- Only convert sand to temporary stone if the ball is moving
+        if speed > 10 then
+            -- Optimize: Use a smaller radius for slow-moving balls
+            local radius = math.min(4, math.max(2, math.floor(speed / 100) + 2))
+            
+            -- Optimize: Only convert sand in the direction of movement
+            local dirX = 0
+            local dirY = 0
+            
+            if speed > 50 then
+                dirX = vx / speed
+                dirY = vy / speed
+            end
+            
+            -- Calculate the distance from the ball to each cell
+            for dy = -radius, radius do
+                for dx = -radius, radius do
+                    -- Skip cells that are not in the direction of movement (for fast balls)
+                    if speed <= 50 or (dx * dirX + dy * dirY > -0.5) then
+                        local checkX = gridX + dx
+                        local checkY = gridY + dy
                         
-                        -- Add to the list of converted cells
-                        table.insert(sandToStone, {
-                            x = checkX,
-                            y = checkY,
-                            timer = 0.2 -- Convert back after 0.2 seconds (reduced from 1.0)
-                        })
+                        -- Calculate distance from ball center to cell center
+                        local distSq = dx*dx + dy*dy
+                        
+                        -- Only convert cells within the radius
+                        if distSq <= radius*radius then
+                            if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
+                                if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
+                                    -- Convert sand to temporary stone
+                                    level:setCellType(checkX, checkY, Cell.TYPES.TEMP_STONE)
+                                    
+                                    -- Add to the list of converted cells
+                                    table.insert(sandToStone, {
+                                        x = checkX,
+                                        y = checkY,
+                                        timer = 0.1 -- Convert back after 0.1 seconds (reduced from 0.2)
+                                    })
+                                end
+                            end
+                        end
                     end
                 end
             end
         end
     end
     
-    -- Update the level
-    level:update(dt)
+    -- Update the level (pass the ball for cluster activation)
+    level:update(dt, ball)
     
     -- Update input
     input:update(ball, level)
@@ -270,10 +291,10 @@ end
 
 function love.draw()
     -- Draw the level
-    level:draw()
+    level:draw(debug) -- Pass debug flag to level:draw
     
     -- Draw the ball
-    ball:draw()
+    ball:draw(debug) -- Pass debug flag to ball:draw
     
     -- Draw input (aim line, power indicator)
     input:draw(ball)
@@ -285,7 +306,110 @@ function love.draw()
     -- Debug info
     if debug then
         love.graphics.setColor(1, 0, 0, 1)
+        
+        -- FPS
         love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
+        
+        -- Cell counts (only update every 10 frames to improve performance)
+        if not level.cellCounts or love.timer.getTime() - (level.lastCountTime or 0) > 0.5 then
+            level.cellCounts = level.cellCounts or {}
+            level.cellCounts.sandCount = 0
+            level.cellCounts.stoneCount = 0
+            level.cellCounts.tempStoneCount = 0
+            level.cellCounts.emptyCount = 0
+            level.cellCounts.visualSandCount = 0
+            
+            -- Only count cells in visible area
+            local screenWidth, screenHeight = love.graphics.getDimensions()
+            local margin = 10
+            local minX = math.max(0, math.floor(0 / Cell.SIZE) - margin)
+            local maxX = math.min(level.width - 1, math.ceil(screenWidth / Cell.SIZE) + margin)
+            local minY = math.max(0, math.floor(0 / Cell.SIZE) - margin)
+            local maxY = math.min(level.height - 1, math.ceil(screenHeight / Cell.SIZE) + margin)
+            
+            -- Count cells by type (only in visible area)
+            for y = minY, maxY do
+                for x = minX, maxX do
+                    local cellType = level:getCellType(x, y)
+                    if cellType == Cell.TYPES.SAND then
+                        level.cellCounts.sandCount = level.cellCounts.sandCount + 1
+                    elseif cellType == Cell.TYPES.STONE then
+                        level.cellCounts.stoneCount = level.cellCounts.stoneCount + 1
+                    elseif cellType == Cell.TYPES.TEMP_STONE then
+                        level.cellCounts.tempStoneCount = level.cellCounts.tempStoneCount + 1
+                    elseif cellType == Cell.TYPES.EMPTY then
+                        level.cellCounts.emptyCount = level.cellCounts.emptyCount + 1
+                    elseif cellType == Cell.TYPES.VISUAL_SAND then
+                        level.cellCounts.visualSandCount = level.cellCounts.visualSandCount + 1
+                    end
+                end
+            end
+            
+            -- Add visual sand particles count
+            level.cellCounts.visualSandCount = level.cellCounts.visualSandCount + #(level.visualSandCells or {})
+            level.lastCountTime = love.timer.getTime()
+        end
+        
+        -- Use cached cell counts
+        local sandCount = level.cellCounts.sandCount
+        local stoneCount = level.cellCounts.stoneCount
+        local tempStoneCount = level.cellCounts.tempStoneCount
+        local emptyCount = level.cellCounts.emptyCount
+        local visualSandCount = level.cellCounts.visualSandCount
+        
+        -- Display cell counts
+        love.graphics.print("Sand: " .. sandCount, 10, 30)
+        love.graphics.print("Stone: " .. stoneCount, 10, 50)
+        love.graphics.print("Temp Stone: " .. tempStoneCount, 10, 70)
+        love.graphics.print("Empty: " .. emptyCount, 10, 90)
+        love.graphics.print("Visual Sand: " .. visualSandCount, 10, 110)
+        
+        -- Display ball info
+        if ball.body then
+            local x, y = ball.body:getPosition()
+            local vx, vy = ball.body:getLinearVelocity()
+            local speed = math.sqrt(vx*vx + vy*vy)
+            love.graphics.print(string.format("Ball: x=%.1f, y=%.1f", x, y), 10, 130)
+            love.graphics.print(string.format("Velocity: vx=%.1f, vy=%.1f", vx, vy), 10, 150)
+            love.graphics.print(string.format("Speed: %.1f", speed), 10, 170)
+        end
+        
+        -- Display optimization info
+        love.graphics.print("Performance Optimization:", 10, 200)
+        love.graphics.print("Cluster Size: " .. level.clusterSize .. "x" .. level.clusterSize, 10, 220)
+        
+        -- Count active clusters
+        local clusterRows = math.ceil(level.height / level.clusterSize)
+        local clusterCols = math.ceil(level.width / level.clusterSize)
+        local activeClusterCount = 0
+        local totalClusters = clusterRows * clusterCols
+        
+        for cy = 0, clusterRows - 1 do
+            for cx = 0, clusterCols - 1 do
+                if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
+                    activeClusterCount = activeClusterCount + 1
+                end
+            end
+        end
+        
+        love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 240)
+        love.graphics.print("Active Cells: " .. #level.activeCells, 10, 260)
+        
+        -- Draw active clusters
+        love.graphics.setColor(0, 1, 0, 0.2)
+        for cy = 0, clusterRows - 1 do
+            for cx = 0, clusterCols - 1 do
+                if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
+                    love.graphics.rectangle(
+                        "fill", 
+                        cx * level.clusterSize * Cell.SIZE, 
+                        cy * level.clusterSize * Cell.SIZE, 
+                        level.clusterSize * Cell.SIZE, 
+                        level.clusterSize * Cell.SIZE
+                    )
+                end
+            end
+        end
     end
 end
 
@@ -301,5 +425,15 @@ function love.keypressed(key)
     elseif key == "d" then
         -- Toggle debug mode
         debug = not debug
+    elseif key == "s" then
+        -- Add more sand for performance testing
+        level:addLotsOfSand(1000)
+        print("Added 1000 sand cells for performance testing")
+    elseif key == "p" then
+        -- Add a sand pile
+        local x, y = ball.body:getPosition()
+        local gridX, gridY = level:getGridCoordinates(x, y)
+        level:addSandPile(gridX, gridY, 10, 20)
+        print("Added a sand pile at ball position")
     end
 end

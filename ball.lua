@@ -85,13 +85,43 @@ function Ball:isCollidingWithCell(cellX, cellY, cellSize)
            ballTop < cellBottom
 end
 
-function Ball:draw()
+function Ball:draw(debug)
     love.graphics.push()
     love.graphics.setColor(WHITE)
     love.graphics.translate(self.body:getX(), self.body:getY())
     love.graphics.rotate(self.body:getAngle())
     love.graphics.rectangle("fill", -10, -10, 20, 20) -- Draw a filled 20x20 square centered at the body position
+    
+    -- Draw debug info
+    if debug then
+        -- Draw a red outline
+        love.graphics.setColor(1, 0, 0, 1)
+        love.graphics.rectangle("line", -10, -10, 20, 20)
+        
+        -- Draw axes to show rotation
+        love.graphics.setColor(1, 0, 0, 1) -- Red for X axis
+        love.graphics.line(0, 0, 15, 0)
+        love.graphics.setColor(0, 1, 0, 1) -- Green for Y axis
+        love.graphics.line(0, 0, 0, 15)
+    end
+    
     love.graphics.pop()
+    
+    -- Draw additional debug info outside the transform
+    if debug then
+        local x, y = self.body:getPosition()
+        local vx, vy = self.body:getLinearVelocity()
+        local speed = math.sqrt(vx*vx + vy*vy)
+        local angle = self.body:getAngle() * 180 / math.pi -- Convert to degrees
+        
+        -- Draw velocity vector
+        love.graphics.setColor(1, 1, 0, 1) -- Yellow
+        love.graphics.line(x, y, x + vx * 0.1, y + vy * 0.1)
+        
+        -- Draw bounding box
+        love.graphics.setColor(0, 1, 1, 0.5) -- Cyan
+        love.graphics.rectangle("line", x - 10, y - 10, 20, 20)
+    end
 end
 
 function Ball:shoot(direction, power)

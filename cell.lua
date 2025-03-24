@@ -70,9 +70,14 @@ function Cell:createPhysics(world)
     end
 end
 
-function Cell:draw()
+function Cell:draw(debug)
     if self.type == Cell.TYPES.EMPTY then
-        return -- Don't draw empty cells
+        -- Only draw empty cells in debug mode
+        if debug then
+            love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
+            love.graphics.rectangle("line", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        end
+        return
     end
     
     if self.type == Cell.TYPES.VISUAL_SAND then
@@ -80,93 +85,168 @@ function Cell:draw()
         local color = COLORS[self.type]
         love.graphics.setColor(color[1], color[2], color[3], self.alpha)
         love.graphics.rectangle("fill", self.visualX, self.visualY, Cell.SIZE, Cell.SIZE)
+        
+        -- Draw debug info for visual sand
+        if debug then
+            love.graphics.setColor(1, 0, 0, self.alpha)
+            love.graphics.rectangle("line", self.visualX, self.visualY, Cell.SIZE, Cell.SIZE)
+        end
     else
         -- Draw regular cells
         love.graphics.setColor(COLORS[self.type])
         love.graphics.rectangle("fill", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
-        -- Draw a small indicator in the center for different cell types
-        if self.type == Cell.TYPES.SAND then
-            love.graphics.setColor(0, 0, 1, 1) -- Blue
-            love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
-        elseif self.type == Cell.TYPES.STONE then
-            love.graphics.setColor(1, 0, 0, 1) -- Red
-            love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
-        elseif self.type == Cell.TYPES.TEMP_STONE then
-            love.graphics.setColor(1, 0, 1, 1) -- Magenta
-            love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+        -- Draw cell type indicators only in debug mode
+        if debug then
+            if self.type == Cell.TYPES.SAND then
+                love.graphics.setColor(0, 0, 1, 1) -- Blue
+                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+            elseif self.type == Cell.TYPES.STONE then
+                love.graphics.setColor(1, 0, 0, 1) -- Red
+                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+            elseif self.type == Cell.TYPES.TEMP_STONE then
+                love.graphics.setColor(1, 0, 1, 1) -- Magenta
+                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+            end
+        end
+        
+        -- Draw cell coordinates in debug mode
+        if debug then
+            love.graphics.setColor(1, 1, 1, 0.5)
+            love.graphics.rectangle("line", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            
+            -- Draw coordinates in tiny font
+            love.graphics.setColor(1, 1, 1, 0.7)
+            local coordText = self.x .. "," .. self.y
+            love.graphics.print(coordText, self.x * Cell.SIZE + 1, self.y * Cell.SIZE + 1, 0, 0.4, 0.4)
         end
     end
 end
 
+-- Cache for faster lookups
+local EMPTY = Cell.TYPES.EMPTY
+local SAND = Cell.TYPES.SAND
+local STONE = Cell.TYPES.STONE
+local VISUAL_SAND = Cell.TYPES.VISUAL_SAND
+local TEMP_STONE = Cell.TYPES.TEMP_STONE
+
 function Cell:update(dt, level)
-    if self.type == Cell.TYPES.EMPTY or self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.TEMP_STONE then
-        return -- No update needed for empty or stone cells
+    local cellType = self.type
+    
+    -- Fast return for static cells
+    if cellType == EMPTY or cellType == STONE or cellType == TEMP_STONE then
+        return false -- No update needed for empty or stone cells
     end
     
     -- Handle visual flying sand
-    if self.type == Cell.TYPES.VISUAL_SAND then
-        -- Update position based on velocity
+    if cellType == VISUAL_SAND then
+        -- Update position based on velocity (optimize: combine operations)
         self.visualX = self.visualX + self.velocityX * dt
         self.visualY = self.visualY + self.velocityY * dt
-        
-        -- Apply gravity
         self.velocityY = self.velocityY + 500 * dt  -- Gravity
         
         -- Update lifetime and alpha
         self.lifetime = self.lifetime + dt
         self.alpha = math.max(0, 1 - (self.lifetime / self.maxLifetime))
         
-        -- Check if the visual sand should disappear
-        if self.lifetime >= self.maxLifetime then
-            -- Remove the visual sand
-            level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-            return
-        end
-        
-        -- Check if out of bounds
-        if self.visualX < 0 or self.visualX >= level.width * Cell.SIZE or 
+        -- Check if the visual sand should disappear (optimize: combine conditions)
+        if self.lifetime >= self.maxLifetime or
+           self.visualX < 0 or self.visualX >= level.width * Cell.SIZE or 
            self.visualY < 0 or self.visualY >= level.height * Cell.SIZE then
             -- Remove the visual sand
-            level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-            return
-        end
-    
-    -- Handle regular sand (cellular automata)
-    elseif self.type == Cell.TYPES.SAND then
-        -- Check if there's empty space below
-        if self.y < level.height - 1 and level:getCellType(self.x, self.y + 1) == Cell.TYPES.EMPTY then
-            -- Fall straight down
-            level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-            level:setCellType(self.x, self.y + 1, Cell.TYPES.SAND)
-            return
+            level:setCellType(self.x, self.y, EMPTY)
+            return true -- Cell changed
         end
         
-        -- Check if there's empty space diagonally down-left or down-right
-        local leftEmpty = self.x > 0 and self.y < level.height - 1 and level:getCellType(self.x - 1, self.y + 1) == Cell.TYPES.EMPTY
-        local rightEmpty = self.x < level.width - 1 and self.y < level.height - 1 and level:getCellType(self.x + 1, self.y + 1) == Cell.TYPES.EMPTY
+        return true -- Visual sand always changes (moves)
+    
+    -- Handle regular sand (cellular automata)
+    elseif cellType == SAND then
+        -- Optimize: Cache level properties
+        local levelHeight = level.height
+        local levelWidth = level.width
+        local x, y = self.x, self.y
+        
+        -- Optimize: Early return if at bottom of level
+        if y >= levelHeight - 1 then
+            return false
+        end
+        
+        -- Optimize: Get cell types once
+        local belowType = level:getCellType(x, y + 1)
+        
+        -- Check if there's empty space below
+        if belowType == EMPTY then
+            -- Fall straight down
+            level:setCellType(x, y, EMPTY)
+            level:setCellType(x, y + 1, SAND)
+            
+            -- Mark cells as active for next frame (optimize: use local variables)
+            local activeCells = level.activeCells
+            table.insert(activeCells, {x = x, y = y})
+            table.insert(activeCells, {x = x, y = y + 1})
+            
+            return true -- Cell changed
+        end
+        
+        -- Optimize: Only check diagonals if we can't fall straight down
+        -- Check if we're at the edges
+        local canCheckLeft = x > 0
+        local canCheckRight = x < levelWidth - 1
+        
+        -- Only get diagonal cell types if we need them
+        local leftEmpty = canCheckLeft and level:getCellType(x - 1, y + 1) == EMPTY
+        local rightEmpty = canCheckRight and level:getCellType(x + 1, y + 1) == EMPTY
+        
+        -- Optimize: Use local variables for activeCells
+        local activeCells = level.activeCells
         
         if leftEmpty and rightEmpty then
             -- Both diagonal spaces are empty, choose randomly
-            if math.random() < 0.5 then
+            -- Optimize: Use a faster random check
+            if (x + y) % 2 == 0 then
                 -- Fall diagonally left
-                level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-                level:setCellType(self.x - 1, self.y + 1, Cell.TYPES.SAND)
+                level:setCellType(x, y, EMPTY)
+                level:setCellType(x - 1, y + 1, SAND)
+                
+                -- Mark cells as active for next frame
+                table.insert(activeCells, {x = x, y = y})
+                table.insert(activeCells, {x = x - 1, y = y + 1})
             else
                 -- Fall diagonally right
-                level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-                level:setCellType(self.x + 1, self.y + 1, Cell.TYPES.SAND)
+                level:setCellType(x, y, EMPTY)
+                level:setCellType(x + 1, y + 1, SAND)
+                
+                -- Mark cells as active for next frame
+                table.insert(activeCells, {x = x, y = y})
+                table.insert(activeCells, {x = x + 1, y = y + 1})
             end
+            
+            return true -- Cell changed
         elseif leftEmpty then
             -- Fall diagonally left
-            level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-            level:setCellType(self.x - 1, self.y + 1, Cell.TYPES.SAND)
+            level:setCellType(x, y, EMPTY)
+            level:setCellType(x - 1, y + 1, SAND)
+            
+            -- Mark cells as active for next frame
+            table.insert(activeCells, {x = x, y = y})
+            table.insert(activeCells, {x = x - 1, y = y + 1})
+            
+            return true -- Cell changed
         elseif rightEmpty then
             -- Fall diagonally right
-            level:setCellType(self.x, self.y, Cell.TYPES.EMPTY)
-            level:setCellType(self.x + 1, self.y + 1, Cell.TYPES.SAND)
+            level:setCellType(x, y, EMPTY)
+            level:setCellType(x + 1, y + 1, SAND)
+            
+            -- Mark cells as active for next frame
+            table.insert(activeCells, {x = x, y = y})
+            table.insert(activeCells, {x = x + 1, y = y + 1})
+            
+            return true -- Cell changed
         end
     end
+    
+    return false -- Cell didn't change
 end
 
 function Cell:destroy(world)

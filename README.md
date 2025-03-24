@@ -15,6 +15,8 @@ A physics-based golf game where the ball is a square and the level is made of ce
 - **Left Click**: Shoot the square ball
 - **R**: Reset the ball to the starting position
 - **D**: Toggle debug mode
+- **S**: Add 1000 random sand cells (for performance testing)
+- **P**: Add a sand pile at the ball's position
 
 ## Game Features
 
@@ -36,6 +38,33 @@ A physics-based golf game where the ball is a square and the level is made of ce
 - Sand normally follows cellular automata rules
 - When sand is hit by the ball with enough force, it temporarily becomes physics-based
 - Flying sand eventually settles back into cellular automata behavior
+
+## Performance Optimizations
+
+The game includes several optimizations to handle large numbers of sand cells efficiently:
+
+### Cluster-Based Updates
+- The level is divided into clusters (8x8 cells by default)
+- Only active clusters are updated every frame
+- Inactive clusters are updated less frequently (staggered updates)
+- Clusters are marked as active when:
+  - They are near the ball
+  - They contain cells that changed recently
+  - They are below clusters with active cells (for falling sand)
+
+### Selective Cell Updates
+- Only cells that need updating are processed
+- Cells track whether they've changed and mark themselves as active
+- Empty and stone cells are skipped entirely during updates
+- Visual sand particles are always updated for smooth animation
+
+### Debug Visualization
+- Toggle debug mode (D key) to see performance metrics:
+  - FPS counter
+  - Cell counts by type
+  - Active cluster count and visualization
+  - Active cells count
+  - Ball physics information
 
 ## Code Structure
 
