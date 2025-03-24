@@ -1,6 +1,7 @@
 -- input.lua - Input handling (mouse, keyboard)
 
 local Cell = require("cell")
+local CellTypes = require("src.cell_types")
 
 local Input = {}
 Input.__index = Input
@@ -80,9 +81,9 @@ function Input:spraySand(level)
         
         -- Check if the position is valid and empty
         if sandX >= 0 and sandX < level.width and sandY >= 0 and sandY < level.height then
-            if level:getCellType(sandX, sandY) == Cell.TYPES.EMPTY then
+            if level:getCellType(sandX, sandY) == CellTypes.TYPES.EMPTY then
                 -- Create a new sand cell
-                level:setCellType(sandX, sandY, Cell.TYPES.SAND)
+                level:setCellType(sandX, sandY, CellTypes.TYPES.SAND)
             end
         end
     end
@@ -114,8 +115,8 @@ function Input:draw(ball)
         love.graphics.print("Mode: SPRAY (press SPACE to switch)", 10, 30)
         
         -- Draw spray indicator
-        local gridX, gridY = math.floor(self.mouseX / Cell.SIZE), math.floor(self.mouseY / Cell.SIZE)
-        love.graphics.circle("line", gridX * Cell.SIZE + Cell.SIZE/2, gridY * Cell.SIZE + Cell.SIZE/2, self.sprayRadius * Cell.SIZE)
+        local gridX, gridY = math.floor(self.mouseX / CellTypes.SIZE), math.floor(self.mouseY / CellTypes.SIZE)
+        love.graphics.circle("line", gridX * CellTypes.SIZE + CellTypes.SIZE/2, gridY * CellTypes.SIZE + CellTypes.SIZE/2, self.sprayRadius * CellTypes.SIZE)
     end
 end
 

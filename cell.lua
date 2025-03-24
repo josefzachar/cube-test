@@ -1,28 +1,14 @@
 -- cell.lua - Cell implementation (SAND and STONE) with cellular automata behavior
 
+local CellTypes = require("src.cell_types")
+
 local Cell = {}
 Cell.__index = Cell
 
--- Cell types
-Cell.TYPES = {
-    EMPTY = 0,
-    SAND = 1,
-    STONE = 2,
-    VISUAL_SAND = 3,  -- Visual effect for flying sand (no physics)
-    TEMP_STONE = 4    -- Temporary stone that looks like sand
-}
-
--- Colors
-local COLORS = {
-    [Cell.TYPES.EMPTY] = {0, 0, 0, 0}, -- Transparent
-    [Cell.TYPES.SAND] = {0.9, 0.8, 0.5, 1}, -- Sand color
-    [Cell.TYPES.STONE] = {0.5, 0.5, 0.5, 1}, -- Stone color
-    [Cell.TYPES.VISUAL_SAND] = {1.0, 0.9, 0.6, 1}, -- Brighter sand for visual effect
-    [Cell.TYPES.TEMP_STONE] = {0.9, 0.8, 0.5, 1}  -- Same as sand color
-}
-
--- Cell size (half the size of the ball)
-Cell.SIZE = 10
+-- Import cell types and properties from CellTypes module
+Cell.TYPES = CellTypes.TYPES
+Cell.SIZE = CellTypes.SIZE
+local COLORS = CellTypes.COLORS
 
 function Cell.new(world, x, y, type)
     local self = setmetatable({}, Cell)
@@ -124,11 +110,11 @@ function Cell:draw(debug)
 end
 
 -- Cache for faster lookups
-local EMPTY = Cell.TYPES.EMPTY
-local SAND = Cell.TYPES.SAND
-local STONE = Cell.TYPES.STONE
-local VISUAL_SAND = Cell.TYPES.VISUAL_SAND
-local TEMP_STONE = Cell.TYPES.TEMP_STONE
+local EMPTY = CellTypes.TYPES.EMPTY
+local SAND = CellTypes.TYPES.SAND
+local STONE = CellTypes.TYPES.STONE
+local VISUAL_SAND = CellTypes.TYPES.VISUAL_SAND
+local TEMP_STONE = CellTypes.TYPES.TEMP_STONE
 
 function Cell:update(dt, level)
     local cellType = self.type

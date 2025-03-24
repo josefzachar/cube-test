@@ -1,6 +1,7 @@
 -- level.lua - Level generation and management
 
 local Cell = require("cell")
+local CellTypes = require("src.cell_types")
 
 local Level = {}
 Level.__index = Level
@@ -207,10 +208,10 @@ function Level:draw(debug)
     
     -- Calculate visible cell range with some margin
     local margin = 5 -- Extra cells to draw outside the visible area
-    local minX = math.max(0, math.floor(0 / Cell.SIZE) - margin)
-    local maxX = math.min(self.width - 1, math.ceil(screenWidth / Cell.SIZE) + margin)
-    local minY = math.max(0, math.floor(0 / Cell.SIZE) - margin)
-    local maxY = math.min(self.height - 1, math.ceil(screenHeight / Cell.SIZE) + margin)
+    local minX = math.max(0, math.floor(0 / CellTypes.SIZE) - margin)
+    local maxX = math.min(self.width - 1, math.ceil(screenWidth / CellTypes.SIZE) + margin)
+    local minY = math.max(0, math.floor(0 / CellTypes.SIZE) - margin)
+    local maxY = math.min(self.height - 1, math.ceil(screenHeight / CellTypes.SIZE) + margin)
     
     -- Batch drawing for better performance
     local sandBatch = {}
