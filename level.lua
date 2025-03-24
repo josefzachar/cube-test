@@ -12,6 +12,7 @@ function Level.new(world, width, height)
     self.width = width
     self.height = height
     self.cells = {}
+    self.visualSandCells = {} -- Array to store visual sand cells
     
     -- Initialize empty grid
     for y = 0, height - 1 do
@@ -27,13 +28,40 @@ end
 function Level:update(dt)
     
     -- Update all cells
-    -- First update physics-based cells (flying sand)
+    -- First update visual sand cells in the grid
     for y = 0, self.height - 1 do
         for x = 0, self.width - 1 do
             if self.cells[y] and self.cells[y][x] and 
-               self.cells[y][x].type == Cell.TYPES.FLYING_SAND then
+               self.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
                 self.cells[y][x]:update(dt, self)
             end
+        end
+    end
+    
+    -- Update visual sand cells in the visualSandCells array
+    local i = 1
+    while i <= #self.visualSandCells do
+        local cell = self.visualSandCells[i]
+        
+        -- Update position based on velocity
+        cell.visualX = cell.visualX + cell.velocityX * dt
+        cell.visualY = cell.visualY + cell.velocityY * dt
+        
+        -- Apply gravity
+        cell.velocityY = cell.velocityY + 500 * dt  -- Gravity
+        
+        -- Update lifetime and alpha
+        cell.lifetime = (cell.lifetime or 0) + dt
+        cell.alpha = math.max(0, 1 - (cell.lifetime / (cell.maxLifetime or 2.0)))
+        
+        -- Check if the visual sand should disappear
+        if cell.lifetime >= (cell.maxLifetime or 2.0) or
+           cell.visualX < 0 or cell.visualX >= self.width * Cell.SIZE or 
+           cell.visualY < 0 or cell.visualY >= self.height * Cell.SIZE then
+            -- Remove the visual sand
+            table.remove(self.visualSandCells, i)
+        else
+            i = i + 1
         end
     end
     
@@ -45,8 +73,7 @@ function Level:update(dt)
             -- Process left to right
             for x = 0, self.width - 1 do
                 if self.cells[y] and self.cells[y][x] and 
-                   self.cells[y][x].type == Cell.TYPES.SAND and
-                   self.cells[y][x].state == Cell.STATES.STATIC then
+                   self.cells[y][x].type == Cell.TYPES.SAND then
                     self.cells[y][x]:update(dt, self)
                 end
             end
@@ -54,8 +81,7 @@ function Level:update(dt)
             -- Process right to left
             for x = self.width - 1, 0, -1 do
                 if self.cells[y] and self.cells[y][x] and 
-                   self.cells[y][x].type == Cell.TYPES.SAND and
-                   self.cells[y][x].state == Cell.STATES.STATIC then
+                   self.cells[y][x].type == Cell.TYPES.SAND then
                     self.cells[y][x]:update(dt, self)
                 end
             end
@@ -72,6 +98,14 @@ function Level:draw()
             end
         end
     end
+    
+    -- Draw visual sand cells
+    for _, cell in ipairs(self.visualSandCells) do
+        -- Draw visual sand at its actual position with alpha for fade out
+        local color = {1.0, 0.9, 0.6, cell.alpha or 1.0} -- Brighter sand for visual effect
+        love.graphics.setColor(color)
+        love.graphics.rectangle("fill", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
+    end
 end
 
 function Level:setCellType(x, y, type)
@@ -81,31 +115,8 @@ function Level:setCellType(x, y, type)
     end
 end
 
--- Convert a sand cell to flying sand when hit by the ball
-function Level:convertSandToFlying(x, y, velocityX, velocityY)
-    -- Check if the coordinates are valid
-    if x < 0 or x >= self.width or y < 0 or y >= self.height then
-        print("  ERROR: Invalid coordinates", x, y)
-        return false
-    end
-    
-    -- Check if the cell exists and is sand
-    if not self.cells[y] or not self.cells[y][x] then
-        print("  ERROR: Cell does not exist at", x, y)
-        return false
-    end
-    
-    -- Only convert sand cells
-    if self.cells[y][x].type ~= Cell.TYPES.SAND then
-        print("  ERROR: Cell at", x, y, "is not sand, it's", self.cells[y][x].type)
-        return false
-    end
-    
-    -- Convert to flying sand
-    print("  SUCCESS: Converting sand at", x, y, "to flying sand")
-    self.cells[y][x]:convertToFlyingSand(self.world, velocityX, velocityY)
-    return true
-end
+-- This function is no longer needed since we're using visual sand
+-- The conversion is done directly in main.lua
 
 function Level:getCellType(x, y)
     -- Get cell type if within bounds

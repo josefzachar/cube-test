@@ -44,9 +44,11 @@ function beginContact(a, b, coll)
     local aData = a:getUserData()
     local bData = b:getUserData()
     
-    -- Handle collisions between ball and stone/temp_stone cells
-    if (aData == "ball" and (bData == "stone" or bData == "temp_stone")) or 
-       ((aData == "stone" or aData == "temp_stone") and bData == "ball") then
+    -- Check if the ball is involved in the collision
+    local isBallCollision = (aData == "ball" or bData == "ball")
+    
+    -- Handle collisions between ball and any cells
+    if isBallCollision then
         -- Ball hit stone or temporary stone - normal physics collision
         
         -- Get the ball's velocity
@@ -55,30 +57,68 @@ function beginContact(a, b, coll)
         local vx, vy = ballBody:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
         
-        -- If the ball is moving fast enough and hit a temporary stone (sand), create a crater
-        if speed > 50 and (aData == "temp_stone" or bData == "temp_stone") then
-            -- Get the stone cell position
-            local stoneFixture = aData == "temp_stone" and a or b
-            local stoneBody = stoneFixture:getBody()
-            local stoneX, stoneY = stoneBody:getPosition()
-            local gridX, gridY = level:getGridCoordinates(stoneX, stoneY)
+        -- Only create a crater if the ball is moving very fast
+        -- We need to convert temp_stone back to sand for the crater effect
+        if speed > 300 then
+            -- Get the collision position
+            local nx, ny = coll:getNormal()
+            local x1, y1, x2, y2 = coll:getPositions()
             
-            print("Ball hit temp_stone at", gridX, gridY, "with speed", speed)
+            -- Use the collision position if available, otherwise use the fixture position
+            local hitX, hitY
+            if x1 and y1 then
+                hitX, hitY = x1, y1
+            else
+                local hitFixture = aData == "temp_stone" and a or b
+                local hitBody = hitFixture:getBody()
+                hitX, hitY = hitBody:getPosition()
+            end
             
-            -- Queue up nearby cells for conversion to flying sand
-            local craterRadius = math.min(3, math.floor(speed / 100) + 1)
-            for dy = -craterRadius, craterRadius do
-                for dx = -craterRadius, craterRadius do
-                    local distance = math.sqrt(dx*dx + dy*dy)
-                    if distance <= craterRadius then
-                        local checkX = gridX + dx
-                        local checkY = gridY + dy
-                        
-                        -- Only affect sand cells
-                        if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
-                            if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
-                                -- Calculate velocity based on impact
-                                local impactFactor = (1 - distance/craterRadius) * math.min(1.0, speed / 300)
+            local gridX, gridY = level:getGridCoordinates(hitX, hitY)
+            
+            print("Ball hit solid at", gridX, gridY, "with speed", speed)
+            
+            -- First, convert temp_stone back to sand in the crater area
+            local directRadius = 2 -- Ball is 20x20, each cell is 10x10, so radius 2 is about right
+            for dy = -directRadius, directRadius do
+                for dx = -directRadius, directRadius do
+                    local checkX = gridX + dx
+                    local checkY = gridY + dy
+                    
+                    -- Only affect temp_stone cells
+                    if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
+                        if level:getCellType(checkX, checkY) == Cell.TYPES.TEMP_STONE then
+                            -- Convert back to sand first
+                            level:setCellType(checkX, checkY, Cell.TYPES.SAND)
+                            
+                            -- Also remove from the sandToStone list to prevent it from being converted back
+                            for i = #sandToStone, 1, -1 do
+                                if sandToStone[i].x == checkX and sandToStone[i].y == checkY then
+                                    table.remove(sandToStone, i)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Now create the crater with visual sand
+            
+            -- Limit the crater to about twice the size of the ball
+            local directRadius = 2 -- Ball is 20x20, each cell is 10x10, so radius 2 is about right
+            for dy = -directRadius, directRadius do
+                for dx = -directRadius, directRadius do
+                    local checkX = gridX + dx
+                    local checkY = gridY + dy
+                    
+                    -- Only affect sand cells
+                    if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
+                        if level:getCellType(checkX, checkY) == Cell.TYPES.SAND then
+                            -- Calculate velocity based on impact
+                            local distance = math.sqrt(dx*dx + dy*dy)
+                            if distance <= directRadius then
+                                local impactFactor = (1 - distance/directRadius) * math.min(1.0, speed / 300)
                                 
                                 -- Direction away from impact
                                 local dirX = dx
@@ -111,6 +151,8 @@ function beginContact(a, b, coll)
                     end
                 end
             end
+            
+            -- We only need one loop to create the crater
         end
     end
 end
@@ -136,16 +178,31 @@ function love.update(dt)
     end
     tempStoneCells = {}
     
-    -- Process sand cells that need to be converted to flying sand
-    -- This is done outside of collision callbacks to avoid Box2D errors
-    if #sandToConvert > 0 then
-        print("Converting", #sandToConvert, "sand cells to flying sand")
-        for _, sand in ipairs(sandToConvert) do
-            print("  Converting sand at", sand.x, sand.y, "to flying sand with velocity", sand.vx, sand.vy)
-            level:convertSandToFlying(sand.x, sand.y, sand.vx, sand.vy)
+-- Process sand cells that need to be converted to visual sand
+-- This is done outside of collision callbacks to avoid Box2D errors
+if #sandToConvert > 0 then
+    print("Converting", #sandToConvert, "sand cells to visual sand")
+    for _, sand in ipairs(sandToConvert) do
+        print("  Converting sand at", sand.x, sand.y, "to visual sand with velocity", sand.vx, sand.vy)
+        
+        -- Get the cell at this position
+        if level.cells[sand.y] and level.cells[sand.y][sand.x] then
+            -- Create a crater by setting the cell to EMPTY
+            level:setCellType(sand.x, sand.y, Cell.TYPES.EMPTY)
+            
+            -- Create a visual effect of flying sand
+            -- We'll just create a new cell at the same position with type VISUAL_SAND
+            local visualSand = Cell.new(world, sand.x, sand.y, Cell.TYPES.VISUAL_SAND)
+            visualSand.velocityX = sand.vx
+            visualSand.velocityY = sand.vy
+            
+            -- Add the visual sand to the level's cells array
+            level.visualSandCells = level.visualSandCells or {}
+            table.insert(level.visualSandCells, visualSand)
         end
-        sandToConvert = {} -- Clear the queue
     end
+    sandToConvert = {} -- Clear the queue
+end
     
     -- Convert temporary stone cells back to sand
     local i = 1
@@ -178,8 +235,8 @@ function love.update(dt)
         local ballX, ballY = ball.body:getPosition()
         local gridX, gridY = level:getGridCoordinates(ballX, ballY)
         
-        -- Convert sand to temporary stone when the ball is about to hit it
-        -- Use a larger radius to catch more sand cells in the ball's path
+        -- Always convert sand to temporary stone for collisions
+        -- This ensures the ball doesn't go through sand like butter
         local radius = 4
         for dy = -radius, radius do
             for dx = -radius, radius do
@@ -196,7 +253,7 @@ function love.update(dt)
                         table.insert(sandToStone, {
                             x = checkX,
                             y = checkY,
-                            timer = 0.5 -- Convert back after 0.5 seconds
+                            timer = 0.2 -- Convert back after 0.2 seconds (reduced from 1.0)
                         })
                     end
                 end
