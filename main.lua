@@ -28,7 +28,7 @@ function love.load()
     -- Set up collision callbacks
     world:setCallbacks(
         function(a, b, coll) Collision.beginContact(a, b, coll, level) end,
-        Collision.endContact,
+        function(a, b, coll) Collision.endContact(a, b, coll, level) end,
         Collision.preSolve,
         Collision.postSolve
     )
@@ -39,6 +39,9 @@ function love.load()
     
     -- Create the square ball
     ball = Ball.new(world, 100, 500)
+    
+    -- Set the ball as the user data for the ball body
+    ball.body:setUserData(ball)
     
     -- Create input handler
     input = Input.new()

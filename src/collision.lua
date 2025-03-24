@@ -17,20 +17,36 @@ function Collision.beginContact(a, b, coll, level)
     
     -- Handle collisions between ball and any cells
     if isBallCollision then
-        -- Get the ball's velocity
-        local ballFixture = aData == "ball" and a or b
+        -- Get the ball fixture and the other fixture
+        local ballFixture, otherFixture
+        if aData == "ball" then
+            ballFixture = a
+            otherFixture = b
+        else
+            ballFixture = b
+            otherFixture = a
+        end
+        
         local ballBody = ballFixture:getBody()
+        local ball = ballBody:getUserData() -- Get the ball object
+        local otherData = otherFixture:getUserData()
+        
+        -- Get the ball's velocity
         local vx, vy = ballBody:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
         
-        -- Get the other fixture (what the ball hit)
-        local otherFixture
-        if aData == "ball" then
-            otherFixture = b
-        else
-            otherFixture = a
+        -- Handle water collisions
+        if otherData == "water" then
+            -- Get the water cell position
+            local waterBody = otherFixture:getBody()
+            local waterX, waterY = waterBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(waterX, waterY)
+            
+            -- Tell the ball it's in water
+            if ball and ball.enterWater then
+                ball:enterWater(gridX, gridY)
+            end
         end
-        local otherData = otherFixture:getUserData()
         
         -- Only create a crater if the ball is moving fast and hit sand
         if speed > 300 and (otherData == "sand" or otherData == "stone") then
@@ -102,8 +118,42 @@ function Collision.beginContact(a, b, coll, level)
     end
 end
 
-function Collision.endContact(a, b, coll)
-    -- Not used but required by LÖVE
+function Collision.endContact(a, b, coll, level)
+    local aData = a:getUserData()
+    local bData = b:getUserData()
+    
+    -- Check if the ball is involved in the collision
+    local isBallCollision = (aData == "ball" or bData == "ball")
+    
+    -- Handle collisions between ball and any cells
+    if isBallCollision then
+        -- Get the ball fixture and the other fixture
+        local ballFixture, otherFixture
+        if aData == "ball" then
+            ballFixture = a
+            otherFixture = b
+        else
+            ballFixture = b
+            otherFixture = a
+        end
+        
+        local ballBody = ballFixture:getBody()
+        local ball = ballBody:getUserData() -- Get the ball object
+        local otherData = otherFixture:getUserData()
+        
+        -- Handle water collisions
+        if otherData == "water" then
+            -- Get the water cell position
+            local waterBody = otherFixture:getBody()
+            local waterX, waterY = waterBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(waterX, waterY)
+            
+            -- Tell the ball it's exiting water
+            if ball and ball.exitWater then
+                ball:exitWater(gridX, gridY)
+            end
+        end
+    end
 end
 
 function Collision.preSolve(a, b, coll)

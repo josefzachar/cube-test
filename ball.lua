@@ -5,6 +5,7 @@ Ball.__index = Ball
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
+local BLUE_TINT = {0.8, 0.8, 1, 1} -- Slight blue tint for when ball is in water
 
 function Ball.new(world, x, y)
     local self = setmetatable({}, Ball)
@@ -19,6 +20,8 @@ function Ball.new(world, x, y)
     
     self.isLaunched = false
     self.size = 20 -- Store the ball size for collision detection
+    self.inWater = false -- Flag to track if the ball is in water
+    self.waterCells = {} -- Table to track which water cells the ball is in
     
     return self
 end
@@ -32,6 +35,20 @@ function Ball:update(dt)
     if speed > 50 then
         -- Apply torque proportional to speed and direction
         self.body:applyTorque(vx * 0.1)
+    end
+    
+    -- Apply water resistance if the ball is in water
+    if self.inWater and speed > 10 then
+        -- Calculate drag force (proportional to velocity squared)
+        local dragCoefficient = 0.01 -- Adjust this value to control water resistance
+        local dragForceX = -vx * speed * dragCoefficient
+        local dragForceY = -vy * speed * dragCoefficient
+        
+        -- Apply buoyancy (upward force)
+        local buoyancyForce = 100 -- Adjust this value to control buoyancy
+        
+        -- Apply the forces
+        self.body:applyForce(dragForceX, dragForceY + buoyancyForce)
     end
     
     -- Check if ball has stopped
@@ -87,7 +104,14 @@ end
 
 function Ball:draw(debug)
     love.graphics.push()
-    love.graphics.setColor(WHITE)
+    
+    -- Use blue tint when in water
+    if self.inWater then
+        love.graphics.setColor(BLUE_TINT)
+    else
+        love.graphics.setColor(WHITE)
+    end
+    
     love.graphics.translate(self.body:getX(), self.body:getY())
     love.graphics.rotate(self.body:getAngle())
     love.graphics.rectangle("fill", -10, -10, 20, 20) -- Draw a filled 20x20 square centered at the body position
@@ -121,6 +145,12 @@ function Ball:draw(debug)
         -- Draw bounding box
         love.graphics.setColor(0, 1, 1, 0.5) -- Cyan
         love.graphics.rectangle("line", x - 10, y - 10, 20, 20)
+        
+        -- Show water status
+        if self.inWater then
+            love.graphics.setColor(0, 0.5, 1, 1)
+            love.graphics.print("In Water", x + 15, y - 20)
+        end
     end
 end
 
@@ -152,6 +182,28 @@ end
 
 function Ball:isMoving()
     return self.isLaunched
+end
+
+-- Add a water cell to the ball's water cells
+function Ball:enterWater(cellX, cellY)
+    local key = cellX .. "," .. cellY
+    self.waterCells[key] = true
+    self.inWater = true
+end
+
+-- Remove a water cell from the ball's water cells
+function Ball:exitWater(cellX, cellY)
+    local key = cellX .. "," .. cellY
+    self.waterCells[key] = nil
+    
+    -- Check if the ball is still in any water cells
+    local stillInWater = false
+    for _, _ in pairs(self.waterCells) do
+        stillInWater = true
+        break
+    end
+    
+    self.inWater = stillInWater
 end
 
 return Ball
