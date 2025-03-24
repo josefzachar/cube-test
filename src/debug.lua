@@ -45,8 +45,6 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
                     level.cellCounts.sandCount = level.cellCounts.sandCount + 1
                 elseif cellType == CellTypes.TYPES.STONE then
                     level.cellCounts.stoneCount = level.cellCounts.stoneCount + 1
-                elseif cellType == CellTypes.TYPES.TEMP_STONE then
-                    level.cellCounts.tempStoneCount = level.cellCounts.tempStoneCount + 1
                 elseif cellType == CellTypes.TYPES.EMPTY then
                     level.cellCounts.emptyCount = level.cellCounts.emptyCount + 1
                 elseif cellType == CellTypes.TYPES.VISUAL_SAND then
@@ -63,16 +61,14 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     -- Use cached cell counts
     local sandCount = level.cellCounts.sandCount
     local stoneCount = level.cellCounts.stoneCount
-    local tempStoneCount = level.cellCounts.tempStoneCount
     local emptyCount = level.cellCounts.emptyCount
     local visualSandCount = level.cellCounts.visualSandCount
     
     -- Display cell counts
     love.graphics.print("Sand: " .. sandCount, 10, 30)
     love.graphics.print("Stone: " .. stoneCount, 10, 50)
-    love.graphics.print("Temp Stone: " .. tempStoneCount, 10, 70)
-    love.graphics.print("Empty: " .. emptyCount, 10, 90)
-    love.graphics.print("Visual Sand: " .. visualSandCount, 10, 110)
+    love.graphics.print("Empty: " .. emptyCount, 10, 70)
+    love.graphics.print("Visual Sand: " .. visualSandCount, 10, 90)
     
     -- Display ball info
     if ball.body then

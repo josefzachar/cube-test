@@ -45,24 +45,15 @@ function love.load()
 end
 
 function love.update(dt)
-    -- Clear any temporary stone cells from the previous frame
-    Collision.clearTempStoneCells()
-    
     -- Process sand cells that need to be converted to visual sand
     Effects.processSandConversion(Collision.sandToConvert, level)
     Collision.sandToConvert = {} -- Clear the queue
-    
-    -- Update temporary stone cells
-    Collision.updateTempStone(dt)
     
     -- Update the physics world
     world:update(dt)
     
     -- Update the ball
     local ballStopped = ball:update(dt)
-    
-    -- Check for ball collisions with sand
-    Effects.handleBallSandCollision(ball, level, Collision.sandToStone)
     
     -- Update the level (pass the ball for cluster activation)
     level:update(dt, ball)

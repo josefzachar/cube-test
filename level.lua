@@ -216,7 +216,6 @@ function Level:draw(debug)
     -- Batch drawing for better performance
     local sandBatch = {}
     local stoneBatch = {}
-    local tempStoneBatch = {}
     
     -- Collect cells for batch drawing
     for y = minY, maxY do
@@ -229,8 +228,6 @@ function Level:draw(debug)
                     table.insert(sandBatch, {x = x, y = y})
                 elseif cellType == Cell.TYPES.STONE then
                     table.insert(stoneBatch, {x = x, y = y})
-                elseif cellType == Cell.TYPES.TEMP_STONE then
-                    table.insert(tempStoneBatch, {x = x, y = y})
                 elseif debug and cellType == Cell.TYPES.EMPTY then
                     -- Draw empty cells only in debug mode
                     love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
@@ -266,18 +263,6 @@ function Level:draw(debug)
         end
     end
     
-    -- Draw temp stone cells
-    love.graphics.setColor(0.9, 0.8, 0.5, 1) -- Same as sand color
-    for _, cell in ipairs(tempStoneBatch) do
-        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
-        
-        -- Draw debug info
-        if debug then
-            love.graphics.setColor(1, 0, 1, 1) -- Magenta
-            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
-            love.graphics.setColor(0.9, 0.8, 0.5, 1) -- Reset to sand color
-        end
-    end
     
     -- Draw visual sand cells
     if #self.visualSandCells > 0 then

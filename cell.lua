@@ -31,8 +31,8 @@ function Cell.new(world, x, y, type)
     self.shape = nil
     self.fixture = nil
     
-    -- Create physics bodies for stone cells only
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.TEMP_STONE then
+    -- Create physics bodies for stone and sand cells
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND then
         self:createPhysics(world)
     end
     
@@ -41,18 +41,27 @@ end
 
 function Cell:createPhysics(world)
     -- Create physics body based on cell type
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.TEMP_STONE then
+    if self.type == Cell.TYPES.STONE then
         -- Stone cells are static (immovable)
         self.body = love.physics.newBody(world, self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, "static")
         self.shape = love.physics.newRectangleShape(Cell.SIZE, Cell.SIZE)
         self.fixture = love.physics.newFixture(self.body, self.shape)
         
-        -- Set user data based on type
-        if self.type == Cell.TYPES.STONE then
-            self.fixture:setUserData("stone")
-        else
-            self.fixture:setUserData("temp_stone")
-        end
+        -- Set user data
+        self.fixture:setUserData("stone")
+    end
+    
+    -- Sand cells now also get physics bodies to interact with the ball
+    if self.type == Cell.TYPES.SAND then
+        -- Sand cells are static but can be displaced
+        self.body = love.physics.newBody(world, self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, "static")
+        self.shape = love.physics.newRectangleShape(Cell.SIZE, Cell.SIZE)
+        self.fixture = love.physics.newFixture(self.body, self.shape)
+        self.fixture:setUserData("sand")
+        
+        -- Make sand less solid than stone
+        self.fixture:setFriction(0.3)
+        self.fixture:setRestitution(0.2)
     end
 end
 
@@ -90,9 +99,6 @@ function Cell:draw(debug)
             elseif self.type == Cell.TYPES.STONE then
                 love.graphics.setColor(1, 0, 0, 1) -- Red
                 love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
-            elseif self.type == Cell.TYPES.TEMP_STONE then
-                love.graphics.setColor(1, 0, 1, 1) -- Magenta
-                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
             end
         end
         
@@ -114,13 +120,12 @@ local EMPTY = CellTypes.TYPES.EMPTY
 local SAND = CellTypes.TYPES.SAND
 local STONE = CellTypes.TYPES.STONE
 local VISUAL_SAND = CellTypes.TYPES.VISUAL_SAND
-local TEMP_STONE = CellTypes.TYPES.TEMP_STONE
 
 function Cell:update(dt, level)
     local cellType = self.type
     
     -- Fast return for static cells
-    if cellType == EMPTY or cellType == STONE or cellType == TEMP_STONE then
+    if cellType == EMPTY or cellType == STONE then
         return false -- No update needed for empty or stone cells
     end
     
@@ -289,7 +294,7 @@ function Cell:setType(world, newType)
     self.type = newType
     
     -- Create physics if needed
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.TEMP_STONE then
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND then
         self:createPhysics(world)
     end
     
