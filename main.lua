@@ -79,6 +79,18 @@ function love.keypressed(key)
             local gridX, gridY = level:getGridCoordinates(x, y)
             level:addSandPile(gridX, gridY, 10, 20)
             print("Added a sand pile at ball position")
+        elseif result == "dirt_block" then
+            -- Add a dirt block
+            local x, y = ball.body:getPosition()
+            local gridX, gridY = level:getGridCoordinates(x, y)
+            level:addDirtBlock(gridX, gridY, 5, 5)
+            print("Added a dirt block at ball position")
+        elseif result == "water_pool" then
+            -- Add a water pool
+            local x, y = ball.body:getPosition()
+            local gridX, gridY = level:getGridCoordinates(x, y)
+            level:addWaterPool(gridX, gridY, 10, 3)
+            print("Added a water pool at ball position")
         end
     end
 end

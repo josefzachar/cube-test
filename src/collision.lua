@@ -48,8 +48,8 @@ function Collision.beginContact(a, b, coll, level)
             end
         end
         
-        -- Only create a crater if the ball is moving fast and hit sand
-        if speed > 300 and (otherData == "sand" or otherData == "stone") then
+        -- Only create a crater if the ball is moving fast and hit sand, stone, or dirt
+        if speed > 300 and (otherData == "sand" or otherData == "stone" or otherData == "dirt") then
             -- Get the collision position
             local nx, ny = coll:getNormal()
             local x1, y1, x2, y2 = coll:getPositions()
@@ -75,9 +75,10 @@ function Collision.beginContact(a, b, coll, level)
                     local checkX = gridX + dx
                     local checkY = gridY + dy
                     
-                    -- Only affect sand cells
+                    -- Only affect sand and dirt cells
                     if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
-                        if level:getCellType(checkX, checkY) == CellTypes.TYPES.SAND then
+                        local cellType = level:getCellType(checkX, checkY)
+                        if cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT then
                             -- Calculate velocity based on impact
                             local distance = math.sqrt(dx*dx + dy*dy)
                             if distance <= directRadius then

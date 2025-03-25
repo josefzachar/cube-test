@@ -5,27 +5,39 @@ local CellTypes = require("src.cell_types")
 
 local Effects = {}
 
--- Process sand cells that need to be converted to visual sand
+-- Process sand and dirt cells that need to be converted to visual particles
 function Effects.processSandConversion(sandToConvert, level)
     if #sandToConvert > 0 then
-        print("Converting", #sandToConvert, "sand cells to visual sand")
-        for _, sand in ipairs(sandToConvert) do
-            print("  Converting sand at", sand.x, sand.y, "to visual sand with velocity", sand.vx, sand.vy)
+        print("Converting", #sandToConvert, "cells to visual particles")
+        for _, cell in ipairs(sandToConvert) do
+            local cellType = level:getCellType(cell.x, cell.y)
+            local cellTypeName = "unknown"
+            local visualType = CellTypes.TYPES.VISUAL_SAND -- Default to visual sand
+            
+            if cellType == CellTypes.TYPES.SAND then
+                cellTypeName = "sand"
+                visualType = CellTypes.TYPES.VISUAL_SAND
+            elseif cellType == CellTypes.TYPES.DIRT then
+                cellTypeName = "dirt"
+                visualType = CellTypes.TYPES.VISUAL_DIRT
+            end
+            
+            print("  Converting " .. cellTypeName .. " at", cell.x, cell.y, "to visual particle with velocity", cell.vx, cell.vy)
             
             -- Get the cell at this position
-            if level.cells[sand.y] and level.cells[sand.y][sand.x] then
+            if level.cells[cell.y] and level.cells[cell.y][cell.x] then
                 -- Create a crater by setting the cell to EMPTY
-                level:setCellType(sand.x, sand.y, CellTypes.TYPES.EMPTY)
+                level:setCellType(cell.x, cell.y, CellTypes.TYPES.EMPTY)
                 
-                -- Create a visual effect of flying sand
-                -- We'll just create a new cell at the same position with type VISUAL_SAND
-                local visualSand = Cell.new(level.world, sand.x, sand.y, CellTypes.TYPES.VISUAL_SAND)
-                visualSand.velocityX = sand.vx
-                visualSand.velocityY = sand.vy
+                -- Create a visual effect of flying particle
+                -- We'll just create a new cell at the same position with the appropriate visual type
+                local visualParticle = Cell.new(level.world, cell.x, cell.y, visualType)
+                visualParticle.velocityX = cell.vx
+                visualParticle.velocityY = cell.vy
                 
-                -- Add the visual sand to the level's cells array
+                -- Add the visual particle to the level's cells array
                 level.visualSandCells = level.visualSandCells or {}
-                table.insert(level.visualSandCells, visualSand)
+                table.insert(level.visualSandCells, visualParticle)
             end
         end
     end

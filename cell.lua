@@ -4,6 +4,7 @@ local CellTypes = require("src.cell_types")
 local Sand = require("src.sand")
 local Water = require("src.water")
 local Stone = require("src.stone")
+local Dirt = require("dirt") -- Use dirt.lua from root directory
 
 local Cell = {}
 Cell.__index = Cell
@@ -34,8 +35,8 @@ function Cell.new(world, x, y, type)
     self.shape = nil
     self.fixture = nil
     
-    -- Create physics bodies for stone, sand, and water cells
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER then
+    -- Create physics bodies for stone, sand, water, and dirt cells
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT then
         self:createPhysics(world)
     end
     
@@ -50,6 +51,8 @@ function Cell:createPhysics(world)
         Sand.createPhysics(self, world)
     elseif self.type == Cell.TYPES.WATER then
         Water.createPhysics(self, world)
+    elseif self.type == Cell.TYPES.DIRT then
+        Dirt.createPhysics(self, world)
     end
 end
 
@@ -63,13 +66,13 @@ function Cell:draw(debug)
         return
     end
     
-    if self.type == Cell.TYPES.VISUAL_SAND then
-        -- Draw visual sand at its actual position with alpha for fade out
+    if self.type == Cell.TYPES.VISUAL_SAND or self.type == Cell.TYPES.VISUAL_DIRT then
+        -- Draw visual particles at their actual position with alpha for fade out
         local color = COLORS[self.type]
         love.graphics.setColor(color[1], color[2], color[3], self.alpha)
         love.graphics.rectangle("fill", self.visualX, self.visualY, Cell.SIZE, Cell.SIZE)
         
-        -- Draw debug info for visual sand
+        -- Draw debug info for visual particles
         if debug then
             love.graphics.setColor(1, 0, 0, self.alpha)
             love.graphics.rectangle("line", self.visualX, self.visualY, Cell.SIZE, Cell.SIZE)
@@ -89,6 +92,9 @@ function Cell:draw(debug)
                 love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
             elseif self.type == Cell.TYPES.WATER then
                 love.graphics.setColor(0, 1, 1, 1) -- Cyan
+                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+            elseif self.type == Cell.TYPES.DIRT then
+                love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
                 love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
             end
         end
@@ -111,14 +117,21 @@ local EMPTY = CellTypes.TYPES.EMPTY
 local SAND = CellTypes.TYPES.SAND
 local STONE = CellTypes.TYPES.STONE
 local VISUAL_SAND = CellTypes.TYPES.VISUAL_SAND
+local VISUAL_DIRT = CellTypes.TYPES.VISUAL_DIRT
 local WATER = CellTypes.TYPES.WATER
+local DIRT = CellTypes.TYPES.DIRT
 
 function Cell:update(dt, level)
     local cellType = self.type
     
-    -- Fast return for static cells
+    -- Fast return for static cells (dirt is static but can displace water)
     if cellType == EMPTY or cellType == STONE then
         return false -- No update needed for empty or stone cells
+    end
+    
+    -- Handle dirt
+    if cellType == DIRT then
+        return Dirt.update(self, dt, level)
     end
     
     -- Handle water
@@ -126,8 +139,11 @@ function Cell:update(dt, level)
         return Water.update(self, dt, level)
     end
     
-    -- Handle visual flying sand
+    -- Handle visual flying sand and dirt
     if cellType == VISUAL_SAND then
+        return Sand.updateVisual(self, dt, level)
+    elseif cellType == VISUAL_DIRT then
+        -- Use the same visual update logic as sand for dirt
         return Sand.updateVisual(self, dt, level)
     
     -- Handle regular sand (cellular automata)
@@ -160,12 +176,12 @@ function Cell:setType(world, newType)
     self.type = newType
     
     -- Create physics if needed
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER then
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT then
         self:createPhysics(world)
     end
     
-    -- Initialize visual sand properties
-    if self.type == Cell.TYPES.VISUAL_SAND then
+    -- Initialize visual particle properties
+    if self.type == Cell.TYPES.VISUAL_SAND or self.type == Cell.TYPES.VISUAL_DIRT then
         self.visualX = self.x * Cell.SIZE
         self.visualY = self.y * Cell.SIZE
         self.lifetime = 0

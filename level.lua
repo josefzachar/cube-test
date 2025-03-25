@@ -109,10 +109,29 @@ function Level:addWaterPool(x, y, width, height)
     Water.createPool(self, x, y, width, height)
 end
 
+-- Add a dirt block at the specified position
+function Level:addDirtBlock(x, y, width, height)
+    -- Delegate to the LevelGenerator
+    local Dirt = require("dirt") -- Use dirt.lua from root directory
+    Dirt.createBlock(self, x, y, width, height)
+end
+
 -- Add a large amount of sand for performance testing
 function Level:addLotsOfSand(amount)
     -- Delegate to the LevelGenerator
     LevelGenerator.createSandTestLevel(self, amount)
+end
+
+-- Create a level for testing dirt and water interaction
+function Level:createDirtWaterTestLevel()
+    -- Delegate to the LevelGenerator
+    LevelGenerator.createDirtWaterTestLevel(self)
+end
+
+-- Create a level with water for testing fluid dynamics
+function Level:createWaterTestLevel()
+    -- Delegate to the LevelGenerator
+    LevelGenerator.createWaterTestLevel(self)
 end
 
 function Level:getWorldCoordinates(gridX, gridY)

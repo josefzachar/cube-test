@@ -55,6 +55,16 @@ function Updater.updateRowLeftToRight(level, y, dt)
                     table.insert(level.activeCells, {x = x, y = y})
                 end
             end
+            
+            -- Update dirt cells - ALWAYS update ALL dirt cells
+            if level.cells[y][x].type == Cell.TYPES.DIRT then
+                local changed = level.cells[y][x]:update(dt, level)
+                
+                -- If the cell changed, mark it as active for next frame
+                if changed then
+                    table.insert(level.activeCells, {x = x, y = y})
+                end
+            end
         end
     end
 end

@@ -38,6 +38,9 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
         local maxY = math.min(level.height - 1, math.ceil(screenHeight / CellTypes.SIZE) + margin)
         
         -- Count cells by type (only in visible area)
+        level.cellCounts.dirtCount = 0
+        level.cellCounts.waterCount = 0
+        
         for y = minY, maxY do
             for x = minX, maxX do
                 local cellType = level:getCellType(x, y)
@@ -49,6 +52,10 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
                     level.cellCounts.emptyCount = level.cellCounts.emptyCount + 1
                 elseif cellType == CellTypes.TYPES.VISUAL_SAND then
                     level.cellCounts.visualSandCount = level.cellCounts.visualSandCount + 1
+                elseif cellType == CellTypes.TYPES.DIRT then
+                    level.cellCounts.dirtCount = level.cellCounts.dirtCount + 1
+                elseif cellType == CellTypes.TYPES.WATER then
+                    level.cellCounts.waterCount = level.cellCounts.waterCount + 1
                 end
             end
         end
@@ -63,26 +70,30 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     local stoneCount = level.cellCounts.stoneCount
     local emptyCount = level.cellCounts.emptyCount
     local visualSandCount = level.cellCounts.visualSandCount
+    local dirtCount = level.cellCounts.dirtCount or 0
+    local waterCount = level.cellCounts.waterCount or 0
     
     -- Display cell counts
     love.graphics.print("Sand: " .. sandCount, 10, 30)
     love.graphics.print("Stone: " .. stoneCount, 10, 50)
-    love.graphics.print("Empty: " .. emptyCount, 10, 70)
-    love.graphics.print("Visual Sand: " .. visualSandCount, 10, 90)
+    love.graphics.print("Dirt: " .. dirtCount, 10, 70)
+    love.graphics.print("Water: " .. waterCount, 10, 90)
+    love.graphics.print("Empty: " .. emptyCount, 10, 110)
+    love.graphics.print("Visual Sand: " .. visualSandCount, 10, 130)
     
     -- Display ball info
     if ball.body then
         local x, y = ball.body:getPosition()
         local vx, vy = ball.body:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
-        love.graphics.print(string.format("Ball: x=%.1f, y=%.1f", x, y), 10, 130)
-        love.graphics.print(string.format("Velocity: vx=%.1f, vy=%.1f", vx, vy), 10, 150)
-        love.graphics.print(string.format("Speed: %.1f", speed), 10, 170)
+        love.graphics.print(string.format("Ball: x=%.1f, y=%.1f", x, y), 10, 150)
+        love.graphics.print(string.format("Velocity: vx=%.1f, vy=%.1f", vx, vy), 10, 170)
+        love.graphics.print(string.format("Speed: %.1f", speed), 10, 190)
     end
     
     -- Display optimization info
-    love.graphics.print("Performance Optimization:", 10, 200)
-    love.graphics.print("Cluster Size: " .. level.clusterSize .. "x" .. level.clusterSize, 10, 220)
+    love.graphics.print("Performance Optimization:", 10, 220)
+    love.graphics.print("Cluster Size: " .. level.clusterSize .. "x" .. level.clusterSize, 10, 240)
     
     -- Count active clusters
     local clusterRows = math.ceil(level.height / level.clusterSize)
@@ -98,8 +109,8 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
         end
     end
     
-    love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 240)
-    love.graphics.print("Active Cells: " .. #level.activeCells, 10, 260)
+    love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 260)
+    love.graphics.print("Active Cells: " .. #level.activeCells, 10, 280)
     
     -- Only draw active clusters if specifically requested
     if Debug.showActiveCells then
@@ -154,6 +165,20 @@ function Debug.handleKeyPressed(key, level)
         Debug.vsyncEnabled = not Debug.vsyncEnabled
         love.window.setVSync(Debug.vsyncEnabled and 1 or 0)
         print("VSync: " .. (Debug.vsyncEnabled and "ON" or "OFF"))
+    elseif key == "w" then
+        -- Create water test level
+        level:createWaterTestLevel()
+        print("Created water test level")
+    elseif key == "t" then
+        -- Create dirt-water test level
+        level:createDirtWaterTestLevel()
+        print("Created dirt-water test level")
+    elseif key == "e" then
+        -- Add a dirt block
+        return "dirt_block" -- Signal to add a dirt block at ball position
+    elseif key == "q" then
+        -- Add a water pool
+        return "water_pool" -- Signal to add a water pool at ball position
     end
     
     return false -- No debug action taken

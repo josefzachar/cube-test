@@ -21,6 +21,7 @@ function Renderer.drawLevel(level, debug)
     local sandBatch = {}
     local stoneBatch = {}
     local waterBatch = {}
+    local dirtBatch = {}
     
     -- Collect cells for batch drawing
     for y = minY, maxY do
@@ -35,6 +36,8 @@ function Renderer.drawLevel(level, debug)
                     table.insert(stoneBatch, {x = x, y = y})
                 elseif cellType == Cell.TYPES.WATER then
                     table.insert(waterBatch, {x = x, y = y})
+                elseif cellType == Cell.TYPES.DIRT then
+                    table.insert(dirtBatch, {x = x, y = y})
                 elseif debug and cellType == Cell.TYPES.EMPTY then
                     -- Draw empty cells only in debug mode
                     love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
@@ -52,6 +55,9 @@ function Renderer.drawLevel(level, debug)
     
     -- Draw water cells
     Renderer.drawWaterBatch(waterBatch, debug)
+    
+    -- Draw dirt cells
+    Renderer.drawDirtBatch(dirtBatch, debug)
     
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
@@ -113,9 +119,10 @@ function Renderer.drawWaterBatch(waterBatch, debug)
     end
 end
 
--- Draw visual sand cells
+-- Draw visual particles (sand and dirt)
 function Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
     
     if #level.visualSandCells > 0 then
         for _, cell in ipairs(level.visualSandCells) do
@@ -125,17 +132,37 @@ function Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
                cell.visualY >= minY * Cell.SIZE - Cell.SIZE and
                cell.visualY <= maxY * Cell.SIZE + Cell.SIZE then
                 
-                -- Draw visual sand at its actual position with alpha for fade out
-                local color = {1.0, 0.9, 0.6, cell.alpha or 1.0} -- Brighter sand for visual effect
-                love.graphics.setColor(color)
-                love.graphics.rectangle("fill", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
-                
-                -- Draw debug info for visual sand
-                if debug then
-                    love.graphics.setColor(1, 0, 0, cell.alpha or 1.0)
-                    love.graphics.rectangle("line", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
+                -- Get the correct color based on cell type
+                local color = COLORS[cell.type]
+                if color then
+                    -- Apply alpha for fade out
+                    love.graphics.setColor(color[1], color[2], color[3], cell.alpha or 1.0)
+                    love.graphics.rectangle("fill", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
+                    
+                    -- Draw debug info for visual particles
+                    if debug then
+                        love.graphics.setColor(1, 0, 0, cell.alpha or 1.0)
+                        love.graphics.rectangle("line", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
+                    end
                 end
             end
+        end
+    end
+end
+
+-- Draw dirt cells
+function Renderer.drawDirtBatch(dirtBatch, debug)
+    local Cell = require("cell")
+    
+    love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Dirt color (brown)
+    for _, cell in ipairs(dirtBatch) do
+        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        
+        -- Draw debug info
+        if debug then
+            love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
+            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
+            love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Reset to dirt color
         end
     end
 end

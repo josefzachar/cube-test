@@ -4,6 +4,21 @@ local CellTypes = require("src.cell_types")
 local Sand = require("src.sand")
 local Water = require("src.water")
 local Stone = require("src.stone")
+-- Try loading Dirt module from root directory
+print("About to require dirt module from root")
+local status, result = pcall(function()
+    local module = require("dirt")
+    print("Module type:", type(module))
+    return module
+end)
+
+if not status then
+    print("Error loading dirt module:", result)
+    Dirt = {}
+else
+    Dirt = result
+end
+print("Dirt module loaded:", Dirt, "type:", type(Dirt))
 
 local LevelGenerator = {}
 
@@ -26,6 +41,13 @@ function LevelGenerator.createTestLevel(level)
     -- Add water pools
     Water.createPool(level, 20, level.height - 5, 20, 3)  -- Ground level pool
     Water.createPool(level, 50, level.height - 30, 30, 10) -- Larger pool higher up
+    
+    -- Add dirt blocks
+    print("Dirt type:", type(Dirt))
+    if type(Dirt) == "table" then
+        Dirt.createBlock(level, 100, level.height - 15, 8, 5)
+        Dirt.createPlatform(level, 40, level.height - 40, 15)
+    end
 end
 
 -- Create a level with lots of sand for performance testing
@@ -76,6 +98,32 @@ function LevelGenerator.createMixedLevel(level)
     -- Add water pools
     Water.createPool(level, 50, level.height - 5, 40, 4)
     Water.createPool(level, 90, level.height - 40, 20, 8)
+    
+    -- Add dirt blocks
+    Dirt.createBlock(level, 110, level.height - 25, 10, 8)
+    Dirt.createPlatform(level, 60, level.height - 50, 20)
+end
+
+-- Create a level for testing dirt and water interaction
+function LevelGenerator.createDirtWaterTestLevel(level)
+    -- Create stone walls around the level
+    Stone.createWalls(level)
+    
+    -- Create some stone platforms
+    Stone.createPlatform(level, 30, level.height - 30, 20)
+    Stone.createPlatform(level, 80, level.height - 40, 30)
+    
+    -- Add water pools
+    Water.createPool(level, 40, level.height - 5, 80, 10)  -- Large pool at bottom
+    Water.createPool(level, 60, level.height - 50, 40, 15) -- Pool at top
+    
+    -- Add dirt blocks above water to demonstrate sinking
+    Dirt.createBlock(level, 50, level.height - 20, 10, 5)
+    Dirt.createBlock(level, 70, level.height - 60, 15, 5)
+    
+    -- Add some dirt platforms
+    Dirt.createPlatform(level, 100, level.height - 20, 25)
+    Dirt.createPlatform(level, 20, level.height - 50, 15)
 end
 
 return LevelGenerator
