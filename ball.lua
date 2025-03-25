@@ -6,6 +6,7 @@ Ball.__index = Ball
 -- Colors
 local WHITE = {1, 1, 1, 1}
 local BLUE_TINT = {0.8, 0.8, 1, 1} -- Slight blue tint for when ball is in water
+local SAND_TINT = {1, 0.9, 0.7, 1} -- Slight yellow/brown tint for when ball is in sand
 
 function Ball.new(world, x, y)
     local self = setmetatable({}, Ball)
@@ -22,6 +23,8 @@ function Ball.new(world, x, y)
     self.size = 20 -- Store the ball size for collision detection
     self.inWater = false -- Flag to track if the ball is in water
     self.waterCells = {} -- Table to track which water cells the ball is in
+    self.inSand = false -- Flag to track if the ball is in sand
+    self.sandCells = {} -- Table to track which sand cells the ball is in
     
     return self
 end
@@ -49,6 +52,21 @@ function Ball:update(dt)
         
         -- Apply the forces
         self.body:applyForce(dragForceX, dragForceY + buoyancyForce)
+    end
+    
+    -- Apply sand resistance if the ball is in sand
+    if self.inSand and speed > 5 then
+        -- Calculate drag force (proportional to velocity squared)
+        local sandDragCoefficient = 0.05 -- Much higher drag coefficient for sand
+        local dragForceX = -vx * speed * sandDragCoefficient
+        local dragForceY = -vy * speed * sandDragCoefficient
+        
+        -- Apply the forces - no buoyancy in sand, just resistance
+        self.body:applyForce(dragForceX, dragForceY)
+        
+        -- Also apply a damping effect to angular velocity
+        local av = self.body:getAngularVelocity()
+        self.body:setAngularVelocity(av * 0.95) -- Reduce angular velocity by 5% each frame
     end
     
     -- Check if ball has stopped
@@ -105,9 +123,11 @@ end
 function Ball:draw(debug)
     love.graphics.push()
     
-    -- Use blue tint when in water
+    -- Use appropriate tint based on what the ball is in
     if self.inWater then
         love.graphics.setColor(BLUE_TINT)
+    elseif self.inSand then
+        love.graphics.setColor(SAND_TINT)
     else
         love.graphics.setColor(WHITE)
     end
@@ -146,10 +166,13 @@ function Ball:draw(debug)
         love.graphics.setColor(0, 1, 1, 0.5) -- Cyan
         love.graphics.rectangle("line", x - 10, y - 10, 20, 20)
         
-        -- Show water status
+        -- Show environment status
         if self.inWater then
             love.graphics.setColor(0, 0.5, 1, 1)
             love.graphics.print("In Water", x + 15, y - 20)
+        elseif self.inSand then
+            love.graphics.setColor(0.9, 0.7, 0.3, 1)
+            love.graphics.print("In Sand", x + 15, y - 20)
         end
     end
 end
@@ -204,6 +227,28 @@ function Ball:exitWater(cellX, cellY)
     end
     
     self.inWater = stillInWater
+end
+
+-- Add a sand cell to the ball's sand cells
+function Ball:enterSand(cellX, cellY)
+    local key = cellX .. "," .. cellY
+    self.sandCells[key] = true
+    self.inSand = true
+end
+
+-- Remove a sand cell from the ball's sand cells
+function Ball:exitSand(cellX, cellY)
+    local key = cellX .. "," .. cellY
+    self.sandCells[key] = nil
+    
+    -- Check if the ball is still in any sand cells
+    local stillInSand = false
+    for _, _ in pairs(self.sandCells) do
+        stillInSand = true
+        break
+    end
+    
+    self.inSand = stillInSand
 end
 
 return Ball

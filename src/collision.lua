@@ -46,6 +46,17 @@ function Collision.beginContact(a, b, coll, level)
             if ball and ball.enterWater then
                 ball:enterWater(gridX, gridY)
             end
+        -- Handle sand collisions
+        elseif otherData == "sand" then
+            -- Get the sand cell position
+            local sandBody = otherFixture:getBody()
+            local sandX, sandY = sandBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(sandX, sandY)
+            
+            -- Tell the ball it's in sand
+            if ball and ball.enterSand then
+                ball:enterSand(gridX, gridY)
+            end
         end
         
         -- Only create a crater if the ball is moving fast and hit sand, stone, or dirt
@@ -67,49 +78,68 @@ function Collision.beginContact(a, b, coll, level)
             
             print("Ball hit solid at", gridX, gridY, "with speed", speed)
             
+            -- Slow down the ball more when it hits sand
+            if otherData == "sand" then
+                -- Apply a stronger damping force to the ball when it hits sand
+                local dampingFactor = 0.7  -- Higher value means more damping
+                local vx, vy = ballBody:getLinearVelocity()
+                ballBody:setLinearVelocity(vx * (1 - dampingFactor), vy * (1 - dampingFactor))
+                
+                -- Also reduce angular velocity
+                local av = ballBody:getAngularVelocity()
+                ballBody:setAngularVelocity(av * (1 - dampingFactor))
+            end
+            
             -- Create the crater with visual sand
-            -- Limit the crater to about twice the size of the ball
-            local directRadius = 2 -- Ball is 20x20, each cell is 10x10, so radius 2 is about right
+            -- Make the crater larger for sand to simulate digging in
+            local directRadius = 2 -- Default radius
+            if otherData == "sand" then
+                -- Larger crater for sand based on speed
+                directRadius = 2 + math.min(2, speed / 300)  -- Up to 4 cells radius for fast balls
+            end
             for dy = -directRadius, directRadius do
                 for dx = -directRadius, directRadius do
                     local checkX = gridX + dx
                     local checkY = gridY + dy
                     
-                    -- Only affect sand and dirt cells
+                    -- Only affect sand and dirt cells within bounds
                     if checkX >= 0 and checkX < level.width and checkY >= 0 and checkY < level.height then
-                        local cellType = level:getCellType(checkX, checkY)
-                        if cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT then
-                            -- Calculate velocity based on impact
-                            local distance = math.sqrt(dx*dx + dy*dy)
-                            if distance <= directRadius then
-                                local impactFactor = (1 - distance/directRadius) * math.min(1.0, speed / 300)
-                                
-                                -- Direction away from impact
-                                local dirX = dx
-                                local dirY = dy
-                                if dx == 0 and dy == 0 then
-                                    dirX, dirY = 0, -1 -- Default upward
-                                else
-                                    local dirLen = math.sqrt(dirX*dirX + dirY*dirY)
-                                    dirX = dirX / dirLen
-                                    dirY = dirY / dirLen
+                        -- Make sure the cell exists
+                        if level.cells[checkY] and level.cells[checkY][checkX] then
+                            local cellType = level:getCellType(checkX, checkY)
+                            if cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT then
+                                -- Calculate velocity based on impact
+                                local distance = math.sqrt(dx*dx + dy*dy)
+                                if distance <= directRadius then
+                                    local impactFactor = (1 - distance/directRadius) * math.min(1.0, speed / 300)
+                                    
+                                    -- Direction away from impact
+                                    local dirX = dx
+                                    local dirY = dy
+                                    if dx == 0 and dy == 0 then
+                                        dirX, dirY = 0, -1 -- Default upward
+                                    else
+                                        local dirLen = math.sqrt(dirX*dirX + dirY*dirY)
+                                        dirX = dirX / dirLen
+                                        dirY = dirY / dirLen
+                                    end
+                                    
+                                    -- Calculate velocity with much stronger effect
+                                    local flyVx = dirX * speed * 1.0 * impactFactor
+                                    local flyVy = dirY * speed * 1.0 * impactFactor - 200 -- Extra upward boost
+                                    
+                                    -- Add randomness
+                                    flyVx = flyVx + math.random(-50, 50)
+                                    flyVy = flyVy + math.random(-50, 50)
+                                    
+                                    -- Queue up for conversion
+                                    table.insert(Collision.sandToConvert, {
+                                        x = checkX,
+                                        y = checkY,
+                                        vx = flyVx,
+                                        vy = flyVy
+                                    })
                                 end
-                                
-                                -- Calculate velocity with much stronger effect
-                                local flyVx = dirX * speed * 1.0 * impactFactor
-                                local flyVy = dirY * speed * 1.0 * impactFactor - 200 -- Extra upward boost
-                                
-                                -- Add randomness
-                                flyVx = flyVx + math.random(-50, 50)
-                                flyVy = flyVy + math.random(-50, 50)
-                                
-                                -- Queue up for conversion
-                                table.insert(Collision.sandToConvert, {
-                                    x = checkX,
-                                    y = checkY,
-                                    vx = flyVx,
-                                    vy = flyVy
-                                })
                             end
                         end
                     end
@@ -152,6 +182,17 @@ function Collision.endContact(a, b, coll, level)
             -- Tell the ball it's exiting water
             if ball and ball.exitWater then
                 ball:exitWater(gridX, gridY)
+            end
+        -- Handle sand collisions
+        elseif otherData == "sand" then
+            -- Get the sand cell position
+            local sandBody = otherFixture:getBody()
+            local sandX, sandY = sandBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(sandX, sandY)
+            
+            -- Tell the ball it's exiting sand
+            if ball and ball.exitSand then
+                ball:exitSand(gridX, gridY)
             end
         end
     end

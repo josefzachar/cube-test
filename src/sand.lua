@@ -32,9 +32,9 @@ function Sand.createPhysics(cell, world)
     cell.fixture = love.physics.newFixture(cell.body, cell.shape)
     cell.fixture:setUserData("sand")
     
-    -- Make sand less solid than stone
-    cell.fixture:setFriction(0.3)
-    cell.fixture:setRestitution(0.2)
+    -- Make sand have high friction and low restitution to slow down the ball
+    cell.fixture:setFriction(0.8)       -- Increased from 0.3 to 0.8
+    cell.fixture:setRestitution(0.05)   -- Decreased from 0.2 to 0.05
 end
 
 -- Update sand cell behavior
