@@ -32,8 +32,21 @@ function Effects.processSandConversion(sandToConvert, level)
                 -- Create a visual effect of flying particle
                 -- We'll just create a new cell at the same position with the appropriate visual type
                 local visualParticle = Cell.new(level.world, cell.x, cell.y, visualType)
-                visualParticle.velocityX = cell.vx
-                visualParticle.velocityY = cell.vy
+                
+                -- Adjust velocity based on material type
+                if cellType == CellTypes.TYPES.SAND then
+                    -- Sand is more easily displaced - increase velocity
+                    visualParticle.velocityX = cell.vx * 1.2
+                    visualParticle.velocityY = cell.vy * 1.2
+                elseif cellType == CellTypes.TYPES.DIRT then
+                    -- Dirt is more durable - reduce velocity
+                    visualParticle.velocityX = cell.vx * 0.7
+                    visualParticle.velocityY = cell.vy * 0.7
+                else
+                    -- Default behavior
+                    visualParticle.velocityX = cell.vx
+                    visualParticle.velocityY = cell.vy
+                end
                 
                 -- Add the visual particle to the level's cells array
                 level.visualSandCells = level.visualSandCells or {}

@@ -57,7 +57,7 @@ function Ball:update(dt)
     -- Apply sand resistance if the ball is in sand
     if self.inSand and speed > 5 then
         -- Calculate drag force (proportional to velocity squared)
-        local sandDragCoefficient = 0.05 -- Much higher drag coefficient for sand
+        local sandDragCoefficient = 0.03 -- Reduced from 0.05 to 0.03 for less resistance
         local dragForceX = -vx * speed * sandDragCoefficient
         local dragForceY = -vy * speed * sandDragCoefficient
         
@@ -66,7 +66,7 @@ function Ball:update(dt)
         
         -- Also apply a damping effect to angular velocity
         local av = self.body:getAngularVelocity()
-        self.body:setAngularVelocity(av * 0.95) -- Reduce angular velocity by 5% each frame
+        self.body:setAngularVelocity(av * 0.97) -- Reduced damping from 0.95 to 0.97
     end
     
     -- Check if ball has stopped

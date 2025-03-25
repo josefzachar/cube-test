@@ -19,8 +19,10 @@ function Input.new()
     self.mouseY = 0
     self.aimDirection = {x = 0, y = 0}
     self.aimPower = 0
-    self.maxPower = 800
+    self.maxPower = 2000  -- Increased from 800 to 1500 for higher force
     self.minPower = 100
+    self.clickPosition = {x = nil, y = nil}  -- Store the position where the user clicked
+    self.isAiming = false  -- Flag to track if the user is currently aiming
     
     -- Sand spraying properties
     self.mode = MODES.SHOOT -- Start in shooting mode
@@ -36,8 +38,8 @@ function Input:update(ball, level)
     
     -- Handle mode switching
     if self.mode == MODES.SHOOT then
-        -- Only calculate aim if ball is not moving
-        if not ball:isMoving() then
+        -- Only calculate aim if ball is not moving and user is aiming
+        if not ball:isMoving() and self.isAiming then
             self:calculateAim(ball)
         end
     elseif self.mode == MODES.SPRAY then
@@ -49,11 +51,9 @@ function Input:update(ball, level)
 end
 
 function Input:calculateAim(ball)
-    local ballX, ballY = ball:getPosition()
-    
-    -- Calculate direction vector
-    self.aimDirection.x = self.mouseX - ballX
-    self.aimDirection.y = self.mouseY - ballY
+    -- Calculate direction vector from click position to mouse
+    self.aimDirection.x = self.mouseX - self.clickPosition.x
+    self.aimDirection.y = self.mouseY - self.clickPosition.y
     
     -- Calculate power based on distance (clamped between min and max)
     local distance = math.sqrt(self.aimDirection.x^2 + self.aimDirection.y^2)
@@ -64,6 +64,9 @@ function Input:calculateAim(ball)
         self.aimDirection.x = self.aimDirection.x / distance
         self.aimDirection.y = self.aimDirection.y / distance
     end
+    
+    -- Note: We no longer update the click position here
+    -- The click position stays at the original click location
 end
 
 function Input:spraySand(level)
@@ -95,17 +98,22 @@ function Input:draw(ball)
     if self.mode == MODES.SHOOT then
         love.graphics.print("Mode: SHOOT (press SPACE to switch)", 10, 30)
         
-        -- Draw aim line if ball is not moving
-        if not ball:isMoving() then
-            local ballX, ballY = ball:getPosition()
+        -- Draw aim line if ball is not moving and user is aiming
+        if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
             local lineLength = self.aimPower / 10 -- Scale down for visual purposes
             
+            -- Draw aim line at the original clicked position
             love.graphics.line(
-                ballX, 
-                ballY, 
-                ballX + self.aimDirection.x * lineLength, 
-                ballY + self.aimDirection.y * lineLength
+                self.clickPosition.x, 
+                self.clickPosition.y, 
+                self.clickPosition.x + self.aimDirection.x * lineLength, 
+                self.clickPosition.y + self.aimDirection.y * lineLength
             )
+            
+            -- Draw a small indicator at the clicked position
+            love.graphics.setColor(1, 0.5, 0, 1) -- Orange
+            love.graphics.circle("fill", self.clickPosition.x, self.clickPosition.y, 5)
+            love.graphics.setColor(1, 1, 1, 1) -- Reset to white
             
             -- Draw power indicator
             local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
@@ -123,6 +131,29 @@ end
 function Input:handleMousePressed(button, ball)
     if self.mode == MODES.SHOOT then
         if button == 1 and not ball:isMoving() then -- Left mouse button
+            -- Start aiming
+            self.isAiming = true
+            
+            -- Store the clicked position
+            self.clickPosition.x = self.mouseX
+            self.clickPosition.y = self.mouseY
+            
+            -- Calculate initial aim
+            self:calculateAim(ball)
+            
+            return false -- No shot taken yet
+        end
+    end
+    return false -- No shot taken
+end
+
+-- Handle mouse release events
+function Input:handleMouseReleased(button, ball)
+    if self.mode == MODES.SHOOT then
+        if button == 1 and self.isAiming and not ball:isMoving() then -- Left mouse button
+            -- Stop aiming
+            self.isAiming = false
+            
             -- Shoot the ball in the aimed direction
             ball:shoot(self.aimDirection, self.aimPower)
             return true -- Shot was taken
@@ -135,6 +166,10 @@ function Input:handleKeyPressed(key, ball)
     if key == "r" then
         -- Reset the ball to the starting position
         ball:reset(100, 500)
+        -- Reset the click position and aiming state
+        self.clickPosition.x = nil
+        self.clickPosition.y = nil
+        self.isAiming = false
         return true -- Reset was performed
     elseif key == "space" then
         -- Switch between shooting and spraying modes
@@ -143,6 +178,8 @@ function Input:handleKeyPressed(key, ball)
         else
             self.mode = MODES.SHOOT
         end
+        -- Reset aiming state when switching modes
+        self.isAiming = false
     end
     return false -- No action taken
 end

@@ -59,8 +59,16 @@ function Collision.beginContact(a, b, coll, level)
             end
         end
         
-        -- Only create a crater if the ball is moving fast and hit sand, stone, or dirt
-        if speed > 300 and (otherData == "sand" or otherData == "stone" or otherData == "dirt") then
+        -- Create a crater if the ball hits sand, stone, or dirt with appropriate speed thresholds
+        -- Lower threshold for sand, higher for dirt
+        local createCrater = false
+        if (otherData == "sand" and speed > 50) or  -- Much lower threshold for sand (was 100)
+           (otherData == "dirt" and speed > 300) or  -- Keep dirt threshold the same
+           (otherData == "stone" and speed > 300) then -- Keep stone threshold the same
+            createCrater = true
+        end
+        
+        if createCrater then
             -- Get the collision position
             local nx, ny = coll:getNormal()
             local x1, y1, x2, y2 = coll:getPositions()
@@ -90,12 +98,15 @@ function Collision.beginContact(a, b, coll, level)
                 ballBody:setAngularVelocity(av * (1 - dampingFactor))
             end
             
-            -- Create the crater with visual sand
-            -- Make the crater larger for sand to simulate digging in
+            -- Create the crater with visual particles
+            -- Make the crater size appropriate for the material
             local directRadius = 2 -- Default radius
             if otherData == "sand" then
-                -- Larger crater for sand based on speed
-                directRadius = 2 + math.min(2, speed / 300)  -- Up to 4 cells radius for fast balls
+                -- Even more sensitive crater size for sand based on speed
+                directRadius = 0.5 + math.min(3.5, speed / 150)  -- Changed from speed/200 to speed/150
+            elseif otherData == "dirt" then
+                -- Keep dirt calculation the same
+                directRadius = 0.5 + math.min(2.0, (speed - 200) / 300)
             end
             for dy = -directRadius, directRadius do
                 for dx = -directRadius, directRadius do

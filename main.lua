@@ -121,3 +121,9 @@ function love.mousepressed(x, y, button)
         attempts = attempts + 1
     end
 end
+
+function love.mousereleased(x, y, button)
+    if input:handleMouseReleased(button, ball) then
+        attempts = attempts + 1
+    end
+end

@@ -38,9 +38,9 @@ function Dirt.createPhysics(cell, world)
     -- Set user data
     cell.fixture:setUserData("dirt")
     
-    -- Make dirt less solid than stone but similar to sand
-    cell.fixture:setFriction(0.3)
-    cell.fixture:setRestitution(0.2)
+    -- Make dirt more durable than sand but less than stone
+    cell.fixture:setFriction(0.6)       -- Increased from 0.3 to 0.6
+    cell.fixture:setRestitution(0.1)    -- Decreased from 0.2 to 0.1
 end
 
 -- Update dirt cell behavior
