@@ -102,12 +102,22 @@ function Input:draw(ball)
         if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
             local lineLength = self.aimPower / 10 -- Scale down for visual purposes
             
-            -- Draw aim line at the original clicked position
+            -- Draw original aim line
+            love.graphics.setColor(0.8, 0.8, 0.8, 1) -- Light gray for original direction
             love.graphics.line(
                 self.clickPosition.x, 
                 self.clickPosition.y, 
                 self.clickPosition.x + self.aimDirection.x * lineLength, 
                 self.clickPosition.y + self.aimDirection.y * lineLength
+            )
+            
+            -- Draw opposite aim line (actual shot direction)
+            love.graphics.setColor(1, 0, 0, 1) -- Red for shot direction
+            love.graphics.line(
+                self.clickPosition.x, 
+                self.clickPosition.y, 
+                self.clickPosition.x - self.aimDirection.x * lineLength, 
+                self.clickPosition.y - self.aimDirection.y * lineLength
             )
             
             -- Draw a small indicator at the clicked position
@@ -154,8 +164,15 @@ function Input:handleMouseReleased(button, ball)
             -- Stop aiming
             self.isAiming = false
             
-            -- Shoot the ball in the aimed direction
-            ball:shoot(self.aimDirection, self.aimPower)
+            -- For slingshot, we want to fire in the direction from mouse to ball
+            -- The aimDirection already points from ball to mouse, so we use the negative
+            local slingDirection = {
+                x = -self.aimDirection.x,
+                y = -self.aimDirection.y
+            }
+            
+            -- Shoot the ball using the slingshot direction
+            ball:shoot(slingDirection, self.aimPower)
             return true -- Shot was taken
         end
     end

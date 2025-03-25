@@ -66,7 +66,7 @@ function Ball:update(dt)
         
         -- Also apply a damping effect to angular velocity
         local av = self.body:getAngularVelocity()
-        self.body:setAngularVelocity(av * 0.97) -- Reduced damping from 0.95 to 0.97
+        self.body:setAngularVelocity(av * 0.99) -- Reduced damping from 0.95 to 0.97
     end
     
     -- Check if ball has stopped
