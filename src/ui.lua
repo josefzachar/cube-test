@@ -29,23 +29,49 @@ end
 
 -- Draw the button
 function Button:draw()
-    -- Draw button background
+    -- Draw button shadow for depth
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.rectangle("fill", self.x + 2, self.y + 2, self.width, self.height, 8, 8)
+    
+    -- Draw button background with gradient effect
     if self.isHovered then
-        love.graphics.setColor(self.hoverColor)
+        -- Brighter top to bottom gradient when hovered
+        love.graphics.setColor(self.hoverColor[1], self.hoverColor[2], self.hoverColor[3], self.hoverColor[4])
     else
-        love.graphics.setColor(self.color)
+        -- Normal top to bottom gradient
+        love.graphics.setColor(self.color[1], self.color[2], self.color[3], self.color[4])
     end
-    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 5, 5) -- Rounded corners
     
-    -- Draw button border
-    love.graphics.setColor(1, 1, 1, 0.8)
-    love.graphics.rectangle("line", self.x, self.y, self.width, self.height, 5, 5)
+    -- Main button fill
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 8, 8) -- More rounded corners
     
-    -- Draw button text
-    love.graphics.setColor(1, 1, 1, 1)
+    -- Add a subtle highlight at the top for 3D effect
+    love.graphics.setColor(1, 1, 1, 0.3)
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height/4, 8, 8)
+    
+    -- Draw button border with thicker line for better visibility
+    if self.isHovered then
+        love.graphics.setColor(1, 1, 1, 0.9) -- Brighter border on hover
+        love.graphics.setLineWidth(2)
+    else
+        love.graphics.setColor(1, 1, 1, 0.7)
+        love.graphics.setLineWidth(1.5)
+    end
+    love.graphics.rectangle("line", self.x, self.y, self.width, self.height, 8, 8)
+    love.graphics.setLineWidth(1) -- Reset line width
+    
+    -- Draw button text with slight shadow for better readability
+    -- Text shadow
+    love.graphics.setColor(0, 0, 0, 0.5)
     local font = love.graphics.getFont()
     local textWidth = font:getWidth(self.text)
     local textHeight = font:getHeight()
+    love.graphics.print(self.text, 
+        self.x + (self.width - textWidth) / 2 + 1, 
+        self.y + (self.height - textHeight) / 2 + 1)
+    
+    -- Actual text
+    love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(self.text, 
         self.x + (self.width - textWidth) / 2, 
         self.y + (self.height - textHeight) / 2)
@@ -72,10 +98,13 @@ local toggleUIButton = nil
 
 -- Initialize the UI
 function UI.init(ballTypes)
-    -- Create toggle UI button (always visible)
-    toggleUIButton = Button.new(10, 10, 100, 30, "Toggle UI", function()
+    -- Get screen dimensions for positioning
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Create toggle UI button in the top right corner (always visible)
+    toggleUIButton = Button.new(screenWidth - 110, 10, 100, 30, "☰ Menu", function()
         isUIVisible = not isUIVisible
-    end, {0.5, 0.5, 0.5, 0.8})
+    end, {0.3, 0.6, 0.9, 0.9}) -- Nicer blue color
     
     -- Create difficulty buttons
     local difficultyColors = {
@@ -159,6 +188,17 @@ function UI.draw()
     
     -- Draw other buttons only if UI is visible
     if isUIVisible then
+        -- Draw a semi-transparent panel behind the menu
+        love.graphics.setColor(0.1, 0.1, 0.2, 0.8)
+        love.graphics.rectangle("fill", 10, 5, 780, 85, 10, 10) -- Rounded corners
+        
+        -- Add a subtle border to the panel
+        love.graphics.setColor(0.3, 0.6, 0.9, 0.6)
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", 10, 5, 780, 85, 10, 10)
+        love.graphics.setLineWidth(1)
+        
+        -- Draw all buttons
         for _, button in ipairs(buttons) do
             button:draw()
         end

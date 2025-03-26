@@ -118,11 +118,12 @@ function ExplodingBall:explode(level, sandToConvert)
                 -- Get the cell type
                 local cellType = level:getCellType(checkX, checkY)
                 
-                -- Only affect certain cell types (not empty, fire, smoke, or water)
+                -- Only affect certain cell types (not empty, fire, smoke, water, or win hole)
                 if cellType ~= CellTypes.TYPES.EMPTY and 
                    cellType ~= CellTypes.TYPES.WATER and
                    cellType ~= CellTypes.TYPES.FIRE and
-                   cellType ~= CellTypes.TYPES.SMOKE then
+                   cellType ~= CellTypes.TYPES.SMOKE and
+                   cellType ~= CellTypes.TYPES.WIN_HOLE then
                     
                     -- Direction away from explosion center
                     local dirX = dx
