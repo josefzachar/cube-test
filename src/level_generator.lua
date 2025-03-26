@@ -23,7 +23,16 @@ print("Dirt module loaded:", Dirt, "type:", type(Dirt))
 local LevelGenerator = {}
 
 -- Create a procedural level with tunnels, dirt, stone, water ponds, and sand traps
-function LevelGenerator.createProceduralLevel(level)
+-- difficulty: 1 = easy, 2 = medium, 3 = hard, 4 = expert, 5 = insane
+function LevelGenerator.createProceduralLevel(level, difficulty)
+    -- Default to difficulty 1 (easy) if not specified
+    difficulty = difficulty or 1
+    
+    -- Clamp difficulty between 1 and 5
+    difficulty = math.max(1, math.min(5, difficulty))
+    
+    -- Print the current difficulty level
+    print("Creating level with difficulty:", difficulty)
     -- Create stone walls around the level
     Stone.createWalls(level)
     
@@ -38,16 +47,16 @@ function LevelGenerator.createProceduralLevel(level)
     createMainPath(level, startX, startY, goalX, goalY)
     
     -- Create just a few additional tunnels (reduced for more dense terrain)
-    createFewerTunnels(level)
+    createFewerTunnels(level, difficulty)
     
     -- Add some stone structures
-    addStoneStructures(level)
+    addStoneStructures(level, difficulty)
     
     -- Add occasional water ponds
-    addWaterPonds(level)
+    addWaterPonds(level, difficulty)
     
     -- Add occasional sand traps
-    addSandTraps(level)
+    addSandTraps(level, difficulty)
     
     -- Create a goal area
     createGoalArea(level, goalX, goalY)
@@ -59,33 +68,60 @@ function LevelGenerator.createProceduralLevel(level)
     removeIsolatedDirtCells(level)
 end
 
--- Create fewer tunnels and caves for a more dense terrain
-function createFewerTunnels(level)
-    -- Reduced number of tunnels
-    local tunnelCount = math.random(2, 4) -- Reduced from 5-8
+-- Create tunnels and caves with density based on difficulty
+function createFewerTunnels(level, difficulty)
+    -- Default to difficulty 1 if not provided
+    difficulty = difficulty or 1
+    
+    -- Adjust tunnel count based on difficulty (fewer tunnels = harder)
+    local minTunnels = math.max(1, 5 - difficulty) -- 4, 3, 2, 1, 1
+    local maxTunnels = math.max(2, 7 - difficulty) -- 6, 5, 4, 3, 2
+    local tunnelCount = math.random(minTunnels, maxTunnels)
+    
+    print("Creating", tunnelCount, "tunnels (difficulty:", difficulty, ")")
     
     for i = 1, tunnelCount do
         -- Start position for the tunnel
         local startX = math.random(5, level.width - 6)
         local startY = math.random(5, level.height - 6)
         
-        -- Create a winding tunnel
-        createWindingTunnel(level, startX, startY, 15, 30) -- Shorter tunnels
+        -- Adjust tunnel length based on difficulty (shorter tunnels = harder)
+        local minLength = math.max(10, 25 - (difficulty * 3)) -- 22, 19, 16, 13, 10
+        local maxLength = math.max(15, 40 - (difficulty * 5)) -- 35, 30, 25, 20, 15
         
-        -- Fewer branches
-        local branchCount = math.random(1, 2) -- Reduced from 2-4
+        -- Create a winding tunnel
+        createWindingTunnel(level, startX, startY, minLength, maxLength)
+        
+        -- Adjust branch count based on difficulty (fewer branches = harder)
+        local minBranches = math.max(0, 3 - difficulty) -- 2, 1, 0, 0, 0
+        local maxBranches = math.max(1, 4 - difficulty) -- 3, 2, 1, 1, 1
+        local branchCount = math.random(minBranches, maxBranches)
+        
         for j = 1, branchCount do
             local branchX = math.random(5, level.width - 6)
             local branchY = math.random(5, level.height - 6)
-            createWindingTunnel(level, branchX, branchY, 10, 20) -- Even shorter branches
+            
+            -- Shorter branches
+            local branchMinLength = math.max(5, 15 - (difficulty * 2))
+            local branchMaxLength = math.max(10, 25 - (difficulty * 3))
+            
+            createWindingTunnel(level, branchX, branchY, branchMinLength, branchMaxLength)
         end
         
-        -- Fewer caves
-        local caveCount = math.random(1, 3) -- Reduced from 3-6
+        -- Adjust cave count based on difficulty (fewer caves = harder)
+        local minCaves = math.max(0, 3 - difficulty) -- 2, 1, 0, 0, 0
+        local maxCaves = math.max(1, 5 - difficulty) -- 4, 3, 2, 1, 1
+        local caveCount = math.random(minCaves, maxCaves)
+        
         for j = 1, caveCount do
             local caveX = math.random(10, level.width - 10)
             local caveY = math.random(10, level.height - 10)
-            local caveRadius = math.random(4, 8) -- Slightly smaller caves
+            
+            -- Adjust cave size based on difficulty (smaller caves = harder)
+            local minRadius = math.max(2, 6 - difficulty) -- 5, 4, 3, 2, 2
+            local maxRadius = math.max(4, 10 - difficulty) -- 9, 8, 7, 6, 5
+            local caveRadius = math.random(minRadius, maxRadius)
+            
             createClearArea(level, caveX, caveY, caveRadius)
         end
     end
@@ -406,8 +442,35 @@ function createGoalArea(level, goalX, goalY)
         {0, 0, 1, 0, 0}
     }
     
+    -- First, check if we can create a complete pattern
+    local canCreateComplete = true
+    for dy = 0, 4 do
+        for dx = 0, 4 do
+            if pattern[dy + 1][dx + 1] == 1 then
+                local cellX = holeX - 2 + dx
+                local cellY = holeY - 2 + dy
+                
+                if cellX < 0 or cellX >= level.width or cellY < 0 or cellY >= level.height then
+                    canCreateComplete = false
+                    break
+                end
+            end
+        end
+        if not canCreateComplete then
+            break
+        end
+    end
+    
+    -- If we can't create a complete pattern, adjust the position
+    if not canCreateComplete then
+        holeX = math.max(5, math.min(level.width - 5, holeX))
+        holeY = math.max(5, math.min(level.height - 5, holeY))
+    end
+    
     -- Create win holes based on the pattern
     local WinHole = require("src.win_hole")
+    local createdHoles = {}
+    
     for dy = 0, 4 do
         for dx = 0, 4 do
             -- Only create a win hole if the pattern has a 1 at this position
@@ -419,8 +482,37 @@ function createGoalArea(level, goalX, goalY)
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
                     print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
+                    table.insert(createdHoles, {x = cellX, y = cellY})
                 end
             end
+        end
+    end
+    
+    -- Check for isolated win holes and remove them
+    for i = #createdHoles, 1, -1 do
+        local hole = createdHoles[i]
+        local hasAdjacent = false
+        
+        -- Check adjacent cells (up, down, left, right)
+        local directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+        for _, dir in ipairs(directions) do
+            local nx = hole.x + dir[1]
+            local ny = hole.y + dir[2]
+            
+            -- Check if this adjacent cell is also a win hole
+            if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                if level:getCellType(nx, ny) == CellTypes.TYPES.WIN_HOLE then
+                    hasAdjacent = true
+                    break
+                end
+            end
+        end
+        
+        -- If this hole has no adjacent win holes, remove it
+        if not hasAdjacent then
+            level:setCellType(hole.x, hole.y, CellTypes.TYPES.EMPTY)
+            print("Removing isolated win hole at", hole.x, hole.y)
+            table.remove(createdHoles, i)
         end
     end
     
@@ -450,27 +542,72 @@ function createGoalArea(level, goalX, goalY)
     connectPoints(level, 20, 20, holeX, holeY)
 end
 
--- Add some stone structures to the level
-function addStoneStructures(level)
-    local structureCount = math.random(3, 6)
+-- Add stone structures to the level based on difficulty
+function addStoneStructures(level, difficulty)
+    -- Default to difficulty 1 if not provided
+    difficulty = difficulty or 1
+    
+    -- Adjust structure count based on difficulty (more structures = harder)
+    local minStructures = math.min(6, 2 + difficulty) -- 3, 4, 5, 6, 7
+    local maxStructures = math.min(10, 4 + difficulty) -- 5, 6, 7, 8, 9
+    local structureCount = math.random(minStructures, maxStructures)
+    
+    print("Creating", structureCount, "stone structures (difficulty:", difficulty, ")")
     
     for i = 1, structureCount do
         local structureType = math.random(1, 3)
-        local x = math.random(10, level.width - 20)
-        local y = math.random(20, level.height - 20)
+        
+        -- Place structures more strategically at higher difficulties
+        local x, y
+        if difficulty <= 2 then
+            -- Random placement for easy/medium
+            x = math.random(10, level.width - 20)
+            y = math.random(20, level.height - 20)
+        else
+            -- More strategic placement for harder difficulties
+            -- Place structures along common paths
+            if math.random() < 0.7 then
+                -- Place near the middle of the level
+                x = math.random(math.floor(level.width / 4), math.floor(3 * level.width / 4))
+                y = math.random(math.floor(level.height / 4), math.floor(3 * level.height / 4))
+            else
+                -- Random placement
+                x = math.random(10, level.width - 20)
+                y = math.random(20, level.height - 20)
+            end
+        end
+        
+        -- Ensure x and y are within valid bounds
+        x = math.max(10, math.min(level.width - 20, x))
+        y = math.max(20, math.min(level.height - 20, y))
         
         if structureType == 1 then
             -- Stone block
-            local width = math.random(3, 6)
-            local height = math.random(3, 6)
+            -- Adjust size based on difficulty (larger blocks = harder)
+            local minWidth = math.min(8, 2 + difficulty) -- 3, 4, 5, 6, 7
+            local maxWidth = math.min(12, 4 + difficulty) -- 5, 6, 7, 8, 9
+            local width = math.random(minWidth, maxWidth)
+            
+            local minHeight = math.min(8, 2 + difficulty) -- 3, 4, 5, 6, 7
+            local maxHeight = math.min(12, 4 + difficulty) -- 5, 6, 7, 8, 9
+            local height = math.random(minHeight, maxHeight)
+            
             Stone.createBlock(level, x, y, width, height)
         elseif structureType == 2 then
             -- Stone platform
-            local width = math.random(5, 12)
+            -- Adjust width based on difficulty (wider platforms = harder)
+            local minWidth = math.min(15, 5 + difficulty * 2) -- 7, 9, 11, 13, 15
+            local maxWidth = math.min(25, 10 + difficulty * 3) -- 13, 16, 19, 22, 25
+            local width = math.random(minWidth, maxWidth)
+            
             Stone.createPlatform(level, x, y, width)
         else
             -- Stone pillar
-            local height = math.random(4, 8)
+            -- Adjust height based on difficulty (taller pillars = harder)
+            local minHeight = math.min(10, 3 + difficulty) -- 4, 5, 6, 7, 8
+            local maxHeight = math.min(15, 6 + difficulty * 2) -- 8, 10, 12, 14, 16
+            local height = math.random(minHeight, maxHeight)
+            
             for py = y, y + height - 1 do
                 if py >= 0 and py < level.height then
                     level:setCellType(x, py, CellTypes.TYPES.STONE)
@@ -480,30 +617,112 @@ function addStoneStructures(level)
     end
 end
 
--- Add occasional water ponds to the level
-function addWaterPonds(level)
-    local pondCount = math.random(2, 4)
+-- Add water ponds to the level based on difficulty
+function addWaterPonds(level, difficulty)
+    -- Default to difficulty 1 if not provided
+    difficulty = difficulty or 1
+    
+    -- Adjust pond count based on difficulty (more ponds = harder)
+    local minPonds = math.min(5, 1 + difficulty) -- 2, 3, 4, 5, 6
+    local maxPonds = math.min(8, 3 + difficulty) -- 4, 5, 6, 7, 8
+    local pondCount = math.random(minPonds, maxPonds)
+    
+    print("Creating", pondCount, "water ponds (difficulty:", difficulty, ")")
     
     for i = 1, pondCount do
-        local x = math.random(20, level.width - 30)
-        local y = math.random(level.height - 30, level.height - 10)
-        local width = math.random(10, 20)
-        local height = math.random(3, 6)
+        -- Place ponds more strategically at higher difficulties
+        local x, y
+        if difficulty <= 2 then
+            -- Random placement for easy/medium
+            x = math.random(20, level.width - 30)
+            y = math.random(level.height - 30, level.height - 10)
+        else
+            -- More strategic placement for harder difficulties
+            if math.random() < 0.7 then
+                -- Place along common paths
+                x = math.random(math.floor(level.width / 4), math.floor(3 * level.width / 4))
+                y = math.random(math.floor(level.height / 3), math.floor(2 * level.height / 3))
+            else
+                -- Random placement
+                x = math.random(20, level.width - 30)
+                y = math.random(level.height - 30, level.height - 10)
+            end
+        end
+        
+        -- Ensure x and y are within valid bounds
+        x = math.max(20, math.min(level.width - 30, x))
+        y = math.max(20, math.min(level.height - 10, y))
+        
+        -- Adjust size based on difficulty (larger ponds = harder)
+        local minWidth = math.min(25, 10 + difficulty * 3) -- 13, 16, 19, 22, 25
+        local maxWidth = math.min(35, 15 + difficulty * 4) -- 19, 23, 27, 31, 35
+        local width = math.random(minWidth, maxWidth)
+        
+        -- Make sure width isn't too large for the level
+        width = math.min(width, level.width - 40)
+        
+        local minHeight = math.min(10, 3 + difficulty) -- 4, 5, 6, 7, 8
+        local maxHeight = math.min(15, 5 + difficulty * 2) -- 7, 9, 11, 13, 15
+        local height = math.random(minHeight, maxHeight)
+        
+        -- Make sure height isn't too large for the level
+        height = math.min(height, level.height - 20)
         
         -- Create a water pond
         Water.createPool(level, x, y, width, height)
     end
 end
 
--- Add occasional sand traps to the level
-function addSandTraps(level)
-    local trapCount = math.random(2, 5)
+-- Add sand traps to the level based on difficulty
+function addSandTraps(level, difficulty)
+    -- Default to difficulty 1 if not provided
+    difficulty = difficulty or 1
+    
+    -- Adjust trap count based on difficulty (more traps = harder)
+    local minTraps = math.min(6, 2 + difficulty) -- 3, 4, 5, 6, 7
+    local maxTraps = math.min(10, 4 + difficulty) -- 5, 6, 7, 8, 9
+    local trapCount = math.random(minTraps, maxTraps)
+    
+    print("Creating", trapCount, "sand traps (difficulty:", difficulty, ")")
     
     for i = 1, trapCount do
-        local x = math.random(20, level.width - 30)
-        local y = math.random(level.height - 40, level.height - 10)
-        local width = math.random(8, 15)
-        local height = math.random(5, 15)
+        -- Place traps more strategically at higher difficulties
+        local x, y
+        if difficulty <= 2 then
+            -- Random placement for easy/medium
+            x = math.random(20, level.width - 30)
+            y = math.random(level.height - 40, level.height - 10)
+        else
+            -- More strategic placement for harder difficulties
+            if math.random() < 0.6 then
+                -- Place along common paths
+                x = math.random(math.floor(level.width / 4), math.floor(3 * level.width / 4))
+                y = math.random(math.floor(level.height / 3), math.floor(2 * level.height / 3))
+            else
+                -- Random placement
+                x = math.random(20, level.width - 30)
+                y = math.random(level.height - 40, level.height - 10)
+            end
+        end
+        
+        -- Ensure x and y are within valid bounds
+        x = math.max(20, math.min(level.width - 30, x))
+        y = math.max(20, math.min(level.height - 10, y))
+        
+        -- Adjust size based on difficulty (larger traps = harder)
+        local minWidth = math.min(20, 8 + difficulty * 2) -- 10, 12, 14, 16, 18
+        local maxWidth = math.min(30, 15 + difficulty * 3) -- 18, 21, 24, 27, 30
+        local width = math.random(minWidth, maxWidth)
+        
+        -- Make sure width isn't too large for the level
+        width = math.min(width, level.width - 40)
+        
+        local minHeight = math.min(20, 5 + difficulty * 3) -- 8, 11, 14, 17, 20
+        local maxHeight = math.min(30, 10 + difficulty * 4) -- 14, 18, 22, 26, 30
+        local height = math.random(minHeight, maxHeight)
+        
+        -- Make sure height isn't too large for the level
+        height = math.min(height, level.height - 20)
         
         -- Create a sand trap
         Sand.createPile(level, x, y, width, height)

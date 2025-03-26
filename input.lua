@@ -350,6 +350,17 @@ end
 
 function Input:handleKeyPressed(key, ball)
     if key == "r" then
+        -- Check if the player has won
+        if ball.hasWon then
+            -- Increase difficulty level for the next level
+            if currentDifficulty < 5 then
+                currentDifficulty = currentDifficulty + 1
+                print("Difficulty increased to:", currentDifficulty)
+            else
+                print("Already at maximum difficulty!")
+            end
+        end
+        
         -- Completely restart the game by calling love.load()
         -- This will regenerate the level and reset everything
         love.load()

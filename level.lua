@@ -220,12 +220,13 @@ function Level:clearAllCells()
 end
 
 -- Create a procedural level with tunnels, dirt, stone, water ponds, and sand traps
-function Level:createProceduralLevel()
+-- difficulty: 1 = easy, 2 = medium, 3 = hard, 4 = expert, 5 = insane
+function Level:createProceduralLevel(difficulty)
     -- Clear all existing cells first
     self:clearAllCells()
     
-    -- Delegate to the LevelGenerator
-    LevelGenerator.createProceduralLevel(self)
+    -- Delegate to the LevelGenerator with the specified difficulty
+    LevelGenerator.createProceduralLevel(self, difficulty)
 end
 
 function Level:getWorldCoordinates(gridX, gridY)

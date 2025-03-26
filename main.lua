@@ -12,6 +12,7 @@ local Debug = require("src.debug")
 local CellTypes = require("src.cell_types")
 local Fire = require("src.fire")
 local WinHole = require("src.win_hole")
+local UI = require("src.ui")
 
 -- Game variables
 local world
@@ -23,6 +24,7 @@ local debug = false -- Set to true to see physics bodies
 local currentBallType = Balls.TYPES.STANDARD -- Start with standard ball
 local gameWon = false -- Flag to track if the player has won
 local winMessageTimer = 0 -- Timer for displaying the win message
+currentDifficulty = 1 -- Current difficulty level (1-5) - global variable
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
@@ -109,7 +111,11 @@ function love.load()
     
     -- Create the level (80x60 cells, each 10x10 pixels)
     level = Level.new(world, 160, 100)
-    level:createProceduralLevel()
+    
+    -- Create a procedural level with the current difficulty
+    local LevelGenerator = require("src.level_generator")
+    print("Creating level with difficulty:", currentDifficulty)
+    level:createProceduralLevel(currentDifficulty)
     
     -- Create a diamond-shaped win hole at a random position
     createDiamondWinHole(level)
@@ -126,6 +132,39 @@ function love.load()
     -- Reset game state
     gameWon = false
     winMessageTimer = 0
+    attempts = 0
+    
+    -- Initialize UI
+    if not UI.initialized then
+        -- Set up UI callbacks
+        UI.onBallTypeChange = function(ballTypeIndex)
+            local ballTypes = {
+                Balls.TYPES.STANDARD,
+                Balls.TYPES.HEAVY,
+                Balls.TYPES.EXPLODING,
+                Balls.TYPES.STICKY
+            }
+            
+            currentBallType = ballTypes[ballTypeIndex]
+            local newBall = Balls.changeBallType(ball, world, currentBallType)
+            ball.body:destroy() -- Destroy old ball's body
+            ball = newBall
+            ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+            
+            local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky"}
+            print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
+        end
+        
+        UI.onAddWinHole = function()
+            local x, y = ball.body:getPosition()
+            local gridX, gridY = level:getGridCoordinates(x, y)
+            WinHole.createWinHoleArea(level, gridX, gridY, 3, 3)
+            print("Added a win hole at ball position")
+        end
+        
+        UI.init()
+        UI.initialized = true
+    end
 end
 
 function love.update(dt)
@@ -169,6 +208,10 @@ function love.update(dt)
     
     -- Update input
     input:update(ball, level)
+    
+    -- Update UI
+    local mouseX, mouseY = love.mouse.getPosition()
+    UI.update(mouseX, mouseY)
 end
 
 function love.keypressed(key)
@@ -305,9 +348,24 @@ function love.draw()
     -- Draw input (aim line, power indicator)
     input:draw(ball)
     
-    -- Display attempts counter
+    -- Display attempts counter and difficulty level
     love.graphics.setColor(WHITE)
     love.graphics.print("Shots: " .. attempts, 250, 30)
+    
+    -- Display difficulty level
+    local difficultyText = "Difficulty: "
+    if currentDifficulty == 1 then
+        difficultyText = difficultyText .. "Easy"
+    elseif currentDifficulty == 2 then
+        difficultyText = difficultyText .. "Medium"
+    elseif currentDifficulty == 3 then
+        difficultyText = difficultyText .. "Hard"
+    elseif currentDifficulty == 4 then
+        difficultyText = difficultyText .. "Expert"
+    elseif currentDifficulty == 5 then
+        difficultyText = difficultyText .. "Insane"
+    end
+    love.graphics.print(difficultyText, 250, 50)
     
     -- Display current ball type
     local ballTypeText = "Ball: "
@@ -320,13 +378,16 @@ function love.draw()
     elseif ball.ballType == Balls.TYPES.STICKY then
         ballTypeText = ballTypeText .. "Sticky (4)"
     end
-    love.graphics.print(ballTypeText, 250, 50)
+    love.graphics.print(ballTypeText, 250, 70)
     
     -- Debug info
     Debug.drawDebugInfo(level, ball, attempts, debug)
     
     -- Draw active cells for debugging
     Debug.drawActiveCells(level)
+    
+    -- Draw UI
+    UI.draw()
     
     -- Draw win message if the game is won
     if gameWon and winMessageTimer > 0 then
@@ -336,13 +397,48 @@ function love.draw()
         
         -- Draw the win message
         love.graphics.setColor(0, 1, 0, 1) -- Green text
-        love.graphics.printf("YOU WIN!", 0, love.graphics.getHeight() / 2 - 50, love.graphics.getWidth(), "center")
-        love.graphics.printf("Shots: " .. attempts, 0, love.graphics.getHeight() / 2, love.graphics.getWidth(), "center")
-        love.graphics.printf("Press R to restart", 0, love.graphics.getHeight() / 2 + 50, love.graphics.getWidth(), "center")
+        love.graphics.printf("YOU WIN!", 0, love.graphics.getHeight() / 2 - 70, love.graphics.getWidth(), "center")
+        love.graphics.printf("Shots: " .. attempts, 0, love.graphics.getHeight() / 2 - 40, love.graphics.getWidth(), "center")
+        
+        -- Display current difficulty
+        local difficultyName = "Easy"
+        if currentDifficulty == 2 then
+            difficultyName = "Medium"
+        elseif currentDifficulty == 3 then
+            difficultyName = "Hard"
+        elseif currentDifficulty == 4 then
+            difficultyName = "Expert"
+        elseif currentDifficulty == 5 then
+            difficultyName = "Insane"
+        end
+        
+        love.graphics.printf("Current Difficulty: " .. difficultyName, 0, love.graphics.getHeight() / 2 - 10, love.graphics.getWidth(), "center")
+        
+        -- Display next difficulty message if not at max difficulty
+        if currentDifficulty < 5 then
+            local nextDifficultyName = "Medium"
+            if currentDifficulty == 2 then
+                nextDifficultyName = "Hard"
+            elseif currentDifficulty == 3 then
+                nextDifficultyName = "Expert"
+            elseif currentDifficulty == 4 then
+                nextDifficultyName = "Insane"
+            end
+            
+            love.graphics.printf("Press R to restart with " .. nextDifficultyName .. " difficulty", 0, love.graphics.getHeight() / 2 + 20, love.graphics.getWidth(), "center")
+        else
+            love.graphics.printf("Press R to restart (Maximum difficulty reached)", 0, love.graphics.getHeight() / 2 + 20, love.graphics.getWidth(), "center")
+        end
     end
 end
 
 function love.mousepressed(x, y, button)
+    -- Check if UI handled the mouse press
+    if UI.handlePress(x, y) then
+        return -- UI handled the press, don't process further
+    end
+    
+    -- Otherwise, let the input system handle it
     if input:handleMousePressed(button, ball) then
         attempts = attempts + 1
     end
