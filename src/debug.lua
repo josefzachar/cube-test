@@ -173,6 +173,10 @@ function Debug.handleKeyPressed(key, level)
         -- Create dirt-water test level
         level:createDirtWaterTestLevel()
         print("Created dirt-water test level")
+    elseif key == "g" then
+        -- Create a new procedural level
+        level:createProceduralLevel()
+        print("Created new procedural level")
     elseif key == "e" then
         -- Add a dirt block
         return "dirt_block" -- Signal to add a dirt block at ball position

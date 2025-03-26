@@ -35,10 +35,10 @@ function love.load()
     
     -- Create the level (80x60 cells, each 10x10 pixels)
     level = Level.new(world, 160, 100)
-    level:createTestLevel()
+    level:createProceduralLevel()
     
-    -- Create the square ball
-    ball = Ball.new(world, 100, 500)
+    -- Create the square ball at the starting position (matching the level generator)
+    ball = Ball.new(world, 20 * Cell.SIZE, 20 * Cell.SIZE)
     
     -- Set the ball as the user data for the ball body
     ball.body:setUserData(ball)

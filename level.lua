@@ -112,6 +112,9 @@ function Level:getCellType(x, y)
 end
 
 function Level:createTestLevel()
+    -- Clear all existing cells first
+    self:clearAllCells()
+    
     -- Create a simple test level with various elements
     LevelGenerator.createTestLevel(self)
 end
@@ -139,20 +142,83 @@ end
 
 -- Add a large amount of sand for performance testing
 function Level:addLotsOfSand(amount)
+    -- Clear all existing cells first
+    self:clearAllCells()
+    
     -- Delegate to the LevelGenerator
     LevelGenerator.createSandTestLevel(self, amount)
 end
 
 -- Create a level for testing dirt and water interaction
 function Level:createDirtWaterTestLevel()
+    -- Clear all existing cells first
+    self:clearAllCells()
+    
     -- Delegate to the LevelGenerator
     LevelGenerator.createDirtWaterTestLevel(self)
 end
 
 -- Create a level with water for testing fluid dynamics
 function Level:createWaterTestLevel()
+    -- Clear all existing cells first
+    self:clearAllCells()
+    
     -- Delegate to the LevelGenerator
     LevelGenerator.createWaterTestLevel(self)
+end
+
+-- Clear all cells in the level, completely destroying and recreating them
+function Level:clearAllCells()
+    -- First destroy all existing cells
+    for y = 0, self.height - 1 do
+        for x = 0, self.width - 1 do
+            if self.cells[y] and self.cells[y][x] then
+                -- Destroy the cell's physics body
+                self.cells[y][x]:destroy(self.world)
+            end
+        end
+    end
+    
+    -- Recreate all cells as empty
+    for y = 0, self.height - 1 do
+        self.cells[y] = {}
+        self.lastUpdateTime[y] = {}
+        for x = 0, self.width - 1 do
+            self.cells[y][x] = Cell.new(self.world, x, y, Cell.TYPES.EMPTY)
+            self.lastUpdateTime[y][x] = 0
+        end
+    end
+    
+    -- Clear visual sand cells
+    self.visualSandCells = {}
+    
+    -- Reset active cells
+    self.activeCells = {}
+    
+    -- Reset clusters
+    local clusterRows = math.ceil(self.height / self.clusterSize)
+    local clusterCols = math.ceil(self.width / self.clusterSize)
+    for cy = 0, clusterRows - 1 do
+        for cx = 0, clusterCols - 1 do
+            if self.clusters[cy] and self.clusters[cy][cx] then
+                self.clusters[cy][cx].active = false
+                self.clusters[cy][cx].cells = {}
+                self.clusters[cy][cx].lastUpdate = 0
+            end
+        end
+    end
+    
+    -- Force a garbage collection to clean up any lingering references
+    collectgarbage("collect")
+end
+
+-- Create a procedural level with tunnels, dirt, stone, water ponds, and sand traps
+function Level:createProceduralLevel()
+    -- Clear all existing cells first
+    self:clearAllCells()
+    
+    -- Delegate to the LevelGenerator
+    LevelGenerator.createProceduralLevel(self)
 end
 
 function Level:getWorldCoordinates(gridX, gridY)

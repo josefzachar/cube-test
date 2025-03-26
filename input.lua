@@ -225,8 +225,8 @@ end
 
 function Input:handleKeyPressed(key, ball)
     if key == "r" then
-        -- Reset the ball to the starting position
-        ball:reset(100, 500)
+        -- Reset the ball to the starting position (matching the level generator)
+        ball:reset(20 * Cell.SIZE, 20 * Cell.SIZE)
         -- Reset the click position and aiming state
         self.clickPosition.x = nil
         self.clickPosition.y = nil

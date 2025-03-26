@@ -17,6 +17,11 @@ A physics-based golf game where the ball is a square and the level is made of ce
 - **D**: Toggle debug mode
 - **S**: Add 1000 random sand cells (for performance testing)
 - **P**: Add a sand pile at the ball's position
+- **E**: Add a dirt block at the ball's position
+- **Q**: Add a water pool at the ball's position
+- **G**: Generate a new procedural level
+- **W**: Create a water test level
+- **T**: Create a dirt-water test level
 
 ## Game Features
 
@@ -30,14 +35,26 @@ A physics-based golf game where the ball is a square and the level is made of ce
   - Sand piles up naturally at angles of repose
   - When hit by the ball, sand can be disrupted and sent flying
 
-### Two Types of Terrain
-- **Sand**: Can be disrupted by the ball, behaves like cellular automata
+### Four Types of Terrain
+- **Sand**: Can be disrupted by the ball, behaves like cellular automata, falls and forms piles
 - **Stone**: Solid obstacles that the ball bounces off of
+- **Dirt**: More durable than sand, doesn't fall but can be displaced by the ball
+- **Water**: Flows like a liquid, the ball can pass through it with altered physics
 
 ### Hybrid Physics System
 - Sand normally follows cellular automata rules
 - When sand is hit by the ball with enough force, it temporarily becomes physics-based
 - Flying sand eventually settles back into cellular automata behavior
+
+### Procedural Level Generation
+- The game features a procedural level generator that creates unique levels each time
+- Generated levels include:
+  - Dirt terrain as the main landscape
+  - Stone structures for variety and challenge
+  - Winding tunnels for the ball to navigate through
+  - Occasional water ponds that add fluid dynamics
+  - Strategic sand traps that can slow down the ball
+- Press 'G' at any time to generate a new procedural level
 
 ## Performance Optimizations
 
@@ -70,7 +87,18 @@ The game includes several optimizations to handle large numbers of sand cells ef
 
 The game is organized into multiple modules:
 - **ball.lua**: Square ball implementation
-- **cell.lua**: Cell types and behavior (sand and stone)
-- **level.lua**: Level generation and management
+- **cell.lua**: Base cell implementation
+- **level.lua**: Level management and interface to level generator
 - **input.lua**: Mouse and keyboard handling
 - **main.lua**: Game initialization and main loop
+- **src/level_generator.lua**: Procedural level generation and test levels
+- **src/cell_types.lua**: Definition of all cell types and their properties
+- **src/dirt.lua**: Dirt cell behavior and utilities
+- **src/sand.lua**: Sand cell behavior and utilities
+- **src/stone.lua**: Stone cell behavior and utilities
+- **src/water.lua**: Water cell behavior and utilities
+- **src/collision.lua**: Physics collision handling
+- **src/effects.lua**: Visual effects for cells
+- **src/renderer.lua**: Level and cell rendering
+- **src/updater.lua**: Cell update logic and optimization
+- **src/debug.lua**: Debug visualization and tools
