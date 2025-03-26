@@ -25,6 +25,7 @@ function Renderer.drawLevel(level, debug)
     local dirtBatch = {}
     local fireBatch = {}
     local smokeBatch = {}
+    local winHoleBatch = {}
     
     -- Collect cells for batch drawing
     for y = minY, maxY do
@@ -45,6 +46,8 @@ function Renderer.drawLevel(level, debug)
                     table.insert(fireBatch, {x = x, y = y})
                 elseif cellType == CellTypes.TYPES.SMOKE then
                     table.insert(smokeBatch, {x = x, y = y})
+                elseif cellType == CellTypes.TYPES.WIN_HOLE then
+                    table.insert(winHoleBatch, {x = x, y = y})
                 elseif debug and cellType == Cell.TYPES.EMPTY then
                     -- Draw empty cells only in debug mode
                     love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
@@ -71,6 +74,9 @@ function Renderer.drawLevel(level, debug)
     
     -- Draw smoke cells
     Renderer.drawSmokeBatch(level, smokeBatch, debug)
+    
+    -- Draw win hole cells
+    Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
     
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
@@ -308,6 +314,36 @@ function Renderer.drawSmokeBatch(level, smokeBatch, debug)
         -- Draw debug info
         if debug then
             love.graphics.setColor(0.7, 0.7, 0.7, 1) -- Light gray
+            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+        end
+    end
+end
+
+-- Draw win hole cells as simple black rectangles
+function Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
+    local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local winHoleColor = COLORS[CellTypes.TYPES.WIN_HOLE]
+    
+    for _, cellPos in ipairs(winHoleBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        local x, y = cellPos.x, cellPos.y
+        
+        -- Apply color variation
+        love.graphics.setColor(
+            winHoleColor[1] * cell.colorVariation.r,
+            winHoleColor[2] * cell.colorVariation.g,
+            winHoleColor[3] * cell.colorVariation.b,
+            winHoleColor[4]
+        )
+        
+        -- Draw win hole as a simple black rectangle
+        love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        
+        -- Draw debug info
+        if debug then
+            love.graphics.setColor(0, 1, 0, 1) -- Green
             love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end

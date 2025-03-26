@@ -11,6 +11,7 @@ local Effects = require("src.effects")
 local Debug = require("src.debug")
 local CellTypes = require("src.cell_types")
 local Fire = require("src.fire")
+local WinHole = require("src.win_hole")
 
 -- Game variables
 local world
@@ -20,9 +21,15 @@ local input
 local attempts = 0
 local debug = false -- Set to true to see physics bodies
 local currentBallType = Balls.TYPES.STANDARD -- Start with standard ball
+local gameWon = false -- Flag to track if the player has won
+local winMessageTimer = 0 -- Timer for displaying the win message
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
+-- Background colors for gradient
+BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0} -- Dark blue (base color)
+BACKGROUND_COLOR_TOP = {0.1, 0.2, 0.4, 1.0} -- Darker blue for top
+BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
 
 function love.load()
     -- Set up the physics world with gravity
@@ -40,6 +47,8 @@ function love.load()
     level = Level.new(world, 160, 100)
     level:createProceduralLevel()
     
+    -- Win hole is now created in the level_generator.lua file
+    
     -- Create the square ball at the starting position (matching the level generator)
     ball = Balls.createBall(world, 20 * Cell.SIZE, 20 * Cell.SIZE, currentBallType)
     
@@ -48,6 +57,10 @@ function love.load()
     
     -- Create input handler
     input = Input.new()
+    
+    -- Reset game state
+    gameWon = false
+    winMessageTimer = 0
 end
 
 function love.update(dt)
@@ -69,6 +82,18 @@ function love.update(dt)
         ball = newBall
         ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
         print("Switched to Standard Ball after explosion")
+    end
+    
+    -- Check for win condition
+    if ball.hasWon and not gameWon then
+        gameWon = true
+        winMessageTimer = 5.0 -- Display win message for 5 seconds
+        print("GAME WON! Congratulations!")
+    end
+    
+    -- Update win message timer
+    if gameWon and winMessageTimer > 0 then
+        winMessageTimer = winMessageTimer - dt
     end
     
     -- Update the level (pass the ball for cluster activation)
@@ -129,6 +154,9 @@ function love.keypressed(key)
         end
     elseif input:handleKeyPressed(key, ball) then
         -- Reset was performed
+        -- Reset game state on reset
+        gameWon = false
+        winMessageTimer = 0
     else
         local result = Debug.handleKeyPressed(key, level)
         if result == true then
@@ -172,11 +200,37 @@ function love.keypressed(key)
                 end
             end
             print("Added fire at ball position")
+        elseif key == "h" then
+            -- Add a win hole at ball position
+            local x, y = ball.body:getPosition()
+            local gridX, gridY = level:getGridCoordinates(x, y)
+            WinHole.createWinHoleArea(level, gridX, gridY, 3, 3)
+            print("Added a win hole at ball position")
         end
     end
 end
 
 function love.draw()
+    -- Draw gradient background
+    love.graphics.clear(0, 0, 0, 1) -- Clear with black first
+    
+    -- Get screen dimensions
+    local width, height = love.graphics.getDimensions()
+    
+    -- Draw gradient rectangle covering the entire screen
+    love.graphics.setColor(BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4])
+    love.graphics.rectangle("fill", 0, 0, width, height)
+    
+    -- Create a subtle gradient mesh
+    local gradient = love.graphics.newMesh({
+        {0, 0, 0, 0, BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4]}, -- top-left
+        {width, 0, 1, 0, BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4]}, -- top-right
+        {width, height, 1, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
+        {0, height, 0, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
+    }, "fan", "static")
+    
+    love.graphics.draw(gradient)
+    
     -- Draw the level
     level:draw(debug) -- Pass debug flag to level:draw
     
@@ -208,6 +262,19 @@ function love.draw()
     
     -- Draw active cells for debugging
     Debug.drawActiveCells(level)
+    
+    -- Draw win message if the game is won
+    if gameWon and winMessageTimer > 0 then
+        -- Draw a semi-transparent background
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+        
+        -- Draw the win message
+        love.graphics.setColor(0, 1, 0, 1) -- Green text
+        love.graphics.printf("YOU WIN!", 0, love.graphics.getHeight() / 2 - 50, love.graphics.getWidth(), "center")
+        love.graphics.printf("Shots: " .. attempts, 0, love.graphics.getHeight() / 2, love.graphics.getWidth(), "center")
+        love.graphics.printf("Press R to restart", 0, love.graphics.getHeight() / 2 + 50, love.graphics.getWidth(), "center")
+    end
 end
 
 function love.mousepressed(x, y, button)

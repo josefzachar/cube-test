@@ -38,8 +38,20 @@ function Collision.beginContact(a, b, coll, level, ball)
         local vx, vy = ballBody:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
         
+        -- Handle win hole collisions
+        if otherData == "win_hole" then
+            -- Get the win hole cell position
+            local winHoleBody = otherFixture:getBody()
+            local winHoleX, winHoleY = winHoleBody:getPosition()
+            local gridX, gridY = level:getGridCoordinates(winHoleX, winHoleY)
+            
+            -- Set the win flag on the ball
+            if ball then
+                ball.hasWon = true
+                print("Ball entered win hole! Player wins!")
+            end
         -- Handle water collisions
-        if otherData == "water" then
+        elseif otherData == "water" then
             -- Get the water cell position
             local waterBody = otherFixture:getBody()
             local waterX, waterY = waterBody:getPosition()

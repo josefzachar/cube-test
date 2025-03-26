@@ -119,7 +119,12 @@ function Cell:draw(debug)
             color[3] * self.colorVariation.b, 
             color[4]
         )
-        love.graphics.rectangle("fill", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        
+        -- All cells except win holes are drawn here
+        -- Win holes are drawn in the renderer.lua file
+        if self.type ~= Cell.TYPES.WIN_HOLE then
+            love.graphics.rectangle("fill", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        end
         
         -- Draw cell type indicators only in debug mode
         if debug then
@@ -134,6 +139,9 @@ function Cell:draw(debug)
                 love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
             elseif self.type == Cell.TYPES.DIRT then
                 love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
+                love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
+            elseif self.type == Cell.TYPES.WIN_HOLE then
+                love.graphics.setColor(0, 1, 0, 1) -- Green
                 love.graphics.circle("fill", self.x * Cell.SIZE + Cell.SIZE/2, self.y * Cell.SIZE + Cell.SIZE/2, 2)
             end
         end
@@ -159,6 +167,7 @@ local VISUAL_SAND = CellTypes.TYPES.VISUAL_SAND
 local VISUAL_DIRT = CellTypes.TYPES.VISUAL_DIRT
 local WATER = CellTypes.TYPES.WATER
 local DIRT = CellTypes.TYPES.DIRT
+local WIN_HOLE = CellTypes.TYPES.WIN_HOLE
 
 function Cell:update(dt, level)
     local cellType = self.type

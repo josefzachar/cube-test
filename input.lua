@@ -262,10 +262,10 @@ function Input:draw(ball)
             )
             
             -- Draw a small indicator at the clicked position
-            -- First draw the black filled circle
-            love.graphics.setColor(0, 0, 0, 1) -- Black
+            -- First draw the filled circle with background color
+            love.graphics.setColor(BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3], BACKGROUND_COLOR[4])
             self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "fill")
-            -- Then draw the orange border over it
+            -- Then draw the white border over it
             love.graphics.setColor(1, 1, 1, 1) -- White
             self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "line")
             love.graphics.setColor(1, 1, 1, 1) -- Reset to white

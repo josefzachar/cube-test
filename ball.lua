@@ -65,6 +65,7 @@ function Ball.new(world, x, y, ballType)
     self.inSand = false -- Flag to track if the ball is in sand
     self.sandCells = {} -- Table to track which sand cells the ball is in
     self.world = world -- Store the world for later use
+    self.hasWon = false -- Flag to track if the ball has entered a win hole
     
     return self
 end
@@ -367,6 +368,7 @@ function Ball:reset(x, y)
     self.body:setAngularVelocity(0)
     self.body:setAngle(0) -- Reset rotation
     self.isLaunched = false
+    self.hasWon = false -- Reset win state
     
     -- Reset special states
     if self.ballType == Ball.TYPES.EXPLODING then

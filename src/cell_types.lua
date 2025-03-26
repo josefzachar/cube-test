@@ -12,12 +12,13 @@ CellTypes.TYPES = {
     DIRT = 5,         -- Dirt that doesn't fall but can be displaced like sand
     VISUAL_DIRT = 6,  -- Visual effect for flying dirt (no physics)
     FIRE = 7,         -- Fire that acts as an energy type
-    SMOKE = 8         -- Visual effect for smoke from fire
+    SMOKE = 8,        -- Visual effect for smoke from fire
+    WIN_HOLE = 9      -- Win hole that makes the player win when the ball enters it
 }
 
 -- Colors
 CellTypes.COLORS = {
-    [CellTypes.TYPES.EMPTY] = {0, 0, 0, 0}, -- Transparent
+    [CellTypes.TYPES.EMPTY] = {0.7, 0.8, 1.0, 1.0}, -- Bluish sky color
     [CellTypes.TYPES.SAND] = {0.9, 0.8, 0.5, 1}, -- Sand color
     [CellTypes.TYPES.STONE] = {0.5, 0.5, 0.5, 1}, -- Stone color
     [CellTypes.TYPES.VISUAL_SAND] = {1.0, 0.9, 0.6, 1}, -- Brighter sand for visual effect
@@ -25,7 +26,8 @@ CellTypes.COLORS = {
     [CellTypes.TYPES.DIRT] = {0.6, 0.4, 0.2, 1}, -- Brown for dirt
     [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1}, -- Brighter dirt for visual effect
     [CellTypes.TYPES.FIRE] = {1.0, 0.3, 0.1, 0.9}, -- Bright orange-red for fire with some transparency
-    [CellTypes.TYPES.SMOKE] = {0.8, 0.8, 0.8, 0.6} -- Gray with transparency for smoke
+    [CellTypes.TYPES.SMOKE] = {0.8, 0.8, 0.8, 0.6}, -- Gray with transparency for smoke
+    [CellTypes.TYPES.WIN_HOLE] = {0.0, 0.0, 0.0, 1.0} -- Black for the win hole
 }
 
 -- Material properties for physics and displacement

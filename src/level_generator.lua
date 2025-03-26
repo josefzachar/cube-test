@@ -373,12 +373,15 @@ function createGoalArea(level, goalX, goalY)
     -- Create a clear area around the goal
     createClearArea(level, goalX, goalY, 8)
     
-    -- Add a visual marker for the goal (could be a different cell type or structure)
-    -- For now, we'll just create a stone ring around it
+    -- Add a win hole at the goal area
+    local WinHole = require("src.win_hole")
+    WinHole.createWinHoleArea(level, goalX - 3, goalY - 3, 7, 7) -- Create a diamond-shaped win hole
+    
+    -- Add a stone ring around the win hole for visibility
     for angle = 0, 360, 10 do
         local rad = math.rad(angle)
-        local x = math.floor(goalX + math.cos(rad) * 5)
-        local y = math.floor(goalY + math.sin(rad) * 5)
+        local x = math.floor(goalX + math.cos(rad) * 6)
+        local y = math.floor(goalY + math.sin(rad) * 6)
         
         if x > 1 and x < level.width - 2 and y > 1 and y < level.height - 3 then
             level:setCellType(x, y, CellTypes.TYPES.STONE)

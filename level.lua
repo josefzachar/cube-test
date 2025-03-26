@@ -140,6 +140,13 @@ function Level:addDirtBlock(x, y, width, height)
     Dirt.createBlock(self, x, y, width, height)
 end
 
+-- Add a win hole at the specified position
+function Level:addWinHole(x, y, width, height)
+    -- Delegate to the WinHole module
+    local WinHole = require("src.win_hole")
+    WinHole.createWinHoleArea(self, x, y, width, height)
+end
+
 -- Add a large amount of sand for performance testing
 function Level:addLotsOfSand(amount)
     -- Clear all existing cells first
