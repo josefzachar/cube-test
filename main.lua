@@ -2,13 +2,14 @@
 -- A simple golf game where the ball is a square and the level is made of cells
 
 -- Load modules
-local Ball = require("ball")
+local Balls = require("src.balls")
 local Cell = require("cell")
 local Level = require("level")
 local Input = require("input")
 local Collision = require("src.collision")
 local Effects = require("src.effects")
 local Debug = require("src.debug")
+local CellTypes = require("src.cell_types")
 
 -- Game variables
 local world
@@ -17,6 +18,7 @@ local level
 local input
 local attempts = 0
 local debug = false -- Set to true to see physics bodies
+local currentBallType = Balls.TYPES.STANDARD -- Start with standard ball
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
@@ -27,7 +29,7 @@ function love.load()
     
     -- Set up collision callbacks
     world:setCallbacks(
-        function(a, b, coll) Collision.beginContact(a, b, coll, level) end,
+        function(a, b, coll) Collision.beginContact(a, b, coll, level, ball) end,
         function(a, b, coll) Collision.endContact(a, b, coll, level) end,
         Collision.preSolve,
         Collision.postSolve
@@ -38,7 +40,7 @@ function love.load()
     level:createProceduralLevel()
     
     -- Create the square ball at the starting position (matching the level generator)
-    ball = Ball.new(world, 20 * Cell.SIZE, 20 * Cell.SIZE)
+    ball = Balls.createBall(world, 20 * Cell.SIZE, 20 * Cell.SIZE, currentBallType)
     
     -- Set the ball as the user data for the ball body
     ball.body:setUserData(ball)
@@ -66,7 +68,41 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
-    if input:handleKeyPressed(key, ball) then
+    -- Handle ball type switching
+    if key == "1" then
+        currentBallType = Balls.TYPES.STANDARD
+        local newBall = Balls.changeBallType(ball, world, currentBallType)
+        ball.body:destroy() -- Destroy old ball's body
+        ball = newBall
+        ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+        print("Switched to Standard Ball")
+    elseif key == "2" then
+        currentBallType = Balls.TYPES.HEAVY
+        local newBall = Balls.changeBallType(ball, world, currentBallType)
+        ball.body:destroy() -- Destroy old ball's body
+        ball = newBall
+        ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+        print("Switched to Heavy Ball")
+    elseif key == "3" then
+        currentBallType = Balls.TYPES.EXPLODING
+        local newBall = Balls.changeBallType(ball, world, currentBallType)
+        ball.body:destroy() -- Destroy old ball's body
+        ball = newBall
+        ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+        print("Switched to Exploding Ball")
+    elseif key == "4" then
+        currentBallType = Balls.TYPES.STICKY
+        local newBall = Balls.changeBallType(ball, world, currentBallType)
+        ball.body:destroy() -- Destroy old ball's body
+        ball = newBall
+        ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+        print("Switched to Sticky Ball")
+    elseif key == "e" and ball.ballType == Balls.TYPES.EXPLODING then
+        -- Trigger explosion for exploding ball
+        if ball:explode(level, Collision.sandToConvert) then
+            print("Exploded!")
+        end
+    elseif input:handleKeyPressed(key, ball) then
         -- Reset was performed
     else
         local result = Debug.handleKeyPressed(key, level)
@@ -108,6 +144,19 @@ function love.draw()
     -- Display attempts counter
     love.graphics.setColor(WHITE)
     love.graphics.print("Shots: " .. attempts, 250, 30)
+    
+    -- Display current ball type
+    local ballTypeText = "Ball: "
+    if ball.ballType == Balls.TYPES.STANDARD then
+        ballTypeText = ballTypeText .. "Standard (1)"
+    elseif ball.ballType == Balls.TYPES.HEAVY then
+        ballTypeText = ballTypeText .. "Heavy (2)"
+    elseif ball.ballType == Balls.TYPES.EXPLODING then
+        ballTypeText = ballTypeText .. "Exploding (3) - Press E to explode"
+    elseif ball.ballType == Balls.TYPES.STICKY then
+        ballTypeText = ballTypeText .. "Sticky (4)"
+    end
+    love.graphics.print(ballTypeText, 250, 50)
     
     -- Debug info
     Debug.drawDebugInfo(level, ball, attempts, debug)

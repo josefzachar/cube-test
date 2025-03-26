@@ -2,13 +2,14 @@
 
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
+local Balls = require("src.balls")
 
 local Collision = {}
 
 -- Tables to track sand cells
 Collision.sandToConvert = {} -- Table to store sand cells that need to be converted to flying sand
 
-function Collision.beginContact(a, b, coll, level)
+function Collision.beginContact(a, b, coll, level, ball)
     -- Don't clear the sandToConvert array here, it's cleared in main.lua
     
     local aData = a:getUserData()
@@ -61,6 +62,9 @@ function Collision.beginContact(a, b, coll, level)
             end
         end
         
+        -- Get the ball object
+        local ballObject = ballBody:getUserData()
+        
         -- Create a crater if the ball hits a material with appropriate speed thresholds
         local createCrater = false
         
@@ -74,10 +78,37 @@ function Collision.beginContact(a, b, coll, level)
             cellType = CellTypes.TYPES.STONE
         end
         
-        -- Check if the material has properties and if the speed exceeds the threshold
-        if cellType and CellTypes.PROPERTIES[cellType] and 
-           speed > CellTypes.PROPERTIES[cellType].displacementThreshold then
-            createCrater = true
+        -- Check if the material has properties
+        if cellType and CellTypes.PROPERTIES[cellType] then
+            local threshold = CellTypes.PROPERTIES[cellType].displacementThreshold
+            
+            -- Adjust threshold based on ball type
+            if ballObject and ballObject.ballType then
+                if ballObject.ballType == Balls.TYPES.HEAVY then
+                    -- Heavy ball has lower threshold (easier to displace terrain)
+                    threshold = threshold * 0.6
+                elseif ballObject.ballType == Balls.TYPES.STICKY then
+                    -- Sticky ball has higher threshold (harder to displace terrain)
+                    threshold = threshold * 2.0
+                end
+            end
+            
+            -- Check if speed exceeds the adjusted threshold
+            if speed > threshold then
+                createCrater = true
+            end
+        end
+        
+        -- Handle sticky ball sticking
+        if ballObject and ballObject.ballType == Balls.TYPES.STICKY and speed < 100 then
+            -- Sticky ball sticks on impact if not moving too fast
+            ballObject.stuck = true
+        end
+        
+        -- Handle exploding ball explosion
+        if ballObject and ballObject.ballType == Balls.TYPES.EXPLODING and speed > 100 then
+            -- Exploding ball explodes on high-speed impact
+            ballObject:explode(level, Collision.sandToConvert)
         end
         
         if createCrater then
@@ -96,10 +127,23 @@ function Collision.beginContact(a, b, coll, level)
             
             local gridX, gridY = level:getGridCoordinates(hitX, hitY)
             
-            -- Special case for direct hit: If the hit cell is sand or dirt and meets the direct hit threshold
-            if (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and 
-               CellTypes.PROPERTIES[cellType] and 
-               speed > CellTypes.PROPERTIES[cellType].directHitThreshold then
+                -- Special case for direct hit: If the hit cell is sand or dirt and meets the direct hit threshold
+                local directHitThreshold = CellTypes.PROPERTIES[cellType].directHitThreshold
+                
+                -- Adjust threshold based on ball type
+                if ballObject and ballObject.ballType then
+                if ballObject.ballType == Balls.TYPES.HEAVY then
+                    -- Heavy ball has lower threshold (easier to displace terrain)
+                    directHitThreshold = directHitThreshold * 0.6
+                elseif ballObject.ballType == Balls.TYPES.STICKY then
+                    -- Sticky ball has higher threshold (harder to displace terrain)
+                    directHitThreshold = directHitThreshold * 2.0
+                    end
+                end
+                
+                if (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and 
+                   CellTypes.PROPERTIES[cellType] and 
+                   speed > directHitThreshold then
                 
                 local cellTypeName = cellType == CellTypes.TYPES.SAND and "sand" or "dirt"
                 
