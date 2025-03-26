@@ -121,6 +121,99 @@ function Input:sprayMaterial(level)
     end
 end
 
+-- Function to draw a dashed line made of cells
+function Input:drawDashedCellLine(startX, startY, endX, endY, cellSize, spacing)
+    local dirX = endX - startX
+    local dirY = endY - startY
+    local length = math.sqrt(dirX * dirX + dirY * dirY)
+    
+    if length > 0 then
+        dirX = dirX / length
+        dirY = dirY / length
+    else
+        return -- No line to draw
+    end
+    
+    -- Draw cells along the line with spacing
+    local distance = 0
+    while distance < length do
+        local posX = startX + dirX * distance
+        local posY = startY + dirY * distance
+        
+        -- Draw a square "cell"
+        love.graphics.rectangle("fill", posX - cellSize/2, posY - cellSize/2, cellSize, cellSize)
+        
+        -- Move along the line with spacing
+        distance = distance + cellSize + spacing
+    end
+end
+
+-- Function to draw a pixelated arrow
+function Input:drawPixelatedArrow(x, y, dirX, dirY, size)
+    -- Normalize direction
+    local length = math.sqrt(dirX * dirX + dirY * dirY)
+    if length > 0 then
+        dirX = dirX / length
+        dirY = dirY / length
+    else
+        return
+    end
+    
+    -- Calculate perpendicular vector for arrow wings
+    local perpX = -dirY
+    local perpY = dirX
+    
+    -- Arrow pixel pattern (relative positions)
+    local pixels = {
+        {0, 0},                -- Tip
+        {-1, -1}, {1, -1},     -- Second row
+        {-2, -2}, {0, -2}, {2, -2},  -- Third row
+        {-3, -3}, {-1, -3}, {1, -3}, {3, -3}  -- Fourth row
+    }
+    
+    -- Size of each pixel
+    local pixelSize = size / 4
+    
+    -- Draw each pixel of the arrow
+    for _, pixel in ipairs(pixels) do
+        local px = x + (pixel[1] * perpX + pixel[2] * dirX) * pixelSize
+        local py = y + (pixel[1] * perpY + pixel[2] * dirY) * pixelSize
+        
+        love.graphics.rectangle("fill", px - pixelSize/2, py - pixelSize/2, pixelSize, pixelSize)
+    end
+end
+
+-- Function to draw a pixelated circle
+function Input:drawPixelatedCircle(x, y, radius, pixelSize, mode)
+    -- Calculate bounding box
+    local minX = math.floor(x - radius - pixelSize)
+    local minY = math.floor(y - radius - pixelSize)
+    local maxX = math.ceil(x + radius + pixelSize)
+    local maxY = math.ceil(y + radius + pixelSize)
+    
+    -- Determine which pixels to draw based on distance from center
+    for px = minX, maxX, pixelSize do
+        for py = minY, maxY, pixelSize do
+            -- Calculate center of this pixel
+            local centerX = px + pixelSize / 2
+            local centerY = py + pixelSize / 2
+            
+            -- Calculate distance from circle center to pixel center
+            local distX = centerX - x
+            local distY = centerY - y
+            local distance = math.sqrt(distX * distX + distY * distY)
+            
+            -- For filled circle, draw if inside radius
+            if mode == "fill" and distance <= radius then
+                love.graphics.rectangle("fill", px, py, pixelSize, pixelSize)
+            -- For line circle, draw if close to the radius
+            elseif mode == "line" and math.abs(distance - radius) <= pixelSize then
+                love.graphics.rectangle("fill", px, py, pixelSize, pixelSize)
+            end
+        end
+    end
+end
+
 function Input:draw(ball)
     -- Draw mode indicator
     love.graphics.setColor(1, 1, 1, 1) -- White
@@ -129,29 +222,52 @@ function Input:draw(ball)
         
         -- Draw aim line if ball is not moving and user is aiming
         if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
-            local lineLength = self.aimPower / 10 -- Scale down for visual purposes
+            local lineLength = self.aimPower / 5 -- Scale down for visual purposes
+            local cellSize = 8  -- Size of each cell in pixels
+            local cellSpacing = 6  -- Space between cells
             
-            -- Draw original aim line
-            love.graphics.setColor(0.8, 0.8, 0.8, 1) -- Light gray for original direction
-            love.graphics.line(
+            -- Draw original aim line (dashed cells)
+            love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
+            local endX = self.clickPosition.x + self.aimDirection.x * lineLength
+            local endY = self.clickPosition.y + self.aimDirection.y * lineLength
+            self:drawDashedCellLine(
                 self.clickPosition.x, 
                 self.clickPosition.y, 
-                self.clickPosition.x + self.aimDirection.x * lineLength, 
-                self.clickPosition.y + self.aimDirection.y * lineLength
+                endX, 
+                endY,
+                cellSize,
+                cellSpacing
             )
             
             -- Draw opposite aim line (actual shot direction)
-            love.graphics.setColor(1, 0, 0, 1) -- Red for shot direction
-            love.graphics.line(
+            love.graphics.setColor(1, 1, 1, 1) -- Red for shot direction
+            local shotEndX = self.clickPosition.x - self.aimDirection.x * lineLength
+            local shotEndY = self.clickPosition.y - self.aimDirection.y * lineLength
+            self:drawDashedCellLine(
                 self.clickPosition.x, 
                 self.clickPosition.y, 
-                self.clickPosition.x - self.aimDirection.x * lineLength, 
-                self.clickPosition.y - self.aimDirection.y * lineLength
+                shotEndX, 
+                shotEndY,
+                8,
+                0
+            )
+            
+            -- Draw pixelated arrow at the end of the red line
+            self:drawPixelatedArrow(
+                shotEndX, 
+                shotEndY, 
+                -self.aimDirection.x, 
+                -self.aimDirection.y, 
+                24 -- Arrow size
             )
             
             -- Draw a small indicator at the clicked position
-            love.graphics.setColor(1, 0.5, 0, 1) -- Orange
-            love.graphics.circle("fill", self.clickPosition.x, self.clickPosition.y, 5)
+            -- First draw the black filled circle
+            love.graphics.setColor(0, 0, 0, 1) -- Black
+            self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "fill")
+            -- Then draw the orange border over it
+            love.graphics.setColor(1, 1, 1, 1) -- White
+            self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "line")
             love.graphics.setColor(1, 1, 1, 1) -- Reset to white
             
             -- Draw power indicator
