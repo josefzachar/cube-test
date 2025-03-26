@@ -48,6 +48,9 @@ function LevelGenerator.createTestLevel(level)
         Dirt.createBlock(level, 100, level.height - 15, 8, 5)
         Dirt.createPlatform(level, 40, level.height - 40, 15)
     end
+    
+    -- Initialize grass on top of dirt cells
+    level:initializeGrass()
 end
 
 -- Create a level with lots of sand for performance testing
@@ -64,6 +67,9 @@ function LevelGenerator.createSandTestLevel(level, amount)
             level:setCellType(x, y, CellTypes.TYPES.SAND)
         end
     end
+    
+    -- Initialize grass on top of dirt cells
+    level:initializeGrass()
 end
 
 -- Create a level with water for testing fluid dynamics
@@ -79,6 +85,9 @@ function LevelGenerator.createWaterTestLevel(level)
     -- Add water pools
     Water.createPool(level, 20, level.height - 40, 40, 20)  -- Large pool at top
     Water.createPool(level, 80, level.height - 5, 30, 3)   -- Small pool at bottom
+    
+    -- Initialize grass on top of dirt cells
+    level:initializeGrass()
 end
 
 -- Create a level with mixed elements
@@ -102,6 +111,9 @@ function LevelGenerator.createMixedLevel(level)
     -- Add dirt blocks
     Dirt.createBlock(level, 110, level.height - 25, 10, 8)
     Dirt.createPlatform(level, 60, level.height - 50, 20)
+    
+    -- Initialize grass on top of dirt cells
+    level:initializeGrass()
 end
 
 -- Create a level for testing dirt and water interaction
@@ -124,6 +136,9 @@ function LevelGenerator.createDirtWaterTestLevel(level)
     -- Add some dirt platforms
     Dirt.createPlatform(level, 100, level.height - 20, 25)
     Dirt.createPlatform(level, 20, level.height - 50, 15)
+    
+    -- Initialize grass on top of dirt cells
+    level:initializeGrass()
 end
 
 return LevelGenerator

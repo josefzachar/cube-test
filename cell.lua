@@ -30,6 +30,10 @@ function Cell.new(world, x, y, type)
     self.maxLifetime = 2.0  -- Visual sand disappears after 2 seconds
     self.alpha = 1.0        -- For fade out effect
     
+    -- Flag to indicate if this dirt cell should be rendered as grass
+    -- This will be set when the level is loaded
+    self.hasGrass = false
+    
     -- Color variation (unique to each cell)
     -- Use a deterministic but seemingly random value based on coordinates
     -- This ensures the same cell always gets the same color variation

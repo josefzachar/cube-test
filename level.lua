@@ -53,6 +53,27 @@ function Level.new(world, width, height)
     return self
 end
 
+-- Initialize grass flags for dirt cells
+-- This should be called after the level is created and filled with content
+function Level:initializeGrass()
+    local EMPTY = Cell.TYPES.EMPTY
+    local DIRT = Cell.TYPES.DIRT
+    
+    -- Loop through all cells
+    for y = 0, self.height - 1 do
+        for x = 0, self.width - 1 do
+            -- Check if this is a dirt cell
+            if self.cells[y][x].type == DIRT then
+                -- Check if there's empty space above
+                if y > 0 and self.cells[y-1][x].type == EMPTY then
+                    -- Mark this dirt cell as having grass
+                    self.cells[y][x].hasGrass = true
+                end
+            end
+        end
+    end
+end
+
 function Level:update(dt, ball)
     -- Increment frame counter
     self.frameCount = self.frameCount + 1

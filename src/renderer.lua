@@ -190,24 +190,30 @@ function Renderer.drawDirtBatch(level, dirtBatch, debug)
     local Cell = require("cell")
     local COLORS = CellTypes.COLORS
     local dirtColor = COLORS[Cell.TYPES.DIRT]
+    -- Define grass color (green)
+    local grassColor = {0.2, 0.7, 0.2, 1}
     
     for _, cellPos in ipairs(dirtBatch) do
         -- Get the actual cell from the level
         local cell = level.cells[cellPos.y][cellPos.x]
+        local x, y = cellPos.x, cellPos.y
+        
+        -- Choose color based on whether this cell has grass (set during level initialization)
+        local color = cell.hasGrass and grassColor or dirtColor
         
         -- Apply color variation
         love.graphics.setColor(
-            dirtColor[1] * cell.colorVariation.r,
-            dirtColor[2] * cell.colorVariation.g,
-            dirtColor[3] * cell.colorVariation.b,
-            dirtColor[4]
+            color[1] * cell.colorVariation.r,
+            color[2] * cell.colorVariation.g,
+            color[3] * cell.colorVariation.b,
+            color[4]
         )
-        love.graphics.rectangle("fill", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
-            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
+            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end
 end
