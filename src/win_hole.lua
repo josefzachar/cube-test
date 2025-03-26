@@ -38,32 +38,40 @@ function WinHole.createPhysics(cell, world)
     
     -- Make the win hole a sensor so it doesn't physically block the ball
     cell.fixture:setSensor(true)
+    
+    print("Created win hole physics at", cell.x, cell.y, "with sensor =", cell.fixture:isSensor())
 end
 
--- Create a win hole area in a diamond shape
-function WinHole.createWinHoleArea(level, x, y, size, _)
-    -- Size should be odd to have a center point
-    if size % 2 == 0 then
-        size = size + 1
-    end
+-- Create a diamond-shaped win hole
+function WinHole.createWinHoleArea(level, x, y, _, _)
+    -- Create a diamond shape using a 5x5 grid with corners removed
+    -- The pattern is:
+    --   X
+    --  XXX
+    -- XXXXX
+    --  XXX
+    --   X
     
-    local radius = math.floor(size / 2)
-    local centerX = x + radius
-    local centerY = y + radius
+    -- Define the diamond pattern explicitly
+    local pattern = {
+        {0, 0, 1, 0, 0},
+        {0, 1, 1, 1, 0},
+        {1, 1, 1, 1, 1},
+        {0, 1, 1, 1, 0},
+        {0, 0, 1, 0, 0}
+    }
     
-    -- Create a diamond-shaped area of win holes
-    for dy = -radius, radius do
-        for dx = -radius, radius do
-            -- Calculate Manhattan distance from center
-            local distance = math.abs(dx) + math.abs(dy)
-            
-            -- If within the diamond radius, create a win hole
-            if distance <= radius then
-                local cellX = centerX + dx
-                local cellY = centerY + dy
+    -- Create win holes based on the pattern
+    for dy = 0, 4 do
+        for dx = 0, 4 do
+            -- Only create a win hole if the pattern has a 1 at this position
+            if pattern[dy + 1][dx + 1] == 1 then
+                local cellX = x + dx
+                local cellY = y + dy
                 
                 -- Only create win holes within the level bounds
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
+                    print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
                 end
             end

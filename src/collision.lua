@@ -49,6 +49,10 @@ function Collision.beginContact(a, b, coll, level, ball)
             if ball then
                 ball.hasWon = true
                 print("Ball entered win hole! Player wins!")
+                print("Ball position:", ballBody:getX(), ballBody:getY())
+                print("Win hole position:", winHoleX, winHoleY)
+                print("Win hole grid coordinates:", gridX, gridY)
+                print("Ball hasWon flag:", ball.hasWon)
             end
         -- Handle water collisions
         elseif otherData == "water" then

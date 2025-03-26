@@ -176,7 +176,12 @@ function Debug.handleKeyPressed(key, level)
     elseif key == "g" then
         -- Create a new procedural level
         level:createProceduralLevel()
-        print("Created new procedural level")
+        
+        -- Add a diamond-shaped win hole at a random position
+        -- This function is defined in main.lua
+        _G.createDiamondWinHole(level)
+        
+        print("Created new procedural level with win hole at random position")
     elseif key == "e" then
         -- Add a dirt block
         return "dirt_block" -- Signal to add a dirt block at ball position

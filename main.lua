@@ -31,6 +31,70 @@ BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0} -- Dark blue (base color)
 BACKGROUND_COLOR_TOP = {0.1, 0.2, 0.4, 1.0} -- Darker blue for top
 BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
 
+-- Function to create a diamond-shaped win hole
+function createDiamondWinHole(level, holeX, holeY)
+    -- If no position is provided, choose a random position
+    if not holeX or not holeY then
+        -- Choose a random position from several possible locations
+        local possibleLocations = {
+            {x = level.width - 20, y = level.height - 20}, -- Bottom right
+            {x = 20, y = level.height - 20},               -- Bottom left
+            {x = level.width - 20, y = 20},                -- Top right
+            {x = 20, y = 20},                              -- Top left
+            {x = level.width / 2, y = 20},                 -- Top middle
+            {x = level.width / 2, y = level.height - 20},  -- Bottom middle
+            {x = 20, y = level.height / 2},                -- Left middle
+            {x = level.width - 20, y = level.height / 2}   -- Right middle
+        }
+        
+        -- Pick a random location
+        local randomIndex = math.random(1, #possibleLocations)
+        holeX = math.floor(possibleLocations[randomIndex].x)
+        holeY = math.floor(possibleLocations[randomIndex].y)
+    end
+    -- The pattern is:
+    --   X
+    --  XXX
+    -- XXXXX
+    --  XXX
+    --   X
+    
+    -- Define the diamond pattern explicitly
+    local pattern = {
+        {0, 0, 1, 0, 0},
+        {0, 1, 1, 1, 0},
+        {1, 1, 1, 1, 1},
+        {0, 1, 1, 1, 0},
+        {0, 0, 1, 0, 0}
+    }
+    
+    -- Create a clear area around the win hole
+    for y = holeY - 5, holeY + 5 do
+        for x = holeX - 5, holeX + 5 do
+            if x >= 0 and x < level.width and y >= 0 and y < level.height then
+                level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+            end
+        end
+    end
+    
+    -- Create win holes based on the pattern
+    for dy = 0, 4 do
+        for dx = 0, 4 do
+            -- Only create a win hole if the pattern has a 1 at this position
+            if pattern[dy + 1][dx + 1] == 1 then
+                local cellX = holeX - 2 + dx
+                local cellY = holeY - 2 + dy
+                
+                -- Only create win holes within the level bounds
+                if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
+                    print("Creating win hole at", cellX, cellY)
+                    WinHole.createWinHole(level, cellX, cellY)
+                end
+            end
+        end
+    end
+end
+
 function love.load()
     -- Set up the physics world with gravity
     world = love.physics.newWorld(0, 9.81 * 64, true)
@@ -47,7 +111,8 @@ function love.load()
     level = Level.new(world, 160, 100)
     level:createProceduralLevel()
     
-    -- Win hole is now created in the level_generator.lua file
+    -- Create a diamond-shaped win hole at a random position
+    createDiamondWinHole(level)
     
     -- Create the square ball at the starting position (matching the level generator)
     ball = Balls.createBall(world, 20 * Cell.SIZE, 20 * Cell.SIZE, currentBallType)

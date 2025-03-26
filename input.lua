@@ -350,8 +350,10 @@ end
 
 function Input:handleKeyPressed(key, ball)
     if key == "r" then
-        -- Reset the ball to the starting position (matching the level generator)
-        ball:reset(20 * Cell.SIZE, 20 * Cell.SIZE)
+        -- Completely restart the game by calling love.load()
+        -- This will regenerate the level and reset everything
+        love.load()
+        
         -- Reset the click position and aiming state
         self.clickPosition.x = nil
         self.clickPosition.y = nil

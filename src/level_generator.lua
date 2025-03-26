@@ -370,23 +370,84 @@ end
 
 -- Create a goal area (could be a hole or target)
 function createGoalArea(level, goalX, goalY)
-    -- Create a clear area around the goal
-    createClearArea(level, goalX, goalY, 8)
+    -- Choose a random position for the win hole
+    -- We'll pick from several possible locations to ensure variety
+    local possibleLocations = {
+        {x = goalX, y = goalY},                      -- Original goal position (bottom right)
+        {x = 20, y = level.height - 20},             -- Bottom left
+        {x = level.width - 20, y = 20},              -- Top right
+        {x = level.width / 2, y = 20},               -- Top middle
+        {x = 20, y = level.height / 2},              -- Left middle
+        {x = level.width - 20, y = level.height / 2} -- Right middle
+    }
     
-    -- Add a win hole at the goal area
+    -- Pick a random location
+    local randomIndex = math.random(1, #possibleLocations)
+    local holeX = math.floor(possibleLocations[randomIndex].x)
+    local holeY = math.floor(possibleLocations[randomIndex].y)
+    
+    -- Create a clear area around the win hole
+    createClearArea(level, holeX, holeY, 10)
+    
+    -- Create a diamond-shaped win hole directly
+    -- The pattern is:
+    --   X
+    --  XXX
+    -- XXXXX
+    --  XXX
+    --   X
+    
+    -- Define the diamond pattern explicitly
+    local pattern = {
+        {0, 0, 1, 0, 0},
+        {0, 1, 1, 1, 0},
+        {1, 1, 1, 1, 1},
+        {0, 1, 1, 1, 0},
+        {0, 0, 1, 0, 0}
+    }
+    
+    -- Create win holes based on the pattern
     local WinHole = require("src.win_hole")
-    WinHole.createWinHoleArea(level, goalX - 3, goalY - 3, 7, 7) -- Create a diamond-shaped win hole
-    
-    -- Add a stone ring around the win hole for visibility
-    for angle = 0, 360, 10 do
-        local rad = math.rad(angle)
-        local x = math.floor(goalX + math.cos(rad) * 6)
-        local y = math.floor(goalY + math.sin(rad) * 6)
-        
-        if x > 1 and x < level.width - 2 and y > 1 and y < level.height - 3 then
-            level:setCellType(x, y, CellTypes.TYPES.STONE)
+    for dy = 0, 4 do
+        for dx = 0, 4 do
+            -- Only create a win hole if the pattern has a 1 at this position
+            if pattern[dy + 1][dx + 1] == 1 then
+                local cellX = holeX - 2 + dx
+                local cellY = holeY - 2 + dy
+                
+                -- Only create win holes within the level bounds
+                if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
+                    print("Creating win hole at", cellX, cellY)
+                    WinHole.createWinHole(level, cellX, cellY)
+                end
+            end
         end
     end
+    
+    -- Add some visual indicators around the win hole (not stone)
+    -- Create a pattern of empty cells around the win hole
+    local radius = 12
+    for angle = 0, 360, 30 do
+        local rad = math.rad(angle)
+        local x = math.floor(holeX + math.cos(rad) * radius)
+        local y = math.floor(holeY + math.sin(rad) * radius)
+        
+        if x > 1 and x < level.width - 2 and y > 1 and y < level.height - 3 then
+            -- Create a small empty area at each point
+            for dy = -1, 1 do
+                for dx = -1, 1 do
+                    local tx = x + dx
+                    local ty = y + dy
+                    if tx > 1 and tx < level.width - 2 and ty > 1 and ty < level.height - 3 then
+                        level:setCellType(tx, ty, CellTypes.TYPES.EMPTY)
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Ensure there's a path from the start to the win hole
+    connectPoints(level, 20, 20, holeX, holeY)
 end
 
 -- Add some stone structures to the level
