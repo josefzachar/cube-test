@@ -10,12 +10,15 @@ setmetatable(HeavyBall, BaseBall) -- Inherit from BaseBall
 function HeavyBall.new(world, x, y)
     local self = BaseBall.new(world, x, y, BaseBall.TYPES.HEAVY)
     
-    -- Override physics properties for heavy ball
+    -- Override physics properties for heavy ball - similar to standard ball in the air
     self.fixture:destroy() -- Remove default fixture
-    self.fixture = love.physics.newFixture(self.body, self.shape, 5) -- Higher density
-    self.fixture:setRestitution(0.2) -- Less bouncy
-    self.fixture:setFriction(0.7) -- More friction
+    self.fixture = love.physics.newFixture(self.body, self.shape, 2) -- Similar to standard ball
+    self.fixture:setRestitution(0.5) -- Standard bounce
+    self.fixture:setFriction(0.5) -- Standard friction
     self.fixture:setUserData("ball")
+    
+    -- No linear damping - flies like standard ball
+    self.body:setLinearDamping(0.0)
     
     return setmetatable(self, HeavyBall)
 end

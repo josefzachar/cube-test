@@ -10,12 +10,18 @@ setmetatable(StickyBall, BaseBall) -- Inherit from BaseBall
 function StickyBall.new(world, x, y)
     local self = BaseBall.new(world, x, y, BaseBall.TYPES.STICKY)
     
-    -- Override physics properties for sticky ball
+    -- Override physics properties for sticky ball - similar to standard ball in the air
     self.fixture:destroy() -- Remove default fixture
-    self.fixture = love.physics.newFixture(self.body, self.shape, 1.5) -- Lower density
-    self.fixture:setRestitution(0.0) -- No bounce
-    self.fixture:setFriction(1.0) -- Maximum friction
+    self.fixture = love.physics.newFixture(self.body, self.shape, 1)
+    self.fixture:setRestitution(0.0) -- No bounce when it hits something
+    self.fixture:setFriction(10.0) -- Extremely high friction to stick to surfaces
     self.fixture:setUserData("ball")
+    
+    -- No linear damping while in the air - behaves like standard ball
+    self.body:setLinearDamping(0.0)
+    
+    -- Flag to track if we've made contact with any cells
+    self.hasContactedCell = false
     
     -- Add sticky ball specific properties
     self.stuck = false -- Track if the ball is stuck
