@@ -1,6 +1,7 @@
 -- renderer.lua - Cell rendering utilities
 
 local CellTypes = require("src.cell_types")
+local Fire = require("src.fire")
 
 local Renderer = {}
 
@@ -22,6 +23,8 @@ function Renderer.drawLevel(level, debug)
     local stoneBatch = {}
     local waterBatch = {}
     local dirtBatch = {}
+    local fireBatch = {}
+    local smokeBatch = {}
     
     -- Collect cells for batch drawing
     for y = minY, maxY do
@@ -38,6 +41,10 @@ function Renderer.drawLevel(level, debug)
                     table.insert(waterBatch, {x = x, y = y})
                 elseif cellType == Cell.TYPES.DIRT then
                     table.insert(dirtBatch, {x = x, y = y})
+                elseif cellType == CellTypes.TYPES.FIRE then
+                    table.insert(fireBatch, {x = x, y = y})
+                elseif cellType == CellTypes.TYPES.SMOKE then
+                    table.insert(smokeBatch, {x = x, y = y})
                 elseif debug and cellType == Cell.TYPES.EMPTY then
                     -- Draw empty cells only in debug mode
                     love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
@@ -58,6 +65,12 @@ function Renderer.drawLevel(level, debug)
     
     -- Draw dirt cells
     Renderer.drawDirtBatch(level, dirtBatch, debug)
+    
+    -- Draw fire cells
+    Renderer.drawFireBatch(level, fireBatch, debug)
+    
+    -- Draw smoke cells
+    Renderer.drawSmokeBatch(level, smokeBatch, debug)
     
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
@@ -213,6 +226,88 @@ function Renderer.drawDirtBatch(level, dirtBatch, debug)
         -- Draw debug info
         if debug then
             love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
+            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+        end
+    end
+end
+
+-- Draw fire cells with simple animated effect
+function Renderer.drawFireBatch(level, fireBatch, debug)
+    local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local fireColor = COLORS[CellTypes.TYPES.FIRE]
+    
+    for _, cellPos in ipairs(fireBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        local x, y = cellPos.x, cellPos.y
+        
+        -- Apply color variation and simple animation
+        local time = love.timer.getTime()
+        local flicker = math.sin(time * 10 + x * 0.5 + y * 0.7) * 0.2 + 0.8 -- Flickering effect
+        
+        love.graphics.setColor(
+            fireColor[1] * cell.colorVariation.r * flicker,
+            fireColor[2] * cell.colorVariation.g * flicker,
+            fireColor[3] * cell.colorVariation.b * flicker,
+            fireColor[4]
+        )
+        
+        -- Draw main fire cell
+        love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        
+        -- Draw debug info
+        if debug then
+            love.graphics.setColor(1, 0.5, 0, 1) -- Orange
+            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+        end
+    end
+end
+
+-- Draw smoke cells with simple rising effect
+function Renderer.drawSmokeBatch(level, smokeBatch, debug)
+    local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local smokeColor = COLORS[CellTypes.TYPES.SMOKE]
+    
+    for _, cellPos in ipairs(smokeBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        local x, y = cellPos.x, cellPos.y
+        
+        -- Check if this is steam (from Fire.steamCells) or regular smoke
+        local isInSteamTable = Fire and Fire.steamCells and Fire.steamCells[x .. "," .. y]
+        
+        -- Apply color variation and animation
+        local time = love.timer.getTime()
+        local drift = math.sin(time * 2 + x * 0.3 + y * 0.5) * 0.1 -- Slow drifting effect
+        
+        -- Determine if this is steam or smoke for coloring
+        if isInSteamTable then
+            -- Steam is more white/blue tinted
+            love.graphics.setColor(0.9, 0.9, 1.0, 0.7)
+        else
+            -- Regular smoke is gray
+            love.graphics.setColor(
+                smokeColor[1] * cell.colorVariation.r,
+                smokeColor[2] * cell.colorVariation.g,
+                smokeColor[3] * cell.colorVariation.b,
+                smokeColor[4] * (0.8 + drift) -- Varying opacity
+            )
+        end
+        
+        -- Draw smoke with slight offset for drifting effect
+        love.graphics.rectangle(
+            "fill", 
+            x * Cell.SIZE + drift * Cell.SIZE, 
+            y * Cell.SIZE, 
+            Cell.SIZE, 
+            Cell.SIZE
+        )
+        
+        -- Draw debug info
+        if debug then
+            love.graphics.setColor(0.7, 0.7, 0.7, 1) -- Light gray
             love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end

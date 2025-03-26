@@ -2,6 +2,7 @@
 
 local BaseBall = require("src.balls.ball_base")
 local CellTypes = require("src.cell_types")
+local Fire = require("src.fire")
 
 local ExplodingBall = {}
 ExplodingBall.__index = ExplodingBall
@@ -75,9 +76,32 @@ function ExplodingBall:explode(level, sandToConvert)
     local gridX, gridY = level:getGridCoordinates(x, y)
     
     -- Explosion radius
-    local explosionRadius = 5
+    local explosionRadius = 12 -- Much larger radius for more dramatic effect
     
-    -- Create explosion effect
+    -- Create fire explosion at the ball's position
+    Fire.createExplosion(level, gridX, gridY, explosionRadius)
+    
+    -- Create additional fire at the center of the explosion
+    for dy = -2, 2 do
+        for dx = -2, 2 do
+            local centerX = gridX + dx
+            local centerY = gridY + dy
+            
+            -- Calculate distance from center
+            local distance = math.sqrt(dx*dx + dy*dy)
+            
+            -- Only affect cells within the center radius
+            if distance <= 2 and
+               centerX >= 0 and centerX < level.width and 
+               centerY >= 0 and centerY < level.height then
+                
+                -- Create fire at the center
+                Fire.createFire(level, centerX, centerY)
+            end
+        end
+    end
+    
+    -- Create explosion effect with particles
     for dy = -explosionRadius, explosionRadius do
         for dx = -explosionRadius, explosionRadius do
             local checkX = gridX + dx
@@ -94,9 +118,11 @@ function ExplodingBall:explode(level, sandToConvert)
                 -- Get the cell type
                 local cellType = level:getCellType(checkX, checkY)
                 
-                -- Only affect certain cell types (not empty or water)
+                -- Only affect certain cell types (not empty, fire, smoke, or water)
                 if cellType ~= CellTypes.TYPES.EMPTY and 
-                   cellType ~= CellTypes.TYPES.WATER then
+                   cellType ~= CellTypes.TYPES.WATER and
+                   cellType ~= CellTypes.TYPES.FIRE and
+                   cellType ~= CellTypes.TYPES.SMOKE then
                     
                     -- Direction away from explosion center
                     local dirX = dx
@@ -111,12 +137,12 @@ function ExplodingBall:explode(level, sandToConvert)
                     
                     -- Calculate velocity based on distance from center
                     local impactFactor = (1 - distance/explosionRadius)
-                    local flyVx = dirX * 500 * impactFactor
-                    local flyVy = dirY * 500 * impactFactor - 200 -- Extra upward boost
+                    local flyVx = dirX * 700 * impactFactor -- Increased velocity
+                    local flyVy = dirY * 700 * impactFactor - 300 -- Extra upward boost
                     
                     -- Add randomness
-                    flyVx = flyVx + math.random(-50, 50)
-                    flyVy = flyVy + math.random(-50, 50)
+                    flyVx = flyVx + math.random(-100, 100)
+                    flyVy = flyVy + math.random(-100, 100)
                     
                     -- Clear the cell
                     level:setCellType(checkX, checkY, CellTypes.TYPES.EMPTY)
@@ -135,7 +161,9 @@ function ExplodingBall:explode(level, sandToConvert)
         end
     end
     
-    return true -- Explosion successful
+    -- Switch to standard ball after explosion
+    -- We'll return a special value to indicate that the ball should be switched
+    return "switch_to_standard"
 end
 
 return ExplodingBall

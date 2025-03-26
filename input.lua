@@ -17,7 +17,8 @@ local MATERIALS = {
     CellTypes.TYPES.SAND,
     CellTypes.TYPES.STONE,
     CellTypes.TYPES.WATER,
-    CellTypes.TYPES.DIRT
+    CellTypes.TYPES.DIRT,
+    CellTypes.TYPES.FIRE
 }
 
 -- Material names for display
@@ -25,7 +26,8 @@ local MATERIAL_NAMES = {
     [CellTypes.TYPES.SAND] = "SAND",
     [CellTypes.TYPES.STONE] = "STONE",
     [CellTypes.TYPES.WATER] = "WATER",
-    [CellTypes.TYPES.DIRT] = "DIRT"
+    [CellTypes.TYPES.DIRT] = "DIRT",
+    [CellTypes.TYPES.FIRE] = "FIRE"
 }
 
 function Input.new()
@@ -105,8 +107,15 @@ function Input:sprayMaterial(level)
         -- Check if the position is valid and empty
         if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
             if level:getCellType(cellX, cellY) == CellTypes.TYPES.EMPTY then
-                -- Create a new cell of the current material type
-                level:setCellType(cellX, cellY, materialType)
+                -- Special handling for fire
+                if materialType == CellTypes.TYPES.FIRE then
+                    -- Use the Fire module to create fire properly
+                    local Fire = require("src.fire")
+                    Fire.createFire(level, cellX, cellY)
+                else
+                    -- Create a new cell of the current material type
+                    level:setCellType(cellX, cellY, materialType)
+                end
             end
         end
     end

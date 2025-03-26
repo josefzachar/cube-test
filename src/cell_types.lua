@@ -10,7 +10,9 @@ CellTypes.TYPES = {
     VISUAL_SAND = 3,  -- Visual effect for flying sand (no physics)
     WATER = 4,        -- Water that flows and has different physics properties
     DIRT = 5,         -- Dirt that doesn't fall but can be displaced like sand
-    VISUAL_DIRT = 6   -- Visual effect for flying dirt (no physics)
+    VISUAL_DIRT = 6,  -- Visual effect for flying dirt (no physics)
+    FIRE = 7,         -- Fire that acts as an energy type
+    SMOKE = 8         -- Visual effect for smoke from fire
 }
 
 -- Colors
@@ -21,7 +23,9 @@ CellTypes.COLORS = {
     [CellTypes.TYPES.VISUAL_SAND] = {1.0, 0.9, 0.6, 1}, -- Brighter sand for visual effect
     [CellTypes.TYPES.WATER] = {0.2, 0.4, 0.8, 0.8}, -- Blue with some transparency for water
     [CellTypes.TYPES.DIRT] = {0.6, 0.4, 0.2, 1}, -- Brown for dirt
-    [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1} -- Brighter dirt for visual effect
+    [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1}, -- Brighter dirt for visual effect
+    [CellTypes.TYPES.FIRE] = {1.0, 0.3, 0.1, 0.9}, -- Bright orange-red for fire with some transparency
+    [CellTypes.TYPES.SMOKE] = {0.8, 0.8, 0.8, 0.6} -- Gray with transparency for smoke
 }
 
 -- Material properties for physics and displacement
@@ -69,6 +73,27 @@ CellTypes.PROPERTIES = {
         
         -- Visual properties
         velocityMultiplier = 0.8        -- Multiplier for visual particle velocity
+    },
+    
+    -- Fire properties
+    [CellTypes.TYPES.FIRE] = {
+        -- Displacement properties
+        displacementThreshold = 10,     -- Very low threshold - fire is easily displaced
+        directHitThreshold = 20,        -- Very low threshold - fire is easily displaced
+        
+        -- Crater size properties
+        craterBaseRadius = 0.1,         -- Small base radius
+        craterMaxRadius = 0.2,          -- Small max radius
+        craterSpeedDivisor = 500,       -- High divisor - small craters
+        
+        -- Visual properties
+        velocityMultiplier = 3.0,       -- High multiplier - fire particles move fast
+        
+        -- Fire specific properties
+        lifetime = 2.0,                 -- How long fire lasts in seconds before turning to smoke
+        smokeRiseSpeed = 50,            -- How fast smoke rises
+        smokeLifetime = 3.0,            -- How long smoke lasts before disappearing
+        waterBoilRate = 0.8             -- Chance of boiling water per update
     }
 }
 

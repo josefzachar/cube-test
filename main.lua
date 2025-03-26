@@ -10,6 +10,7 @@ local Collision = require("src.collision")
 local Effects = require("src.effects")
 local Debug = require("src.debug")
 local CellTypes = require("src.cell_types")
+local Fire = require("src.fire")
 
 -- Game variables
 local world
@@ -60,8 +61,21 @@ function love.update(dt)
     -- Update the ball
     local ballStopped = ball:update(dt)
     
+    -- Check if the exploding ball should switch to standard ball
+    if ball.shouldSwitchToStandard then
+        currentBallType = Balls.TYPES.STANDARD
+        local newBall = Balls.changeBallType(ball, world, currentBallType)
+        ball.body:destroy() -- Destroy old ball's body
+        ball = newBall
+        ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+        print("Switched to Standard Ball after explosion")
+    end
+    
     -- Update the level (pass the ball for cluster activation)
     level:update(dt, ball)
+    
+    -- Update fire and smoke
+    Fire.update(dt, level)
     
     -- Update input
     input:update(ball, level)
@@ -99,8 +113,19 @@ function love.keypressed(key)
         print("Switched to Sticky Ball")
     elseif key == "e" and ball.ballType == Balls.TYPES.EXPLODING then
         -- Trigger explosion for exploding ball
-        if ball:explode(level, Collision.sandToConvert) then
+        local result = ball:explode(level, Collision.sandToConvert)
+        if result then
             print("Exploded!")
+            
+            -- Check if we should switch to standard ball
+            if result == "switch_to_standard" then
+                currentBallType = Balls.TYPES.STANDARD
+                local newBall = Balls.changeBallType(ball, world, currentBallType)
+                ball.body:destroy() -- Destroy old ball's body
+                ball = newBall
+                ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+                print("Switched to Standard Ball after explosion")
+            end
         end
     elseif input:handleKeyPressed(key, ball) then
         -- Reset was performed
@@ -127,6 +152,26 @@ function love.keypressed(key)
             local gridX, gridY = level:getGridCoordinates(x, y)
             level:addWaterPool(gridX, gridY, 10, 3)
             print("Added a water pool at ball position")
+        elseif key == "f" then
+            -- Add fire at ball position
+            local x, y = ball.body:getPosition()
+            local gridX, gridY = level:getGridCoordinates(x, y)
+            
+            -- Create a small cluster of fire for better visibility
+            for dy = -1, 1 do
+                for dx = -1, 1 do
+                    local fireX = gridX + dx
+                    local fireY = gridY + dy
+                    
+                    -- Only place fire in empty cells
+                    if fireX >= 0 and fireX < level.width and 
+                       fireY >= 0 and fireY < level.height and
+                       level:getCellType(fireX, fireY) == CellTypes.TYPES.EMPTY then
+                        Fire.createFire(level, fireX, fireY)
+                    end
+                end
+            end
+            print("Added fire at ball position")
         end
     end
 end

@@ -108,7 +108,14 @@ function Collision.beginContact(a, b, coll, level, ball)
         -- Handle exploding ball explosion
         if ballObject and ballObject.ballType == Balls.TYPES.EXPLODING and speed > 100 then
             -- Exploding ball explodes on high-speed impact
-            ballObject:explode(level, Collision.sandToConvert)
+            local result = ballObject:explode(level, Collision.sandToConvert)
+            
+            -- Check if we should switch to standard ball
+            if result == "switch_to_standard" then
+                -- We'll set a flag on the ball object to indicate it should be switched
+                -- The actual switching will happen in the main update loop
+                ballObject.shouldSwitchToStandard = true
+            end
         end
         
         if createCrater then
