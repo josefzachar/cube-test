@@ -12,6 +12,22 @@ local MODES = {
     SPRAY = 2
 }
 
+-- Available material types for spraying (excluding visual effects)
+local MATERIALS = {
+    CellTypes.TYPES.SAND,
+    CellTypes.TYPES.STONE,
+    CellTypes.TYPES.WATER,
+    CellTypes.TYPES.DIRT
+}
+
+-- Material names for display
+local MATERIAL_NAMES = {
+    [CellTypes.TYPES.SAND] = "SAND",
+    [CellTypes.TYPES.STONE] = "STONE",
+    [CellTypes.TYPES.WATER] = "WATER",
+    [CellTypes.TYPES.DIRT] = "DIRT"
+}
+
 function Input.new()
     local self = setmetatable({}, Input)
     
@@ -24,10 +40,11 @@ function Input.new()
     self.clickPosition = {x = nil, y = nil}  -- Store the position where the user clicked
     self.isAiming = false  -- Flag to track if the user is currently aiming
     
-    -- Sand spraying properties
+    -- Material spraying properties
     self.mode = MODES.SHOOT -- Start in shooting mode
-    self.sprayRadius = 2 -- Radius of sand spray
-    self.sprayRate = 5 -- Number of sand particles per update
+    self.sprayRadius = 2 -- Radius of spray
+    self.sprayRate = 5 -- Number of particles per update
+    self.currentMaterialIndex = 1 -- Start with first material (SAND)
     
     return self
 end
@@ -43,9 +60,9 @@ function Input:update(ball, level)
             self:calculateAim(ball)
         end
     elseif self.mode == MODES.SPRAY then
-        -- Handle sand spraying
+        -- Handle material spraying
         if love.mouse.isDown(1) then -- Left mouse button
-            self:spraySand(level)
+            self:sprayMaterial(level)
         end
     end
 end
@@ -69,24 +86,27 @@ function Input:calculateAim(ball)
     -- The click position stays at the original click location
 end
 
-function Input:spraySand(level)
+function Input:sprayMaterial(level)
     -- Convert mouse position to grid coordinates
     local gridX, gridY = level:getGridCoordinates(self.mouseX, self.mouseY)
     
-    -- Spray sand in a radius around the mouse position
+    -- Get current material type
+    local materialType = MATERIALS[self.currentMaterialIndex]
+    
+    -- Spray material in a radius around the mouse position
     for i = 1, self.sprayRate do
         -- Random position within spray radius
         local offsetX = math.random(-self.sprayRadius, self.sprayRadius)
         local offsetY = math.random(-self.sprayRadius, self.sprayRadius)
         
-        local sandX = gridX + offsetX
-        local sandY = gridY + offsetY
+        local cellX = gridX + offsetX
+        local cellY = gridY + offsetY
         
         -- Check if the position is valid and empty
-        if sandX >= 0 and sandX < level.width and sandY >= 0 and sandY < level.height then
-            if level:getCellType(sandX, sandY) == CellTypes.TYPES.EMPTY then
-                -- Create a new sand cell
-                level:setCellType(sandX, sandY, CellTypes.TYPES.SAND)
+        if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
+            if level:getCellType(cellX, cellY) == CellTypes.TYPES.EMPTY then
+                -- Create a new cell of the current material type
+                level:setCellType(cellX, cellY, materialType)
             end
         end
     end
@@ -130,11 +150,29 @@ function Input:draw(ball)
             love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
         end
     else
-        love.graphics.print("Mode: SPRAY (press SPACE to switch)", 10, 30)
+        -- Get the current material type and name
+        local materialType = MATERIALS[self.currentMaterialIndex]
+        local materialName = MATERIAL_NAMES[materialType]
         
-        -- Draw spray indicator
+        -- Get the color for the current material
+        local materialColor = CellTypes.COLORS[materialType]
+        
+        -- Display current mode and material
+        love.graphics.print("Mode: SPRAY - Material: " .. materialName .. " (press SPACE to switch, RIGHT-CLICK to change material)", 10, 30)
+        
+        -- Draw spray indicator with current material color
         local gridX, gridY = math.floor(self.mouseX / CellTypes.SIZE), math.floor(self.mouseY / CellTypes.SIZE)
+        
+        -- Draw filled circle with semi-transparency
+        love.graphics.setColor(materialColor[1], materialColor[2], materialColor[3], 0.5)
+        love.graphics.circle("fill", gridX * CellTypes.SIZE + CellTypes.SIZE/2, gridY * CellTypes.SIZE + CellTypes.SIZE/2, self.sprayRadius * CellTypes.SIZE)
+        
+        -- Draw outline with full opacity
+        love.graphics.setColor(materialColor[1], materialColor[2], materialColor[3], 1)
         love.graphics.circle("line", gridX * CellTypes.SIZE + CellTypes.SIZE/2, gridY * CellTypes.SIZE + CellTypes.SIZE/2, self.sprayRadius * CellTypes.SIZE)
+        
+        -- Reset color
+        love.graphics.setColor(1, 1, 1, 1)
     end
 end
 
@@ -152,6 +190,12 @@ function Input:handleMousePressed(button, ball)
             self:calculateAim(ball)
             
             return false -- No shot taken yet
+        end
+    elseif self.mode == MODES.SPRAY then
+        if button == 2 then -- Right mouse button
+            -- Cycle to next material
+            self:cycleMaterial()
+            return false
         end
     end
     return false -- No shot taken
@@ -197,8 +241,21 @@ function Input:handleKeyPressed(key, ball)
         end
         -- Reset aiming state when switching modes
         self.isAiming = false
+    elseif key == "1" or key == "2" or key == "3" or key == "4" then
+        -- Number keys 1-4 for quick material selection
+        if self.mode == MODES.SPRAY then
+            local index = tonumber(key)
+            if index <= #MATERIALS then
+                self.currentMaterialIndex = index
+            end
+        end
     end
     return false -- No action taken
+end
+
+function Input:cycleMaterial()
+    -- Cycle to the next material
+    self.currentMaterialIndex = self.currentMaterialIndex % #MATERIALS + 1
 end
 
 return Input

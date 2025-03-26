@@ -24,6 +24,54 @@ CellTypes.COLORS = {
     [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1} -- Brighter dirt for visual effect
 }
 
+-- Material properties for physics and displacement
+CellTypes.PROPERTIES = {
+    -- Sand properties
+    [CellTypes.TYPES.SAND] = {
+        -- Displacement properties
+        displacementThreshold = 50,     -- Speed threshold for creating craters
+        directHitThreshold = 100,       -- Speed threshold for direct hit conversion
+        
+        -- Crater size properties
+        craterBaseRadius = 0.5,         -- Base radius for craters
+        craterMaxRadius = 3.5,          -- Maximum additional radius
+        craterSpeedDivisor = 150,       -- Divisor for speed to radius conversion
+        
+        -- Visual properties
+        velocityMultiplier = 2.0        -- Multiplier for visual particle velocity
+    },
+    
+    -- Dirt properties
+    [CellTypes.TYPES.DIRT] = {
+        -- Displacement properties
+        displacementThreshold = 350,    -- Speed threshold for creating craters
+        directHitThreshold = 400,       -- Speed threshold for direct hit conversion
+        
+        -- Crater size properties
+        craterBaseRadius = 0.3,         -- Base radius for craters
+        craterMaxRadius = 0.7,          -- Maximum additional radius
+        craterSpeedDivisor = 250,       -- Divisor for speed to radius conversion
+        
+        -- Visual properties
+        velocityMultiplier = 1.2        -- Multiplier for visual particle velocity
+    },
+    
+    -- Stone properties
+    [CellTypes.TYPES.STONE] = {
+        -- Displacement properties
+        displacementThreshold = 300,    -- Speed threshold for creating craters
+        directHitThreshold = 500,       -- Speed threshold for direct hit conversion
+        
+        -- Crater size properties
+        craterBaseRadius = 0.2,         -- Base radius for craters
+        craterMaxRadius = 0.5,          -- Maximum additional radius
+        craterSpeedDivisor = 300,       -- Divisor for speed to radius conversion
+        
+        -- Visual properties
+        velocityMultiplier = 0.8        -- Multiplier for visual particle velocity
+    }
+}
+
 -- Cell size (half the size of the ball)
 CellTypes.SIZE = 10
 

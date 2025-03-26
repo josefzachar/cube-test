@@ -9,6 +9,8 @@ local Collision = {}
 Collision.sandToConvert = {} -- Table to store sand cells that need to be converted to flying sand
 
 function Collision.beginContact(a, b, coll, level)
+    -- Don't clear the sandToConvert array here, it's cleared in main.lua
+    
     local aData = a:getUserData()
     local bData = b:getUserData()
     
@@ -59,12 +61,22 @@ function Collision.beginContact(a, b, coll, level)
             end
         end
         
-        -- Create a crater if the ball hits sand, stone, or dirt with appropriate speed thresholds
-        -- Lower threshold for sand, higher for dirt
+        -- Create a crater if the ball hits a material with appropriate speed thresholds
         local createCrater = false
-        if (otherData == "sand" and speed > 50) or  -- Much lower threshold for sand (was 100)
-           (otherData == "dirt" and speed > 300) or  -- Keep dirt threshold the same
-           (otherData == "stone" and speed > 300) then -- Keep stone threshold the same
+        
+        -- Get the cell type from the fixture user data
+        local cellType = nil
+        if otherData == "sand" then
+            cellType = CellTypes.TYPES.SAND
+        elseif otherData == "dirt" then
+            cellType = CellTypes.TYPES.DIRT
+        elseif otherData == "stone" then
+            cellType = CellTypes.TYPES.STONE
+        end
+        
+        -- Check if the material has properties and if the speed exceeds the threshold
+        if cellType and CellTypes.PROPERTIES[cellType] and 
+           speed > CellTypes.PROPERTIES[cellType].displacementThreshold then
             createCrater = true
         end
         
@@ -84,7 +96,29 @@ function Collision.beginContact(a, b, coll, level)
             
             local gridX, gridY = level:getGridCoordinates(hitX, hitY)
             
-            print("Ball hit solid at", gridX, gridY, "with speed", speed)
+            -- Special case for direct hit: If the hit cell is sand or dirt and meets the direct hit threshold
+            if (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and 
+               CellTypes.PROPERTIES[cellType] and 
+               speed > CellTypes.PROPERTIES[cellType].directHitThreshold then
+                
+                local cellTypeName = cellType == CellTypes.TYPES.SAND and "sand" or "dirt"
+                
+                -- Clear the cell directly
+                level:setCellType(gridX, gridY, CellTypes.TYPES.EMPTY)
+                
+                -- Only queue up for conversion if speed is above threshold
+                if speed > CellTypes.PROPERTIES[cellType].displacementThreshold then
+                    -- Queue up for conversion
+                    table.insert(Collision.sandToConvert, {
+                        x = gridX,
+                        y = gridY,
+                        vx = 0,
+                        vy = 0, -- No upward boost
+                        originalType = cellType, -- Store the original cell type
+                        shouldConvert = true -- Flag to indicate this cell should be converted
+                    })
+                end
+            end
             
             -- Slow down the ball more when it hits sand
             if otherData == "sand" then
@@ -101,12 +135,13 @@ function Collision.beginContact(a, b, coll, level)
             -- Create the crater with visual particles
             -- Make the crater size appropriate for the material
             local directRadius = 2 -- Default radius
-            if otherData == "sand" then
-                -- Even more sensitive crater size for sand based on speed
-                directRadius = 0.5 + math.min(3.5, speed / 150)  -- Changed from speed/200 to speed/150
-            elseif otherData == "dirt" then
-                -- Keep dirt calculation the same
-                directRadius = 0.5 + math.min(2.0, (speed - 200) / 300)
+            
+            -- Calculate crater size based on material properties
+            if cellType and CellTypes.PROPERTIES[cellType] then
+                local props = CellTypes.PROPERTIES[cellType]
+                directRadius = props.craterBaseRadius + 
+                               math.min(props.craterMaxRadius, 
+                                       speed / props.craterSpeedDivisor)
             end
             for dy = -directRadius, directRadius do
                 for dx = -directRadius, directRadius do
@@ -118,10 +153,25 @@ function Collision.beginContact(a, b, coll, level)
                         -- Make sure the cell exists
                         if level.cells[checkY] and level.cells[checkY][checkX] then
                             local cellType = level:getCellType(checkX, checkY)
+                            
+                            -- Calculate distance for all cells
+                            local distance = math.sqrt(dx*dx + dy*dy)
+                            
                             if cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT then
-                                -- Calculate velocity based on impact
-                                local distance = math.sqrt(dx*dx + dy*dy)
-                                if distance <= directRadius then
+                                
+                                -- For direct hits, always convert the cell (dx=0, dy=0) regardless of radius
+                                -- if it meets the direct hit threshold
+                                local shouldConvert = distance <= directRadius
+                                
+                                -- Check for direct hit on a sand or dirt cell with properties
+                                if dx == 0 and dy == 0 and 
+                                   (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and
+                                   CellTypes.PROPERTIES[cellType] and 
+                                   speed > CellTypes.PROPERTIES[cellType].directHitThreshold then
+                                    shouldConvert = true
+                                end
+                                
+                                if shouldConvert then
                                     local impactFactor = (1 - distance/directRadius) * math.min(1.0, speed / 300)
                                     
                                     -- Direction away from impact
@@ -143,13 +193,24 @@ function Collision.beginContact(a, b, coll, level)
                                     flyVx = flyVx + math.random(-50, 50)
                                     flyVy = flyVy + math.random(-50, 50)
                                     
-                                    -- Queue up for conversion
-                                    table.insert(Collision.sandToConvert, {
-                                        x = checkX,
-                                        y = checkY,
-                                        vx = flyVx,
-                                        vy = flyVy
-                                    })
+                                    -- Only queue up sand and dirt cells for conversion if speed is above threshold
+                                    if (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and
+                                       CellTypes.PROPERTIES[cellType] and
+                                       speed > CellTypes.PROPERTIES[cellType].displacementThreshold then
+                                        
+                                        -- Clear the cell
+                                        level:setCellType(checkX, checkY, CellTypes.TYPES.EMPTY)
+                                        
+                                        -- Queue up for conversion
+                                        table.insert(Collision.sandToConvert, {
+                                            x = checkX,
+                                            y = checkY,
+                                            vx = flyVx,
+                                            vy = flyVy,
+                                            originalType = cellType, -- Store the original cell type
+                                            shouldConvert = true -- Flag to indicate this cell should be converted
+                                        })
+                                    end
                                 end
                             end
                         end

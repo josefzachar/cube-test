@@ -169,8 +169,16 @@ function Cell:setType(world, newType)
         return -- No change needed
     end
     
+    -- Debug output for dirt cells removed
+    
+    -- Store old type for reference
+    local oldType = self.type
+    
     -- Destroy old physics if exists
-    self:destroy(world)
+    if self.fixture or self.body then
+        -- Removed debug print
+        self:destroy(world)
+    end
     
     -- Set new type
     self.type = newType
@@ -187,20 +195,23 @@ function Cell:setType(world, newType)
         self.lifetime = 0
         self.alpha = 1.0
     end
+    
+    -- Force update the cell in the level's grid
+    -- Debug output removed
 end
 
 -- Convert a sand cell to visual flying sand with initial velocity
 function Cell:convertToVisualSand(velocityX, velocityY)
     -- Only convert sand cells
     if self.type ~= Cell.TYPES.SAND then
-        print("    ERROR: Cannot convert to visual sand - not a sand cell")
+        -- Debug output removed
         return
     end
     
     -- Use the Sand module to convert to visual sand
     Sand.convertToVisual(self, velocityX, velocityY)
     
-    print("    SUCCESS: Cell converted to visual sand with velocity", velocityX, velocityY)
+    -- Debug output removed
 end
 
 return Cell
