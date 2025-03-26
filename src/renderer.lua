@@ -48,16 +48,16 @@ function Renderer.drawLevel(level, debug)
     end
     
     -- Draw sand cells
-    Renderer.drawSandBatch(sandBatch, debug)
+    Renderer.drawSandBatch(level, sandBatch, debug)
     
     -- Draw stone cells
-    Renderer.drawStoneBatch(stoneBatch, debug)
+    Renderer.drawStoneBatch(level, stoneBatch, debug)
     
     -- Draw water cells
-    Renderer.drawWaterBatch(waterBatch, debug)
+    Renderer.drawWaterBatch(level, waterBatch, debug)
     
     -- Draw dirt cells
-    Renderer.drawDirtBatch(dirtBatch, debug)
+    Renderer.drawDirtBatch(level, dirtBatch, debug)
     
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
@@ -69,52 +69,82 @@ function Renderer.drawLevel(level, debug)
 end
 
 -- Draw sand cells
-function Renderer.drawSandBatch(sandBatch, debug)
+function Renderer.drawSandBatch(level, sandBatch, debug)
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local sandColor = COLORS[Cell.TYPES.SAND]
     
-    love.graphics.setColor(0.9, 0.8, 0.5, 1) -- Sand color
-    for _, cell in ipairs(sandBatch) do
-        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+    for _, cellPos in ipairs(sandBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        
+        -- Apply color variation
+        love.graphics.setColor(
+            sandColor[1] * cell.colorVariation.r,
+            sandColor[2] * cell.colorVariation.g,
+            sandColor[3] * cell.colorVariation.b,
+            sandColor[4]
+        )
+        love.graphics.rectangle("fill", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(0, 0, 1, 1) -- Blue
-            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
-            love.graphics.setColor(0.9, 0.8, 0.5, 1) -- Reset to sand color
+            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end
 end
 
 -- Draw stone cells
-function Renderer.drawStoneBatch(stoneBatch, debug)
+function Renderer.drawStoneBatch(level, stoneBatch, debug)
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local stoneColor = COLORS[Cell.TYPES.STONE]
     
-    love.graphics.setColor(0.5, 0.5, 0.5, 1) -- Stone color
-    for _, cell in ipairs(stoneBatch) do
-        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+    for _, cellPos in ipairs(stoneBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        
+        -- Apply color variation
+        love.graphics.setColor(
+            stoneColor[1] * cell.colorVariation.r,
+            stoneColor[2] * cell.colorVariation.g,
+            stoneColor[3] * cell.colorVariation.b,
+            stoneColor[4]
+        )
+        love.graphics.rectangle("fill", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(1, 0, 0, 1) -- Red
-            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
-            love.graphics.setColor(0.5, 0.5, 0.5, 1) -- Reset to stone color
+            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end
 end
 
 -- Draw water cells
-function Renderer.drawWaterBatch(waterBatch, debug)
+function Renderer.drawWaterBatch(level, waterBatch, debug)
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local waterColor = COLORS[Cell.TYPES.WATER]
     
-    love.graphics.setColor(0.2, 0.4, 0.8, 0.8) -- Water color (blue with transparency)
-    for _, cell in ipairs(waterBatch) do
-        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+    for _, cellPos in ipairs(waterBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        
+        -- Apply color variation
+        love.graphics.setColor(
+            waterColor[1] * cell.colorVariation.r,
+            waterColor[2] * cell.colorVariation.g,
+            waterColor[3] * cell.colorVariation.b,
+            waterColor[4]
+        )
+        love.graphics.rectangle("fill", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(0, 1, 1, 1) -- Cyan
-            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
-            love.graphics.setColor(0.2, 0.4, 0.8, 0.8) -- Reset to water color
+            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end
 end
@@ -135,8 +165,13 @@ function Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
                 -- Get the correct color based on cell type
                 local color = COLORS[cell.type]
                 if color then
-                    -- Apply alpha for fade out
-                    love.graphics.setColor(color[1], color[2], color[3], cell.alpha or 1.0)
+                    -- Apply color variation and alpha for fade out
+                    love.graphics.setColor(
+                        color[1] * cell.colorVariation.r, 
+                        color[2] * cell.colorVariation.g, 
+                        color[3] * cell.colorVariation.b, 
+                        cell.alpha or 1.0
+                    )
                     love.graphics.rectangle("fill", cell.visualX, cell.visualY, Cell.SIZE, Cell.SIZE)
                     
                     -- Draw debug info for visual particles
@@ -151,18 +186,28 @@ function Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
 end
 
 -- Draw dirt cells
-function Renderer.drawDirtBatch(dirtBatch, debug)
+function Renderer.drawDirtBatch(level, dirtBatch, debug)
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
+    local dirtColor = COLORS[Cell.TYPES.DIRT]
     
-    love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Dirt color (brown)
-    for _, cell in ipairs(dirtBatch) do
-        love.graphics.rectangle("fill", cell.x * Cell.SIZE, cell.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+    for _, cellPos in ipairs(dirtBatch) do
+        -- Get the actual cell from the level
+        local cell = level.cells[cellPos.y][cellPos.x]
+        
+        -- Apply color variation
+        love.graphics.setColor(
+            dirtColor[1] * cell.colorVariation.r,
+            dirtColor[2] * cell.colorVariation.g,
+            dirtColor[3] * cell.colorVariation.b,
+            dirtColor[4]
+        )
+        love.graphics.rectangle("fill", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
-            love.graphics.circle("fill", cell.x * Cell.SIZE + Cell.SIZE/2, cell.y * Cell.SIZE + Cell.SIZE/2, 2)
-            love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Reset to dirt color
+            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
         end
     end
 end

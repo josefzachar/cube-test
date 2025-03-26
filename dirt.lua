@@ -75,5 +75,26 @@ function Dirt.update(cell, dt, level)
     return false -- Dirt didn't move
 end
 
+-- Convert a dirt cell to visual flying dirt with initial velocity
+function Dirt.convertToVisual(cell, velocityX, velocityY)
+    -- Change type to VISUAL_DIRT
+    cell.type = CellTypes.TYPES.VISUAL_DIRT
+    
+    -- Set initial velocity
+    cell.velocityX = velocityX
+    cell.velocityY = velocityY
+    
+    -- Initialize visual position
+    cell.visualX = cell.x * cell.SIZE
+    cell.visualY = cell.y * cell.SIZE
+    
+    -- Reset lifetime
+    cell.lifetime = 0
+    cell.alpha = 1.0
+    
+    -- Color variation is already set in Cell.new() and persists through type changes
+    -- No need to copy it as it's already a property of the cell
+end
+
 print("About to return Dirt table:", Dirt)
 return Dirt

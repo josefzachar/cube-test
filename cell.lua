@@ -30,6 +30,28 @@ function Cell.new(world, x, y, type)
     self.maxLifetime = 2.0  -- Visual sand disappears after 2 seconds
     self.alpha = 1.0        -- For fade out effect
     
+    -- Color variation (unique to each cell)
+    -- Use a deterministic but seemingly random value based on coordinates
+    -- This ensures the same cell always gets the same color variation
+    local hash = x * 263 + y * 113 -- Simple hash function
+    math.randomseed(hash)
+    
+    -- Generate a single brightness variation factor
+    -- math.random() returns a value between 0.0 and 1.0
+    -- We want a range from 0.85 to 1.15 (±15% variation)
+    -- So we start at 0.85 and add up to 0.3 (which gives us 0.85 to 1.15)
+    local brightnessVariation = 0.95 + 0.2 * math.random()
+    
+    self.colorVariation = {
+        -- Same variation for all RGB components to maintain the same hue
+        r = brightnessVariation,
+        g = brightnessVariation,
+        b = brightnessVariation
+    }
+    
+    -- Restore the random seed to avoid affecting other random operations
+    math.randomseed(os.time())
+    
     -- Physics body for stone and temp_stone only
     self.body = nil
     self.shape = nil
@@ -69,7 +91,13 @@ function Cell:draw(debug)
     if self.type == Cell.TYPES.VISUAL_SAND or self.type == Cell.TYPES.VISUAL_DIRT then
         -- Draw visual particles at their actual position with alpha for fade out
         local color = COLORS[self.type]
-        love.graphics.setColor(color[1], color[2], color[3], self.alpha)
+        -- Apply color variation
+        love.graphics.setColor(
+            color[1] * self.colorVariation.r, 
+            color[2] * self.colorVariation.g, 
+            color[3] * self.colorVariation.b, 
+            self.alpha
+        )
         love.graphics.rectangle("fill", self.visualX, self.visualY, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info for visual particles
@@ -79,7 +107,14 @@ function Cell:draw(debug)
         end
     else
         -- Draw regular cells
-        love.graphics.setColor(COLORS[self.type])
+        local color = COLORS[self.type]
+        -- Apply color variation
+        love.graphics.setColor(
+            color[1] * self.colorVariation.r, 
+            color[2] * self.colorVariation.g, 
+            color[3] * self.colorVariation.b, 
+            color[4]
+        )
         love.graphics.rectangle("fill", self.x * Cell.SIZE, self.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
         
         -- Draw cell type indicators only in debug mode

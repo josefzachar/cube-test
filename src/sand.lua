@@ -232,6 +232,9 @@ function Sand.convertToVisual(cell, velocityX, velocityY)
     -- Reset lifetime
     cell.lifetime = 0
     cell.alpha = 1.0
+    
+    -- Color variation is already set in Cell.new() and persists through type changes
+    -- No need to copy it as it's already a property of the cell
 end
 
 -- Update visual sand behavior
