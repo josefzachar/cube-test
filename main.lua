@@ -13,6 +13,7 @@ local CellTypes = require("src.cell_types")
 local Fire = require("src.fire")
 local WinHole = require("src.win_hole")
 local UI = require("src.ui")
+local Sound = require("src.sound")
 
 -- Game variables
 local world
@@ -98,6 +99,9 @@ function createDiamondWinHole(level, holeX, holeY)
 end
 
 function love.load()
+    -- Initialize sound system
+    Sound.load()
+    
     -- Set up the physics world with gravity
     world = love.physics.newWorld(0, 9.81 * 64, true)
     

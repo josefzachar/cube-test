@@ -3,6 +3,7 @@
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
 local Balls = require("src.balls")
+local Sound = require("src.sound")
 
 local Collision = {}
 
@@ -37,6 +38,30 @@ function Collision.beginContact(a, b, coll, level, ball)
         -- Get the ball's velocity
         local vx, vy = ballBody:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
+        
+        -- Get the ball object to check if it's in water
+        local ballObject = ballBody:getUserData()
+        local inWater = ballObject and ballObject.inWater
+        
+        -- Play sound based on the cell type, but only if not in water
+        if otherData == "water" and not inWater then
+            -- Play water sound only when entering water
+            -- For water entry, use a slightly enhanced speed value to make splash more pronounced
+            local splashSpeed = math.max(speed, 100) -- Minimum splash volume threshold
+            Sound.playCollisionSound(CellTypes.TYPES.WATER, splashSpeed)
+        elseif not inWater then
+            -- Play other sounds only if not in water
+            if otherData == "sand" then
+                Sound.playCollisionSound(CellTypes.TYPES.SAND, speed)
+            elseif otherData == "dirt" then
+                Sound.playCollisionSound(CellTypes.TYPES.DIRT, speed)
+            elseif otherData == "stone" then
+                Sound.playCollisionSound(CellTypes.TYPES.STONE, speed)
+            else
+                -- Default to grass sound for empty cells or other types
+                Sound.playCollisionSound(nil, speed)
+            end
+        end
         
         -- Handle win hole collisions
         if otherData == "win_hole" then
