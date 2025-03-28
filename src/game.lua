@@ -88,19 +88,46 @@ function Game.init(mode, levelNumber)
             Game.level:clearAllCells()
             
             -- Set level properties
+            local cellCount = 0
             for y = 0, levelData.height - 1 do
                 for x = 0, levelData.width - 1 do
-                    if levelData.cells[y] and levelData.cells[y][x] then
-                        Game.level:setCellType(x, y, levelData.cells[y][x])
+                    local cellType = 0
+                    
+                    -- Check if cells is an array or an object
+                    if type(levelData.cells) == "table" then
+                        if type(levelData.cells[0]) == "table" then
+                            -- Array of arrays format
+                            if levelData.cells[y] and levelData.cells[y][x] then
+                                cellType = levelData.cells[y][x]
+                            end
+                        else
+                            -- Object format with y-coordinates as keys
+                            if levelData.cells[tostring(y)] and levelData.cells[tostring(y)][tostring(x)] then
+                                cellType = levelData.cells[tostring(y)][tostring(x)]
+                            end
+                        end
                     end
+                    
+                    if cellType > 0 then -- Only count non-empty cells
+                        cellCount = cellCount + 1
+                        print("Loading cell at", x, y, "with type", cellType)
+                    end
+                    
+                    Game.level:setCellType(x, y, cellType)
                 end
             end
+            print("Loaded", cellCount, "non-empty cells from level file")
             
-            -- Create the ball at the specified starting position
-            Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
-            
-            -- Only allow balls specified in the level
-            UI.availableBalls = levelData.availableBalls
+        -- Create the ball at the specified starting position
+        Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
+        
+        -- Create the win hole if it's not already in the level data
+        local WinHoleGenerator = require("src.win_hole_generator")
+        print("Creating win hole for level at position:", levelData.winHoleX, levelData.winHoleY)
+        WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY)
+        
+        -- Only allow balls specified in the level
+        UI.availableBalls = levelData.availableBalls
         else
             -- Fallback to procedural level if level file not found
             Game.level:createProceduralLevel(currentDifficulty)
