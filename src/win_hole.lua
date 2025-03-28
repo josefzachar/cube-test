@@ -38,8 +38,6 @@ function WinHole.createPhysics(cell, world)
     
     -- Make the win hole a sensor so it doesn't physically block the ball
     cell.fixture:setSensor(true)
-    
-    print("Created win hole physics at", cell.x, cell.y, "with sensor =", cell.fixture:isSensor())
 end
 
 -- Create a diamond-shaped win hole
@@ -71,7 +69,6 @@ function WinHole.createWinHoleArea(level, x, y, _, _)
                 
                 -- Only create win holes within the level bounds
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
-                    print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
                 end
             end

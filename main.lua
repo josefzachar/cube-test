@@ -14,6 +14,7 @@ local Fire = require("src.fire")
 local WinHole = require("src.win_hole")
 local UI = require("src.ui")
 local Sound = require("src.sound")
+local Editor = require("src.editor")
 
 -- Game variables
 local world
@@ -26,6 +27,7 @@ local currentBallType = Balls.TYPES.STANDARD -- Start with standard ball
 local gameWon = false -- Flag to track if the player has won
 local winMessageTimer = 0 -- Timer for displaying the win message
 currentDifficulty = 1 -- Current difficulty level (1-5) - global variable
+local editorMode = false -- Flag to track if editor is active
 
 -- Colors
 local WHITE = {1, 1, 1, 1}
@@ -51,7 +53,6 @@ function createDiamondWinHole(level, holeX, holeY)
         for x = 0, level.width - 1 do
             if level:getCellType(x, y) == CellTypes.TYPES.WIN_HOLE then
                 level:setCellType(x, y, CellTypes.TYPES.EMPTY)
-                print("Cleared existing win hole at", x, y)
             end
         end
     end
@@ -132,7 +133,6 @@ function createDiamondWinHole(level, holeX, holeY)
                 
                 -- Only create win holes within the level bounds
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
-                    print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
                     table.insert(createdHoles, {x = cellX, y = cellY})
                 end
@@ -163,7 +163,6 @@ function createDiamondWinHole(level, holeX, holeY)
         -- If this hole has no adjacent win holes, remove it
         if not hasAdjacent then
             level:setCellType(hole.x, hole.y, CellTypes.TYPES.EMPTY)
-            print("Removing isolated win hole at", hole.x, hole.y)
             table.remove(createdHoles, i)
         end
     end
@@ -209,6 +208,9 @@ function love.load()
     winMessageTimer = 0
     attempts = 0
     
+    -- Initialize editor
+    Editor.init(level, world)
+    
     -- Initialize UI
     if not UI.initialized then
         -- Set up UI callbacks
@@ -243,6 +245,12 @@ function love.load()
 end
 
 function love.update(dt)
+    -- If editor is active, update editor instead of game
+    if Editor.active then
+        Editor.update(dt)
+        return
+    end
+    
     -- Process sand cells that need to be converted to visual sand
     Effects.processSandConversion(Collision.sandToConvert, level)
     Collision.sandToConvert = {} -- Clear the queue
@@ -292,6 +300,18 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
+    -- Toggle editor mode with F12
+    if key == "f12" then
+        Editor.active = not Editor.active
+        return
+    end
+    
+    -- If editor is active, handle editor key presses
+    if Editor.active then
+        Editor.handleKeyPressed(key)
+        return
+    end
+    
     -- Handle ball type switching
     if key == "1" then
         currentBallType = Balls.TYPES.STANDARD
@@ -406,6 +426,13 @@ function love.keypressed(key)
     end
 end
 
+function love.textinput(text)
+    -- If editor is active, handle editor text input
+    if Editor.active then
+        Editor.handleTextInput(text)
+    end
+end
+
 function love.draw()
     -- Draw gradient background
     love.graphics.clear(0, 0, 0, 1) -- Clear with black first
@@ -468,11 +495,16 @@ function love.draw()
     -- Draw the level
     level:draw(debug) -- Pass debug flag to level:draw
     
-    -- Draw the ball
-    ball:draw(debug) -- Pass debug flag to ball:draw
-    
-    -- Draw input (aim line, power indicator)
-    input:draw(ball, attempts)
+    -- If editor is active, draw editor
+    if Editor.active then
+        Editor.draw()
+    else
+        -- Draw the ball
+        ball:draw(debug) -- Pass debug flag to ball:draw
+        
+        -- Draw input (aim line, power indicator)
+        input:draw(ball, attempts)
+    end
     
     -- Display FPS counter
     love.graphics.setColor(WHITE)
@@ -491,13 +523,15 @@ function love.draw()
     love.graphics.pop()
     
     -- Draw UI (UI is drawn at screen coordinates, not scaled)
-    UI.draw()
+    if not Editor.active then
+        UI.draw()
+    end
     
     -- Track if we've pushed any transformations for the win screen
     local winScreenTransformPushed = false
     
     -- Draw win message if the game is won
-    if gameWon and winMessageTimer > 0 then
+    if gameWon and winMessageTimer > 0 and not Editor.active then
         -- Load the win screen font if not already loaded
         if not winFont then
             winFont = love.graphics.newFont("fonts/pixel_font.ttf", 32)
@@ -664,6 +698,12 @@ function screenToGameCoords(screenX, screenY)
 end
 
 function love.mousepressed(x, y, button)
+    -- If editor is active, handle editor mouse presses
+    if Editor.active then
+        Editor.handleMousePressed(x, y, button)
+        return
+    end
+    
     -- Check if we're in the win screen
     if gameWon and winMessageTimer > 0 then
         -- Get screen dimensions
@@ -711,6 +751,11 @@ function love.mousepressed(x, y, button)
 end
 
 function love.mousereleased(x, y, button)
+    -- If editor is active, don't handle game mouse releases
+    if Editor.active then
+        return
+    end
+    
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = screenToGameCoords(x, y)
     
