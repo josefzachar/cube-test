@@ -3,6 +3,13 @@
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
 
+-- Original design dimensions (must match the values in main.lua)
+local ORIGINAL_WIDTH = 1600
+local ORIGINAL_HEIGHT = 1000
+
+-- Background color (must match the value in main.lua)
+local BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0} -- Dark blue (base color)
+
 local Input = {}
 Input.__index = Input
 
@@ -53,7 +60,36 @@ end
 
 function Input:update(ball, level)
     -- Update mouse position
-    self.mouseX, self.mouseY = love.mouse.getPosition()
+    local screenX, screenY = love.mouse.getPosition()
+    
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY
+    if love.window then
+        -- Get screen dimensions
+        local width, height = love.graphics.getDimensions()
+        
+        -- Calculate scale factors
+        local scaleX = width / ORIGINAL_WIDTH
+        local scaleY = height / ORIGINAL_HEIGHT
+        local scale = math.min(scaleX, scaleY)
+        
+        -- Calculate offsets for centering
+        local scaledWidth = width / scale
+        local scaledHeight = height / scale
+        local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
+        local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
+        
+        -- Convert screen coordinates to game coordinates
+        gameX = (screenX / scale) - offsetX
+        gameY = (screenY / scale) - offsetY
+        
+        -- Update mouse position with game coordinates
+        self.mouseX = gameX
+        self.mouseY = gameY
+    else
+        -- Fallback if love.window is not available
+        self.mouseX, self.mouseY = screenX, screenY
+    end
     
     -- Handle mode switching
     if self.mode == MODES.SHOOT then
@@ -303,15 +339,25 @@ function Input:draw(ball, attempts)
     end
 end
 
-function Input:handleMousePressed(button, ball)
+function Input:handleMousePressed(button, ball, gameX, gameY)
+    -- Use provided game coordinates if available, otherwise use stored mouse position
+    local clickX = gameX or self.mouseX
+    local clickY = gameY or self.mouseY
+    
     if self.mode == MODES.SHOOT then
         if button == 1 and not ball:isMoving() then -- Left mouse button
             -- Start aiming
             self.isAiming = true
             
             -- Store the clicked position
-            self.clickPosition.x = self.mouseX
-            self.clickPosition.y = self.mouseY
+            self.clickPosition.x = clickX
+            self.clickPosition.y = clickY
+            
+            -- Update mouse position to match game coordinates
+            if gameX and gameY then
+                self.mouseX = gameX
+                self.mouseY = gameY
+            end
             
             -- Calculate initial aim
             self:calculateAim(ball)
@@ -329,7 +375,13 @@ function Input:handleMousePressed(button, ball)
 end
 
 -- Handle mouse release events
-function Input:handleMouseReleased(button, ball)
+function Input:handleMouseReleased(button, ball, gameX, gameY)
+    -- Use provided game coordinates if available, otherwise use stored mouse position
+    if gameX and gameY then
+        self.mouseX = gameX
+        self.mouseY = gameY
+    end
+    
     if self.mode == MODES.SHOOT then
         if button == 1 and self.isAiming and not ball:isMoving() then -- Left mouse button
             -- Stop aiming

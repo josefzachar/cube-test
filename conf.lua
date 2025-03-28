@@ -3,6 +3,9 @@ function love.conf(t)
     t.version = "11.3"             -- The LÖVE version this game was made for
     t.window.width = 1600          -- The window width
     t.window.height = 1000         -- The window height
+    t.window.resizable = true      -- Allow the window to be resized
+    t.window.minwidth = 1200       -- Minimum window width
+    t.window.minheight = 800       -- Minimum window height
     
     -- Disable VSync to allow unlimited FPS
     t.window.vsync = 0             -- 0 = No VSync, 1 = VSync, 2 = Adaptive VSync

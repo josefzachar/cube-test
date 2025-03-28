@@ -34,6 +34,15 @@ BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0} -- Dark blue (base color)
 BACKGROUND_COLOR_TOP = {0.1, 0.2, 0.4, 1.0} -- Darker blue for top
 BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
 
+-- Original design dimensions
+local ORIGINAL_WIDTH = 1600
+local ORIGINAL_HEIGHT = 1000
+
+-- Make these global so they can be accessed from other modules
+GAME_SCALE = 1
+GAME_OFFSET_X = 0
+GAME_OFFSET_Y = 0
+
 -- Function to create a diamond-shaped win hole
 function createDiamondWinHole(level, holeX, holeY)
     -- Ball starting position
@@ -394,26 +403,54 @@ function love.draw()
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
+    -- Calculate scale factors
+    local scaleX = width / ORIGINAL_WIDTH
+    local scaleY = height / ORIGINAL_HEIGHT
+    local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+    
+    -- Ensure minimum scale to prevent rendering issues
+    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    
+    -- Store the scale for other modules to use
+    GAME_SCALE = scale
+    
+    -- Apply scaling transformation
+    love.graphics.push()
+    love.graphics.scale(scale, scale)
+    
+    -- Adjust width and height for scaled coordinates
+    local scaledWidth = width / scale
+    local scaledHeight = height / scale
+    
+    -- Center the game in the window
+    local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
+    local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
+    
+    -- Store the offsets for other modules to use
+    GAME_OFFSET_X = offsetX
+    GAME_OFFSET_Y = offsetY
+    
+    love.graphics.translate(offsetX, offsetY)
+    
     -- Apply camera shake offset
     local shakeX, shakeY = 0, 0
     local cameraShakeActive = false
     if Sound.cameraShake and Sound.cameraShake.active then
         shakeX, shakeY = Sound.cameraShake.offsetX, Sound.cameraShake.offsetY
-        love.graphics.push()
         love.graphics.translate(shakeX, shakeY)
         cameraShakeActive = true
     end
     
     -- Draw gradient rectangle covering the entire screen
     love.graphics.setColor(BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4])
-    love.graphics.rectangle("fill", 0, 0, width, height)
+    love.graphics.rectangle("fill", 0, 0, ORIGINAL_WIDTH, ORIGINAL_HEIGHT)
     
     -- Create a subtle gradient mesh
     local gradient = love.graphics.newMesh({
         {0, 0, 0, 0, BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4]}, -- top-left
-        {width, 0, 1, 0, BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4]}, -- top-right
-        {width, height, 1, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
-        {0, height, 0, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
+        {ORIGINAL_WIDTH, 0, 1, 0, BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4]}, -- top-right
+        {ORIGINAL_WIDTH, ORIGINAL_HEIGHT, 1, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
+        {0, ORIGINAL_HEIGHT, 0, 1, BACKGROUND_COLOR_BOTTOM[1], BACKGROUND_COLOR_BOTTOM[2], BACKGROUND_COLOR_BOTTOM[3], BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
     }, "fan", "static")
     
     love.graphics.draw(gradient)
@@ -439,12 +476,17 @@ function love.draw()
     -- Draw active cells for debugging
     Debug.drawActiveCells(level)
     
-    -- Reset camera shake before drawing UI
+    -- Reset camera shake and scaling transformation before drawing UI
+    -- Make sure we don't pop more transformations than we pushed
     if cameraShakeActive then
+        -- Pop the camera shake transformation
         love.graphics.pop()
     end
     
-    -- Draw UI
+    -- Pop the scaling transformation
+    love.graphics.pop()
+    
+    -- Draw UI (UI is drawn at screen coordinates, not scaled)
     UI.draw()
     
     -- Draw win message if the game is won
@@ -588,6 +630,32 @@ function love.draw()
     end
 end
 
+-- Function to convert screen coordinates to game coordinates
+function screenToGameCoords(screenX, screenY)
+    -- Get screen dimensions
+    local width, height = love.graphics.getDimensions()
+    
+    -- Calculate scale factors
+    local scaleX = width / ORIGINAL_WIDTH
+    local scaleY = height / ORIGINAL_HEIGHT
+    local scale = math.min(scaleX, scaleY)
+    
+    -- Ensure minimum scale to prevent rendering issues
+    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    
+    -- Calculate offsets for centering
+    local scaledWidth = width / scale
+    local scaledHeight = height / scale
+    local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
+    local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
+    
+    -- Convert screen coordinates to game coordinates
+    local gameX = (screenX / scale) - offsetX
+    local gameY = (screenY / scale) - offsetY
+    
+    return gameX, gameY
+end
+
 function love.mousepressed(x, y, button)
     -- Check if we're in the win screen
     if gameWon and winMessageTimer > 0 then
@@ -626,23 +694,20 @@ function love.mousepressed(x, y, button)
         return -- UI handled the press, don't process further
     end
     
-    -- Otherwise, let the input system handle it
-    if input:handleMousePressed(button, ball) then
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = screenToGameCoords(x, y)
+    
+    -- Otherwise, let the input system handle it with converted coordinates
+    if input:handleMousePressed(button, ball, gameX, gameY) then
         attempts = attempts + 1
     end
 end
 
 function love.mousereleased(x, y, button)
-    if input:handleMouseReleased(button, ball) then
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = screenToGameCoords(x, y)
+    
+    if input:handleMouseReleased(button, ball, gameX, gameY) then
         attempts = attempts + 1
     end
-end
-
--- Store the original pop function
-local originalPop = love.graphics.pop
-
--- Override the pop function
-love.graphics.pop = function(...)
-    -- Call the original pop function
-    originalPop(...)
 end

@@ -134,6 +134,10 @@ local buttons = {}
 local isUIVisible = false
 local toggleUIButton = nil
 
+-- Game dimensions for positioning
+local GAME_WIDTH = 1600
+local GAME_HEIGHT = 1000
+
 -- Initialize the UI
 function UI.init(ballTypes)
     -- Load the button font
@@ -147,7 +151,9 @@ function UI.init(ballTypes)
     local buttonHeight = 40
     local buttonMargin = 10
     local panelWidth = buttonWidth + buttonMargin * 2
-    local rightEdge = screenWidth - buttonMargin
+    
+    -- Position the toggle button in the top right corner of the game area
+    local rightEdge = GAME_WIDTH - buttonMargin
     local buttonX = rightEdge - buttonWidth
     
     -- Create toggle UI button in the top right corner (always visible)
@@ -231,19 +237,24 @@ end
 
 -- Update the UI
 function UI.update(mouseX, mouseY)
-    toggleUIButton:update(mouseX, mouseY)
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = UI.convertCoordinates(mouseX, mouseY)
+    
+    toggleUIButton:update(gameX, gameY)
     
     if isUIVisible then
         for _, button in ipairs(buttons) do
-            button:update(mouseX, mouseY)
+            button:update(gameX, gameY)
         end
     end
 end
 
 -- Draw the UI
 function UI.draw()
-    -- Get screen dimensions for positioning
-    local screenWidth, screenHeight = love.graphics.getDimensions()
+    -- Apply scaling transformation for UI elements
+    love.graphics.push()
+    love.graphics.scale(GAME_SCALE, GAME_SCALE)
+    love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
     
     -- Button dimensions for calculating panel size
     local buttonWidth = 160
@@ -256,8 +267,8 @@ function UI.draw()
     -- Draw other buttons only if UI is visible
     if isUIVisible then
         -- Draw a retro terminal panel on the right side
-        local panelX = screenWidth - panelWidth
-        local panelHeight = screenHeight
+        local panelX = GAME_WIDTH - panelWidth
+        local panelHeight = GAME_HEIGHT
         
         -- Draw panel background
         love.graphics.setColor(retroColors.panel)
@@ -294,19 +305,39 @@ function UI.draw()
             button:draw()
         end
     end
+    
+    -- Reset the transformation
+    love.graphics.pop()
+end
+
+-- Convert screen coordinates to game coordinates
+function UI.convertCoordinates(screenX, screenY)
+    -- Use the global scale and offset variables from main.lua
+    local scale = GAME_SCALE or 1
+    local offsetX = GAME_OFFSET_X or 0
+    local offsetY = GAME_OFFSET_Y or 0
+    
+    -- Convert screen coordinates to game coordinates
+    local gameX = (screenX / scale) - offsetX
+    local gameY = (screenY / scale) - offsetY
+    
+    return gameX, gameY
 end
 
 -- Handle mouse press
 function UI.handlePress(x, y)
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = UI.convertCoordinates(x, y)
+    
     -- Check toggle button first
-    if toggleUIButton:handlePress(x, y) then
+    if toggleUIButton:handlePress(gameX, gameY) then
         return true
     end
     
     -- Check other buttons only if UI is visible
     if isUIVisible then
         for _, button in ipairs(buttons) do
-            if button:handlePress(x, y) then
+            if button:handlePress(gameX, gameY) then
                 return true
             end
         end
