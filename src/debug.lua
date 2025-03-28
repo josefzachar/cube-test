@@ -5,8 +5,31 @@ local CellTypes = require("src.cell_types")
 
 local Debug = {}
 
--- Colors
-local WHITE = {1, 1, 1, 1}
+-- Load the pixel font for debug info
+local debugFont = nil
+local function loadDebugFont()
+    -- Load the font with a size suitable for debug info
+    debugFont = love.graphics.newFont("fonts/pixel_font.ttf", 16)
+end
+
+-- Retro color palette for 80s cassette futurism aesthetic (matching UI)
+local retroColors = {
+    background = {0.05, 0.05, 0.15, 0.9},  -- Dark blue background
+    panel = {0.1, 0.1, 0.2, 0.9},          -- Slightly lighter panel
+    panelBorder = {0, 0.8, 0.8, 1},        -- Cyan border
+    text = {0, 1, 1, 1},                   -- Cyan text
+    highlight = {1, 0.5, 0, 1},            -- Orange highlight
+    warning = {1, 0.3, 0.3, 1},            -- Red warning
+    success = {0.3, 1, 0.3, 1}             -- Green success
+}
+
+-- Draw scanlines effect for retro CRT look
+local function drawScanlines(x, y, width, height, alpha)
+    love.graphics.setColor(0, 0, 0, alpha or 0.1)
+    for i = 0, height, 2 do
+        love.graphics.line(x, y + i, x + width, y + i)
+    end
+end
 
 -- Debug variables
 Debug.showActiveCells = false
@@ -15,9 +38,49 @@ Debug.vsyncEnabled = false -- Start with VSync disabled (as set in conf.lua)
 function Debug.drawDebugInfo(level, ball, attempts, debug)
     if not debug then return end
     
-    love.graphics.setColor(1, 0, 0, 1)
+    -- Load font if not already loaded
+    if not debugFont then
+        loadDebugFont()
+    end
     
-    -- FPS is now displayed in main.lua for all modes
+    -- Get screen dimensions
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Draw retro terminal panel on the left side
+    local panelWidth = 250
+    local panelHeight = screenHeight
+    
+    -- Draw panel background
+    love.graphics.setColor(retroColors.panel)
+    love.graphics.rectangle("fill", 0, 0, panelWidth, panelHeight, 0, 0) -- No rounded corners for retro look
+    
+    -- Draw grid pattern for retro computer look
+    love.graphics.setColor(0, 0, 0, 0.05)
+    for i = 0, panelWidth, 8 do
+        love.graphics.line(i, 0, i, panelHeight)
+    end
+    for i = 0, panelHeight, 8 do
+        love.graphics.line(0, i, panelWidth, i)
+    end
+    
+    -- Draw panel border
+    love.graphics.setColor(retroColors.panelBorder)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", 0, 0, panelWidth, panelHeight)
+    love.graphics.line(panelWidth, 0, panelWidth, panelHeight) -- Right edge line
+    love.graphics.setLineWidth(1)
+    
+    -- Draw scanlines for CRT effect
+    drawScanlines(0, 0, panelWidth, panelHeight, 0.05)
+    
+    -- Set font for debug info
+    love.graphics.setFont(debugFont)
+    
+    -- Draw "DEBUG" header
+    love.graphics.setColor(retroColors.text)
+    local headerText = "DEBUG TERMINAL"
+    local headerWidth = debugFont:getWidth(headerText)
+    love.graphics.print(headerText, (panelWidth - headerWidth) / 2, 10)
     
     -- Cell counts (only update every 10 frames to improve performance)
     if not level.cellCounts or love.timer.getTime() - (level.lastCountTime or 0) > 0.5 then
@@ -72,27 +135,51 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     local dirtCount = level.cellCounts.dirtCount or 0
     local waterCount = level.cellCounts.waterCount or 0
     
-    -- Display cell counts
-    love.graphics.print("Sand: " .. sandCount, 10, 30)
-    love.graphics.print("Stone: " .. stoneCount, 10, 50)
-    love.graphics.print("Dirt: " .. dirtCount, 10, 70)
-    love.graphics.print("Water: " .. waterCount, 10, 90)
-    love.graphics.print("Empty: " .. emptyCount, 10, 110)
-    love.graphics.print("Visual Sand: " .. visualSandCount, 10, 130)
+    -- Section headers
+    local margin = 15
+    local yPos = 40
+    local lineHeight = 20
     
-    -- Display ball info
+    -- Cell counts section
+    love.graphics.setColor(retroColors.highlight)
+    love.graphics.print("CELL COUNTS:", margin, yPos)
+    yPos = yPos + lineHeight + 5
+    
+    -- Display cell counts with retro styling
+    love.graphics.setColor(retroColors.text)
+    love.graphics.print("SAND: " .. sandCount, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("STONE: " .. stoneCount, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("DIRT: " .. dirtCount, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("WATER: " .. waterCount, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("EMPTY: " .. emptyCount, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("VISUAL SAND: " .. visualSandCount, margin, yPos); yPos = yPos + lineHeight * 1.5
+    
+    -- Ball info section
+    love.graphics.setColor(retroColors.highlight)
+    love.graphics.print("BALL STATUS:", margin, yPos)
+    yPos = yPos + lineHeight + 5
+    
+    -- Display ball info with retro styling
+    love.graphics.setColor(retroColors.text)
     if ball.body then
         local x, y = ball.body:getPosition()
         local vx, vy = ball.body:getLinearVelocity()
         local speed = math.sqrt(vx*vx + vy*vy)
-        love.graphics.print(string.format("Ball: x=%.1f, y=%.1f", x, y), 10, 150)
-        love.graphics.print(string.format("Velocity: vx=%.1f, vy=%.1f", vx, vy), 10, 170)
-        love.graphics.print(string.format("Speed: %.1f", speed), 10, 190)
+        love.graphics.print(string.format("POSITION: X=%.1f Y=%.1f", x, y), margin, yPos); yPos = yPos + lineHeight
+        love.graphics.print(string.format("VELOCITY: VX=%.1f VY=%.1f", vx, vy), margin, yPos); yPos = yPos + lineHeight
+        love.graphics.print(string.format("SPEED: %.1f", speed), margin, yPos); yPos = yPos + lineHeight * 1.5
+    else
+        love.graphics.print("NO BALL DATA", margin, yPos); yPos = yPos + lineHeight * 1.5
     end
     
-    -- Display optimization info
-    love.graphics.print("Performance Optimization:", 10, 220)
-    love.graphics.print("Cluster Size: " .. level.clusterSize .. "x" .. level.clusterSize, 10, 240)
+    -- Performance section
+    love.graphics.setColor(retroColors.highlight)
+    love.graphics.print("PERFORMANCE:", margin, yPos)
+    yPos = yPos + lineHeight + 5
+    
+    -- Display optimization info with retro styling
+    love.graphics.setColor(retroColors.text)
+    love.graphics.print("CLUSTER SIZE: " .. level.clusterSize .. "x" .. level.clusterSize, margin, yPos); yPos = yPos + lineHeight
     
     -- Count active clusters
     local clusterRows = math.ceil(level.height / level.clusterSize)
@@ -108,26 +195,37 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
         end
     end
     
-    love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 260)
-    love.graphics.print("Active Cells: " .. #level.activeCells, 10, 280)
+    love.graphics.print("ACTIVE CLUSTERS: " .. activeClusterCount .. "/" .. totalClusters, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("ACTIVE CELLS: " .. #level.activeCells, margin, yPos); yPos = yPos + lineHeight * 1.5
     
-    -- Display shortcuts legend
-    love.graphics.setColor(1, 1, 0, 1) -- Yellow for shortcuts
-    love.graphics.print("Shortcuts:", 10, 310)
-    love.graphics.print("D - Toggle debug mode", 10, 330)
-    love.graphics.print("1-4 - Switch ball types", 10, 350)
-    love.graphics.print("E - Explode (exploding ball)", 10, 370)
-    love.graphics.print("R - Reset level", 10, 390)
-    love.graphics.print("S - Add sand for testing", 10, 410)
-    love.graphics.print("P - Add sand pile at ball", 10, 430)
-    love.graphics.print("A - Toggle active cells view", 10, 450)
-    love.graphics.print("V - Toggle VSync", 10, 470)
-    love.graphics.print("W - Create water test level", 10, 490)
-    love.graphics.print("T - Create dirt-water test level", 10, 510)
-    love.graphics.print("G - Generate new level", 10, 530)
-    love.graphics.print("F - Add fire at ball position", 10, 550)
-    love.graphics.print("H - Add win hole at ball position", 10, 570)
-    love.graphics.print("Q - Add water pool at ball position", 10, 590)
+    -- Shortcuts section
+    love.graphics.setColor(retroColors.highlight)
+    love.graphics.print("KEYBOARD COMMANDS:", margin, yPos)
+    yPos = yPos + lineHeight + 5
+    
+    -- Display shortcuts with retro styling
+    love.graphics.setColor(retroColors.text)
+    local shortcutCommands = {
+        "D - TOGGLE DEBUG",
+        "1-4 - SWITCH BALL TYPES",
+        "E - EXPLODE BALL",
+        "R - RESET LEVEL",
+        "S - ADD SAND",
+        "P - ADD SAND PILE",
+        "A - TOGGLE ACTIVE CELLS",
+        "V - TOGGLE VSYNC",
+        "W - WATER TEST LEVEL",
+        "T - DIRT-WATER TEST",
+        "G - GENERATE NEW LEVEL",
+        "F - ADD FIRE",
+        "H - ADD WIN HOLE",
+        "Q - ADD WATER POOL"
+    }
+    
+    for _, cmd in ipairs(shortcutCommands) do
+        love.graphics.print(cmd, margin, yPos)
+        yPos = yPos + lineHeight
+    end
     
     -- Only draw active clusters if specifically requested
     if Debug.showActiveCells then
@@ -199,9 +297,7 @@ function Debug.handleKeyPressed(key, level)
         _G.createDiamondWinHole(level)
         
         print("Created new procedural level with win hole at random position")
-    elseif key == "e" then
-        -- Add a dirt block
-        return "dirt_block" -- Signal to add a dirt block at ball position
+    -- Removed "e" key handler to avoid conflict with exploding ball functionality
     elseif key == "q" then
         -- Add a water pool
         return "water_pool" -- Signal to add a water pool at ball position

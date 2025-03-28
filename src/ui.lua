@@ -2,6 +2,34 @@
 
 local UI = {}
 
+-- Load the pixel font for buttons
+local buttonFont = nil
+local function loadButtonFont()
+    -- Load the font with larger size for retro look
+    buttonFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
+end
+
+-- Retro color palette for 80s cassette futurism aesthetic
+local retroColors = {
+    background = {0.05, 0.05, 0.15, 0.9},  -- Dark blue background
+    panel = {0.1, 0.1, 0.2, 0.9},          -- Slightly lighter panel
+    panelBorder = {0, 0.8, 0.8, 1},        -- Cyan border
+    buttonNormal = {0.2, 0.2, 0.4, 1},     -- Dark purple button
+    buttonHover = {0.3, 0.3, 0.6, 1},      -- Lighter purple on hover
+    buttonBorder = {0, 0.8, 0.8, 1},       -- Cyan border
+    buttonHighlight = {0, 1, 1, 0.3},      -- Cyan highlight
+    textShadow = {0, 0, 0, 0.7},           -- Dark text shadow
+    text = {0, 1, 1, 1}                    -- Cyan text
+}
+
+-- Draw scanlines effect for retro CRT look
+local function drawScanlines(x, y, width, height, alpha)
+    love.graphics.setColor(0, 0, 0, alpha or 0.1)
+    for i = 0, height, 2 do
+        love.graphics.line(x, y + i, x + width, y + i)
+    end
+end
+
 -- Button class
 local Button = {}
 Button.__index = Button
@@ -29,52 +57,62 @@ end
 
 -- Draw the button
 function Button:draw()
-    -- Draw button shadow for depth
-    love.graphics.setColor(0, 0, 0, 0.3)
-    love.graphics.rectangle("fill", self.x + 2, self.y + 2, self.width, self.height, 8, 8)
+    -- Draw button with retro 80s computer aesthetic (squared, pixelated)
     
-    -- Draw button background with gradient effect
+    -- Button shadow (offset slightly)
+    love.graphics.setColor(0, 0, 0, 0.5)
+    love.graphics.rectangle("fill", self.x + 3, self.y + 3, self.width, self.height, 0, 0) -- No rounded corners
+    
+    -- Main button fill with retro colors
     if self.isHovered then
-        -- Brighter top to bottom gradient when hovered
-        love.graphics.setColor(self.hoverColor[1], self.hoverColor[2], self.hoverColor[3], self.hoverColor[4])
+        love.graphics.setColor(retroColors.buttonHover)
     else
-        -- Normal top to bottom gradient
-        love.graphics.setColor(self.color[1], self.color[2], self.color[3], self.color[4])
+        love.graphics.setColor(retroColors.buttonNormal)
+    end
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 0, 0) -- No rounded corners
+    
+    -- Add a grid pattern for retro computer look
+    love.graphics.setColor(0, 0, 0, 0.1)
+    for i = 0, self.width, 4 do
+        love.graphics.line(self.x + i, self.y, self.x + i, self.y + self.height)
+    end
+    for i = 0, self.height, 4 do
+        love.graphics.line(self.x, self.y + i, self.x + self.width, self.y + i)
     end
     
-    -- Main button fill
-    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 8, 8) -- More rounded corners
+    -- Add a highlight at the top for retro 3D effect
+    love.graphics.setColor(retroColors.buttonHighlight)
+    love.graphics.rectangle("fill", self.x, self.y, self.width, 2)
+    love.graphics.rectangle("fill", self.x, self.y, 2, self.height)
     
-    -- Add a subtle highlight at the top for 3D effect
-    love.graphics.setColor(1, 1, 1, 0.3)
-    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height/4, 8, 8)
-    
-    -- Draw button border with thicker line for better visibility
-    if self.isHovered then
-        love.graphics.setColor(1, 1, 1, 0.9) -- Brighter border on hover
-        love.graphics.setLineWidth(2)
-    else
-        love.graphics.setColor(1, 1, 1, 0.7)
-        love.graphics.setLineWidth(1.5)
-    end
-    love.graphics.rectangle("line", self.x, self.y, self.width, self.height, 8, 8)
+    -- Draw button border with thicker line
+    love.graphics.setColor(retroColors.buttonBorder)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", self.x, self.y, self.width, self.height)
     love.graphics.setLineWidth(1) -- Reset line width
     
-    -- Draw button text with slight shadow for better readability
+    -- Set the pixel font for button text
+    love.graphics.setFont(buttonFont)
+    
     -- Text shadow
-    love.graphics.setColor(0, 0, 0, 0.5)
-    local font = love.graphics.getFont()
-    local textWidth = font:getWidth(self.text)
-    local textHeight = font:getHeight()
+    love.graphics.setColor(retroColors.textShadow)
+    local textWidth = buttonFont:getWidth(self.text)
+    local textHeight = buttonFont:getHeight()
     love.graphics.print(self.text, 
         self.x + (self.width - textWidth) / 2 + 1, 
         self.y + (self.height - textHeight) / 2 + 1)
     
-    -- Actual text
-    love.graphics.setColor(1, 1, 1, 1)
+    -- Actual text with retro cyan color
+    love.graphics.setColor(retroColors.text)
     love.graphics.print(self.text, 
         self.x + (self.width - textWidth) / 2, 
         self.y + (self.height - textHeight) / 2)
+    
+    -- Add scanlines for CRT effect
+    drawScanlines(self.x, self.y, self.width, self.height, 0.05)
+    
+    -- Reset to default font
+    love.graphics.setFont(love.graphics.getFont())
 end
 
 -- Update button state (check for hover)
@@ -98,49 +136,56 @@ local toggleUIButton = nil
 
 -- Initialize the UI
 function UI.init(ballTypes)
+    -- Load the button font
+    loadButtonFont()
+    
     -- Get screen dimensions for positioning
     local screenWidth, screenHeight = love.graphics.getDimensions()
     
+    -- Button dimensions for retro look
+    local buttonWidth = 160
+    local buttonHeight = 40
+    local buttonMargin = 10
+    local panelWidth = buttonWidth + buttonMargin * 2
+    local rightEdge = screenWidth - buttonMargin
+    local buttonX = rightEdge - buttonWidth
+    
     -- Create toggle UI button in the top right corner (always visible)
-    toggleUIButton = Button.new(screenWidth - 110, 10, 100, 30, "☰ Menu", function()
+    toggleUIButton = Button.new(rightEdge - buttonWidth, buttonMargin, buttonWidth, buttonHeight, "TERMINAL", function()
         isUIVisible = not isUIVisible
-    end, {0.3, 0.6, 0.9, 0.9}) -- Nicer blue color
+    end)
     
     -- Create difficulty buttons
-    local difficultyColors = {
-        {0.0, 0.8, 0.0, 0.8}, -- Easy (Green)
-        {0.8, 0.8, 0.0, 0.8}, -- Medium (Yellow)
-        {0.8, 0.4, 0.0, 0.8}, -- Hard (Orange)
-        {0.8, 0.0, 0.0, 0.8}, -- Expert (Red)
-        {0.5, 0.0, 0.5, 0.8}  -- Insane (Purple)
-    }
+    local difficultyNames = {"EASY", "MEDIUM", "HARD", "EXPERT", "INSANE"}
     
-    local difficultyNames = {"Easy", "Medium", "Hard", "Expert", "Insane"}
-    
-    -- Create difficulty buttons
+    -- Create difficulty buttons vertically stacked on the right
     for i = 1, 5 do
-        local button = Button.new(120 + (i-1) * 110, 10, 100, 30, 
+        local button = Button.new(
+            buttonX, 
+            buttonMargin + i * (buttonHeight + buttonMargin) + 50, 
+            buttonWidth, 
+            buttonHeight, 
             difficultyNames[i], 
             function() 
                 currentDifficulty = i
                 print("Difficulty set to:", difficultyNames[i])
                 love.load() -- Reload the level with new difficulty
-            end,
-            difficultyColors[i])
+            end
+        )
         table.insert(buttons, button)
     end
     
     -- Create ball type buttons
-    local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky"}
-    local ballTypeColors = {
-        {0.8, 0.8, 0.8, 0.8}, -- Standard (White)
-        {0.5, 0.5, 0.5, 0.8}, -- Heavy (Gray)
-        {0.8, 0.0, 0.0, 0.8}, -- Exploding (Red)
-        {0.0, 0.8, 0.0, 0.8}  -- Sticky (Green)
-    }
+    local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY"}
     
+    -- Create ball type buttons vertically stacked on the right
+    local ballButtonY = buttonMargin + 6 * (buttonHeight + buttonMargin) + 70
     for i = 1, 4 do
-        local button = Button.new(120 + (i-1) * 140, 50, 130, 30, 
+        local button = Button.new(
+            buttonX, 
+            ballButtonY + (i-1) * (buttonHeight + buttonMargin), 
+            buttonWidth, 
+            buttonHeight, 
             ballTypeNames[i], 
             function() 
                 -- This function will be called when the button is pressed
@@ -148,25 +193,39 @@ function UI.init(ballTypes)
                 if UI.onBallTypeChange then
                     UI.onBallTypeChange(i)
                 end
-            end,
-            ballTypeColors[i])
+            end
+        )
         table.insert(buttons, button)
     end
     
     -- Create regenerate level button
-    local regenButton = Button.new(680, 10, 100, 30, "New Level", function()
-        love.load() -- Reload the level
-    end, {0.0, 0.6, 0.8, 0.8})
+    local regenButton = Button.new(
+        buttonX, 
+        ballButtonY + 4 * (buttonHeight + buttonMargin) + 20, 
+        buttonWidth, 
+        buttonHeight, 
+        "NEW LEVEL", 
+        function()
+            love.load() -- Reload the level
+        end
+    )
     table.insert(buttons, regenButton)
     
     -- Create win hole button
-    local winHoleButton = Button.new(680, 50, 100, 30, "Win Hole", function()
-        -- This function will be called when the button is pressed
-        -- It will be defined in main.lua to add a win hole at the ball position
-        if UI.onAddWinHole then
-            UI.onAddWinHole()
+    local winHoleButton = Button.new(
+        buttonX, 
+        ballButtonY + 5 * (buttonHeight + buttonMargin) + 20, 
+        buttonWidth, 
+        buttonHeight, 
+        "WIN HOLE", 
+        function()
+            -- This function will be called when the button is pressed
+            -- It will be defined in main.lua to add a win hole at the ball position
+            if UI.onAddWinHole then
+                UI.onAddWinHole()
+            end
         end
-    end, {0.8, 0.8, 0.0, 0.8})
+    )
     table.insert(buttons, winHoleButton)
 end
 
@@ -183,20 +242,52 @@ end
 
 -- Draw the UI
 function UI.draw()
+    -- Get screen dimensions for positioning
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Button dimensions for calculating panel size
+    local buttonWidth = 160
+    local buttonMargin = 10
+    local panelWidth = buttonWidth + buttonMargin * 2
+    
     -- Always draw the toggle button
     toggleUIButton:draw()
     
     -- Draw other buttons only if UI is visible
     if isUIVisible then
-        -- Draw a semi-transparent panel behind the menu
-        love.graphics.setColor(0.1, 0.1, 0.2, 0.8)
-        love.graphics.rectangle("fill", 10, 5, 780, 85, 10, 10) -- Rounded corners
+        -- Draw a retro terminal panel on the right side
+        local panelX = screenWidth - panelWidth
+        local panelHeight = screenHeight
         
-        -- Add a subtle border to the panel
-        love.graphics.setColor(0.3, 0.6, 0.9, 0.6)
+        -- Draw panel background
+        love.graphics.setColor(retroColors.panel)
+        love.graphics.rectangle("fill", panelX, 0, panelWidth, panelHeight, 0, 0) -- No rounded corners for retro look
+        
+        -- Draw grid pattern for retro computer look
+        love.graphics.setColor(0, 0, 0, 0.05)
+        for i = 0, panelWidth, 8 do
+            love.graphics.line(panelX + i, 0, panelX + i, panelHeight)
+        end
+        for i = 0, panelHeight, 8 do
+            love.graphics.line(panelX, i, panelX + panelWidth, i)
+        end
+        
+        -- Draw panel border
+        love.graphics.setColor(retroColors.panelBorder)
         love.graphics.setLineWidth(2)
-        love.graphics.rectangle("line", 10, 5, 780, 85, 10, 10)
+        love.graphics.rectangle("line", panelX, 0, panelWidth, panelHeight)
+        love.graphics.line(panelX, 0, panelX, panelHeight) -- Left edge line
         love.graphics.setLineWidth(1)
+        
+        -- Draw scanlines for CRT effect
+        drawScanlines(panelX, 0, panelWidth, panelHeight, 0.05)
+        
+        -- Draw "TERMINAL" header
+        love.graphics.setFont(buttonFont)
+        love.graphics.setColor(retroColors.text)
+        local headerText = "CONTROLS"
+        local headerWidth = buttonFont:getWidth(headerText)
+        love.graphics.print(headerText, panelX + (panelWidth - headerWidth) / 2, buttonMargin * 3 + 40)
         
         -- Draw all buttons
         for _, button in ipairs(buttons) do

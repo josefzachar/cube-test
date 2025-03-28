@@ -214,11 +214,12 @@ function Input:drawPixelatedCircle(x, y, radius, pixelSize, mode)
     end
 end
 
-function Input:draw(ball)
+function Input:draw(ball, attempts)
     -- Draw mode indicator
     love.graphics.setColor(1, 1, 1, 1) -- White
     if self.mode == MODES.SHOOT then
         love.graphics.print("Mode: SHOOT (press SPACE to switch)", 10, 30)
+        love.graphics.print("Shots: " .. attempts, 10, 50)
         
         -- Draw aim line if ball is not moving and user is aiming
         if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
@@ -282,8 +283,9 @@ function Input:draw(ball)
         -- Get the color for the current material
         local materialColor = CellTypes.COLORS[materialType]
         
-        -- Display current mode and material
+        -- Display mode and shots
         love.graphics.print("Mode: SPRAY - Material: " .. materialName .. " (press SPACE to switch, RIGHT-CLICK to change material)", 10, 30)
+        love.graphics.print("Shots: " .. attempts, 10, 50)
         
         -- Draw spray indicator with current material color
         local gridX, gridY = math.floor(self.mouseX / CellTypes.SIZE), math.floor(self.mouseY / CellTypes.SIZE)

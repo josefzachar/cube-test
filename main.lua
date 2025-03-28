@@ -251,14 +251,12 @@ function love.update(dt)
     -- Check for win condition
     if ball.hasWon and not gameWon then
         gameWon = true
-        winMessageTimer = 5.0 -- Display win message for 5 seconds
+        winMessageTimer = 999999.0 -- Display win message until user dismisses it
         print("GAME WON! Congratulations!")
     end
     
-    -- Update win message timer
-    if gameWon and winMessageTimer > 0 then
-        winMessageTimer = winMessageTimer - dt
-    end
+    -- Win message timer is no longer decremented automatically
+    -- It will only be reset when the user clicks the continue button or presses R
     
     -- Update the level (pass the ball for cluster activation)
     level:update(dt, ball)
@@ -304,8 +302,19 @@ function love.keypressed(key)
         ball = newBall
         ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
         print("Switched to Sticky Ball")
-    elseif key == "e" and ball.ballType == Balls.TYPES.EXPLODING then
-        -- Trigger explosion for exploding ball
+    elseif key == "e" then
+        -- Always switch to exploding ball and trigger explosion immediately
+        if ball.ballType ~= Balls.TYPES.EXPLODING then
+            -- Switch to exploding ball first
+            currentBallType = Balls.TYPES.EXPLODING
+            local newBall = Balls.changeBallType(ball, world, currentBallType)
+            ball.body:destroy() -- Destroy old ball's body
+            ball = newBall
+            ball.body:setUserData(ball) -- Set the ball as the user data for the ball body
+            print("Switched to Exploding Ball")
+        end
+        
+        -- Trigger explosion
         local result = ball:explode(level, Collision.sandToConvert)
         if result then
             print("Exploded!")
@@ -416,40 +425,13 @@ function love.draw()
     ball:draw(debug) -- Pass debug flag to ball:draw
     
     -- Draw input (aim line, power indicator)
-    input:draw(ball)
+    input:draw(ball, attempts)
     
-    -- Display FPS, attempts counter and difficulty level
+    -- Display FPS counter
     love.graphics.setColor(WHITE)
     love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
-    love.graphics.print("Shots: " .. attempts, 250, 30)
     
-    -- Display difficulty level
-    local difficultyText = "Difficulty: "
-    if currentDifficulty == 1 then
-        difficultyText = difficultyText .. "Easy"
-    elseif currentDifficulty == 2 then
-        difficultyText = difficultyText .. "Medium"
-    elseif currentDifficulty == 3 then
-        difficultyText = difficultyText .. "Hard"
-    elseif currentDifficulty == 4 then
-        difficultyText = difficultyText .. "Expert"
-    elseif currentDifficulty == 5 then
-        difficultyText = difficultyText .. "Insane"
-    end
-    love.graphics.print(difficultyText, 250, 50)
-    
-    -- Display current ball type
-    local ballTypeText = "Ball: "
-    if ball.ballType == Balls.TYPES.STANDARD then
-        ballTypeText = ballTypeText .. "Standard (1)"
-    elseif ball.ballType == Balls.TYPES.HEAVY then
-        ballTypeText = ballTypeText .. "Heavy (2)"
-    elseif ball.ballType == Balls.TYPES.EXPLODING then
-        ballTypeText = ballTypeText .. "Exploding (3) - Press E to explode"
-    elseif ball.ballType == Balls.TYPES.STICKY then
-        ballTypeText = ballTypeText .. "Sticky (4)"
-    end
-    love.graphics.print(ballTypeText, 250, 70)
+    -- Shots counter will be displayed under the mode indicator in input.lua
     
     -- Debug info
     Debug.drawDebugInfo(level, ball, attempts, debug)
@@ -467,48 +449,178 @@ function love.draw()
     
     -- Draw win message if the game is won
     if gameWon and winMessageTimer > 0 then
-        -- Draw a semi-transparent background
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+        -- Load the win screen font if not already loaded
+        if not winFont then
+            winFont = love.graphics.newFont("fonts/pixel_font.ttf", 32)
+        end
+        if not winFontSmall then
+            winFontSmall = love.graphics.newFont("fonts/pixel_font.ttf", 24)
+        end
         
-        -- Draw the win message
-        love.graphics.setColor(0, 1, 0, 1) -- Green text
-        love.graphics.printf("YOU WIN!", 0, love.graphics.getHeight() / 2 - 70, love.graphics.getWidth(), "center")
-        love.graphics.printf("Shots: " .. attempts, 0, love.graphics.getHeight() / 2 - 40, love.graphics.getWidth(), "center")
+        -- Get screen dimensions
+        local screenWidth, screenHeight = love.graphics.getDimensions()
+        
+        -- Draw a retro-styled background panel
+        love.graphics.setColor(0.1, 0.1, 0.2, 0.9) -- Dark blue background
+        love.graphics.rectangle("fill", 0, 0, screenWidth, screenHeight)
+        
+        -- Draw grid pattern for retro computer look
+        love.graphics.setColor(0, 0, 0, 0.05)
+        for i = 0, screenWidth, 16 do
+            love.graphics.line(i, 0, i, screenHeight)
+        end
+        for i = 0, screenHeight, 16 do
+            love.graphics.line(0, i, screenWidth, i)
+        end
+        
+        -- Draw scanlines for CRT effect
+        love.graphics.setColor(0, 0, 0, 0.1)
+        for i = 0, screenHeight, 2 do
+            love.graphics.line(0, i, screenWidth, i)
+        end
+        
+        -- Draw a centered terminal-like window
+        local windowWidth = 600
+        local windowHeight = 400
+        local windowX = (screenWidth - windowWidth) / 2
+        local windowY = (screenHeight - windowHeight) / 2
+        
+        -- Window background
+        love.graphics.setColor(0.05, 0.05, 0.15, 0.95)
+        love.graphics.rectangle("fill", windowX, windowY, windowWidth, windowHeight, 0, 0) -- No rounded corners
+        
+        -- Window border
+        love.graphics.setColor(0, 0.8, 0.8, 1) -- Cyan border
+        love.graphics.setLineWidth(3)
+        love.graphics.rectangle("line", windowX, windowY, windowWidth, windowHeight, 0, 0)
+        love.graphics.setLineWidth(1)
+        
+        -- Window header
+        love.graphics.setColor(0.2, 0.2, 0.4, 1)
+        love.graphics.rectangle("fill", windowX, windowY, windowWidth, 40, 0, 0)
+        
+        -- Header text
+        love.graphics.setFont(winFont)
+        love.graphics.setColor(0, 1, 1, 1) -- Cyan text
+        local headerText = "MISSION COMPLETE"
+        local headerWidth = winFont:getWidth(headerText)
+        love.graphics.print(headerText, windowX + (windowWidth - headerWidth) / 2, windowY + 5)
+        
+        -- Content
+        love.graphics.setFont(winFontSmall)
         
         -- Display current difficulty
-        local difficultyName = "Easy"
+        local difficultyName = "EASY"
         if currentDifficulty == 2 then
-            difficultyName = "Medium"
+            difficultyName = "MEDIUM"
         elseif currentDifficulty == 3 then
-            difficultyName = "Hard"
+            difficultyName = "HARD"
         elseif currentDifficulty == 4 then
-            difficultyName = "Expert"
+            difficultyName = "EXPERT"
         elseif currentDifficulty == 5 then
-            difficultyName = "Insane"
+            difficultyName = "INSANE"
         end
         
-        love.graphics.printf("Current Difficulty: " .. difficultyName, 0, love.graphics.getHeight() / 2 - 10, love.graphics.getWidth(), "center")
+        -- Stats section
+        local textY = windowY + 70
+        local textX = windowX + 50
+        local lineHeight = 35
         
-        -- Display next difficulty message if not at max difficulty
+        love.graphics.setColor(1, 0.5, 0, 1) -- Orange for headers
+        love.graphics.print("MISSION STATS:", textX, textY)
+        textY = textY + lineHeight
+        
+        love.graphics.setColor(0, 1, 1, 1) -- Cyan for text
+        love.graphics.print("SHOTS FIRED: " .. attempts, textX, textY)
+        textY = textY + lineHeight
+        
+        love.graphics.print("DIFFICULTY: " .. difficultyName, textX, textY)
+        textY = textY + lineHeight * 1.5
+        
+        -- Next difficulty message
         if currentDifficulty < 5 then
-            local nextDifficultyName = "Medium"
+            local nextDifficultyName = "MEDIUM"
             if currentDifficulty == 2 then
-                nextDifficultyName = "Hard"
+                nextDifficultyName = "HARD"
             elseif currentDifficulty == 3 then
-                nextDifficultyName = "Expert"
+                nextDifficultyName = "EXPERT"
             elseif currentDifficulty == 4 then
-                nextDifficultyName = "Insane"
+                nextDifficultyName = "INSANE"
             end
             
-            love.graphics.printf("Press R to restart with " .. nextDifficultyName .. " difficulty", 0, love.graphics.getHeight() / 2 + 20, love.graphics.getWidth(), "center")
+            love.graphics.setColor(1, 0.5, 0, 1) -- Orange for headers
+            love.graphics.print("NEXT MISSION:", textX, textY)
+            textY = textY + lineHeight
+            
+            love.graphics.setColor(0, 1, 1, 1) -- Cyan for text
+            love.graphics.print("DIFFICULTY: " .. nextDifficultyName, textX, textY)
         else
-            love.graphics.printf("Press R to restart (Maximum difficulty reached)", 0, love.graphics.getHeight() / 2 + 20, love.graphics.getWidth(), "center")
+            love.graphics.setColor(1, 0.5, 0, 1) -- Orange for headers
+            love.graphics.print("MAXIMUM DIFFICULTY REACHED", textX, textY)
         end
+        
+        -- Draw buttons
+        local buttonWidth = 200
+        local buttonHeight = 50
+        local buttonX = windowX + (windowWidth - buttonWidth) / 2
+        local buttonY = windowY + windowHeight - buttonHeight - 40
+        
+        -- Draw "CONTINUE" button
+        love.graphics.setColor(0.2, 0.2, 0.4, 1) -- Button background
+        love.graphics.rectangle("fill", buttonX, buttonY, buttonWidth, buttonHeight, 0, 0)
+        
+        -- Button border
+        love.graphics.setColor(0, 0.8, 0.8, 1) -- Cyan border
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", buttonX, buttonY, buttonWidth, buttonHeight, 0, 0)
+        love.graphics.setLineWidth(1)
+        
+        -- Button highlight
+        love.graphics.setColor(0, 1, 1, 0.3) -- Cyan highlight
+        love.graphics.rectangle("fill", buttonX, buttonY, buttonWidth, 2)
+        love.graphics.rectangle("fill", buttonX, buttonY, 2, buttonHeight)
+        
+        -- Button text
+        love.graphics.setColor(0, 1, 1, 1) -- Cyan text
+        local buttonText = "CONTINUE [R]"
+        local buttonTextWidth = winFontSmall:getWidth(buttonText)
+        love.graphics.print(buttonText, buttonX + (buttonWidth - buttonTextWidth) / 2, buttonY + (buttonHeight - winFontSmall:getHeight()) / 2)
     end
 end
 
 function love.mousepressed(x, y, button)
+    -- Check if we're in the win screen
+    if gameWon and winMessageTimer > 0 then
+        -- Get screen dimensions
+        local screenWidth, screenHeight = love.graphics.getDimensions()
+        
+        -- Button dimensions
+        local windowWidth = 600
+        local windowHeight = 400
+        local windowX = (screenWidth - windowWidth) / 2
+        local windowY = (screenHeight - windowHeight) / 2
+        local buttonWidth = 200
+        local buttonHeight = 50
+        local buttonX = windowX + (windowWidth - buttonWidth) / 2
+        local buttonY = windowY + windowHeight - buttonHeight - 40
+        
+        -- Check if click is on the continue button
+        if x >= buttonX and x <= buttonX + buttonWidth and
+           y >= buttonY and y <= buttonY + buttonHeight then
+            -- Increase difficulty if not at max
+            if currentDifficulty < 5 then
+                currentDifficulty = currentDifficulty + 1
+                print("Difficulty increased to:", currentDifficulty)
+            end
+            
+            -- Reload the level
+            love.load()
+            return
+        end
+        
+        return -- Don't process other clicks when win screen is active
+    end
+    
     -- Check if UI handled the mouse press
     if UI.handlePress(x, y) then
         return -- UI handled the press, don't process further
