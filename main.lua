@@ -489,6 +489,9 @@ function love.draw()
     -- Draw UI (UI is drawn at screen coordinates, not scaled)
     UI.draw()
     
+    -- Track if we've pushed any transformations for the win screen
+    local winScreenTransformPushed = false
+    
     -- Draw win message if the game is won
     if gameWon and winMessageTimer > 0 then
         -- Load the win screen font if not already loaded

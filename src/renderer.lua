@@ -319,32 +319,41 @@ function Renderer.drawSmokeBatch(level, smokeBatch, debug)
     end
 end
 
--- Draw win hole cells as simple black rectangles
+-- Draw win hole cells with slower, gradient pulsating effect
 function Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
     local Cell = require("cell")
     local COLORS = CellTypes.COLORS
-    local winHoleColor = COLORS[CellTypes.TYPES.WIN_HOLE]
+    
+    -- Get current time for animation
+    local time = love.timer.getTime()
     
     for _, cellPos in ipairs(winHoleBatch) do
         -- Get the actual cell from the level
         local cell = level.cells[cellPos.y][cellPos.x]
         local x, y = cellPos.x, cellPos.y
         
-        -- Apply color variation
-        love.graphics.setColor(
-            winHoleColor[1] * cell.colorVariation.r,
-            winHoleColor[2] * cell.colorVariation.g,
-            winHoleColor[3] * cell.colorVariation.b,
-            winHoleColor[4]
-        )
+        -- Calculate cell position
+        local cellX = x * Cell.SIZE
+        local cellY = y * Cell.SIZE
         
-        -- Draw win hole as a simple black rectangle
-        love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+        -- Slower, smoother pulsating animation (using sine wave)
+        local pulse = math.sin(time * 1.5 + x * 0.05 + y * 0.05) * 0.5 + 0.5 -- Values between 0 and 1
+        
+        -- Create a gradient between dark blue and dark purple
+        local r = 0.2 + (0.4 * pulse) -- Range: 0.2 to 0.6
+        local g = 0.1 + (0.1 * pulse) -- Range: 0.1 to 0.2
+        local b = 0.5 + (0.3 * pulse) -- Range: 0.5 to 0.8
+        
+        -- Set the color with the gradient effect
+        love.graphics.setColor(r, g, b, 1.0)
+        
+        -- Draw the entire win hole cell with the colorful effect
+        love.graphics.rectangle("fill", cellX, cellY, Cell.SIZE, Cell.SIZE)
         
         -- Draw debug info
         if debug then
             love.graphics.setColor(0, 1, 0, 1) -- Green
-            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+            love.graphics.rectangle("fill", cellX + Cell.SIZE/2 - 1, cellY + Cell.SIZE/2 - 1, 2, 2)
         end
     end
 end
