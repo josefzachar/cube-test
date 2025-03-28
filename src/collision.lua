@@ -73,6 +73,10 @@ function Collision.beginContact(a, b, coll, level, ball)
             -- Set the win flag on the ball
             if ball then
                 ball.hasWon = true
+                
+                -- Play win sound
+                Sound.playWin()
+                
                 print("Ball entered win hole! Player wins!")
                 print("Ball position:", ballBody:getX(), ballBody:getY())
                 print("Win hole position:", winHoleX, winHoleY)

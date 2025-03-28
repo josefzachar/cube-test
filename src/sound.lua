@@ -13,6 +13,16 @@ Sound.loaded = false
 -- Volume settings
 Sound.volume = 0.7 -- Default volume (0.0 to 1.0)
 
+-- Camera shake effect
+Sound.cameraShake = {
+    active = false,
+    duration = 0,
+    intensity = 0,
+    timer = 0,
+    offsetX = 0,
+    offsetY = 0
+}
+
 -- Function to load all sound effects
 function Sound.load()
     -- Only load sounds once
@@ -32,7 +42,9 @@ function Sound.load()
         dirt = {"sounds/dirt_hit.mp3"},
         sand = {"sounds/sand_hit.mp3"},
         water = {"sounds/water_hit.mp3"},
-        stone = {"sounds/stone_hit.mp3"}
+        stone = {"sounds/stone_hit.mp3"},
+        explosion = {"sounds/explosion.mp3"},
+        win = {"sounds/win.mp3"}
     }
     
     -- Load each sound file if it exists
@@ -145,6 +157,63 @@ function Sound.setVolume(volume)
     for _, source in pairs(Sound.sounds) do
         source:setVolume(Sound.volume)
     end
+end
+
+-- Function to trigger camera shake
+function Sound.startCameraShake(duration, intensity)
+    Sound.cameraShake.active = true
+    Sound.cameraShake.duration = duration or 0.5 -- Default 0.5 seconds
+    Sound.cameraShake.intensity = intensity or 10 -- Default intensity of 10 pixels
+    Sound.cameraShake.timer = Sound.cameraShake.duration
+    Sound.cameraShake.offsetX = 0
+    Sound.cameraShake.offsetY = 0
+end
+
+-- Function to update camera shake
+function Sound.updateCameraShake(dt)
+    if not Sound.cameraShake.active then
+        return 0, 0 -- No shake, return zero offset
+    end
+    
+    -- Update timer
+    Sound.cameraShake.timer = Sound.cameraShake.timer - dt
+    
+    -- Check if shake is complete
+    if Sound.cameraShake.timer <= 0 then
+        Sound.cameraShake.active = false
+        Sound.cameraShake.offsetX = 0
+        Sound.cameraShake.offsetY = 0
+        return 0, 0
+    end
+    
+    -- Calculate intensity based on remaining time (fade out)
+    local currentIntensity = Sound.cameraShake.intensity * (Sound.cameraShake.timer / Sound.cameraShake.duration)
+    
+    -- Generate random offset
+    Sound.cameraShake.offsetX = (math.random() * 2 - 1) * currentIntensity
+    Sound.cameraShake.offsetY = (math.random() * 2 - 1) * currentIntensity
+    
+    return Sound.cameraShake.offsetX, Sound.cameraShake.offsetY
+end
+
+-- Function to play explosion sound with camera shake
+function Sound.playExplosion(intensity)
+    -- Play explosion sound at full volume with slight pitch variation
+    local pitchVariation = 0.9 + math.random() * 0.2 -- Random pitch between 0.9 and 1.1
+    Sound.play("explosion", 1.0, pitchVariation)
+    
+    -- Start camera shake with intensity based on explosion size
+    Sound.startCameraShake(0.5, intensity or 15)
+end
+
+-- Function to play win sound
+function Sound.playWin()
+    -- Play win sound at full volume with slight pitch variation
+    local pitchVariation = 0.95 + math.random() * 0.1 -- Random pitch between 0.95 and 1.05
+    Sound.play("win", 1.0, pitchVariation)
+    
+    -- Add a small camera shake for feedback
+    Sound.startCameraShake(0.3, 5)
 end
 
 return Sound

@@ -36,6 +36,10 @@ BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
 
 -- Function to create a diamond-shaped win hole
 function createDiamondWinHole(level, holeX, holeY)
+    -- Ball starting position
+    local ballStartX, ballStartY = 20, 20
+    local minDistanceFromBall = 40 -- Minimum distance from ball starting position
+    
     -- If no position is provided, choose a random position
     if not holeX or not holeY then
         -- Choose a random position from several possible locations
@@ -43,17 +47,34 @@ function createDiamondWinHole(level, holeX, holeY)
             {x = level.width - 20, y = level.height - 20}, -- Bottom right
             {x = 20, y = level.height - 20},               -- Bottom left
             {x = level.width - 20, y = 20},                -- Top right
-            {x = 20, y = 20},                              -- Top left
             {x = level.width / 2, y = 20},                 -- Top middle
             {x = level.width / 2, y = level.height - 20},  -- Bottom middle
             {x = 20, y = level.height / 2},                -- Left middle
             {x = level.width - 20, y = level.height / 2}   -- Right middle
         }
         
-        -- Pick a random location
-        local randomIndex = math.random(1, #possibleLocations)
-        holeX = math.floor(possibleLocations[randomIndex].x)
-        holeY = math.floor(possibleLocations[randomIndex].y)
+        -- Remove the top-left position (20, 20) as it's too close to the ball starting position
+        -- And filter out any positions that are too close to the ball starting position
+        local validLocations = {}
+        for _, loc in ipairs(possibleLocations) do
+            local distance = math.sqrt((loc.x - ballStartX)^2 + (loc.y - ballStartY)^2)
+            if distance >= minDistanceFromBall then
+                table.insert(validLocations, loc)
+            end
+        end
+        
+        -- Pick a random location from valid locations
+        local randomIndex = math.random(1, #validLocations)
+        holeX = math.floor(validLocations[randomIndex].x)
+        holeY = math.floor(validLocations[randomIndex].y)
+    else
+        -- If position is provided, check if it's too close to the ball starting position
+        local distance = math.sqrt((holeX - ballStartX)^2 + (holeY - ballStartY)^2)
+        if distance < minDistanceFromBall then
+            -- If too close, move it to a valid position
+            holeX = level.width - 20
+            holeY = level.height - 20
+        end
     end
     -- The pattern is:
     --   X
@@ -81,6 +102,8 @@ function createDiamondWinHole(level, holeX, holeY)
     end
     
     -- Create win holes based on the pattern
+    local createdHoles = {}
+    
     for dy = 0, 4 do
         for dx = 0, 4 do
             -- Only create a win hole if the pattern has a 1 at this position
@@ -92,8 +115,37 @@ function createDiamondWinHole(level, holeX, holeY)
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
                     print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
+                    table.insert(createdHoles, {x = cellX, y = cellY})
                 end
             end
+        end
+    end
+    
+    -- Check for isolated win holes and remove them
+    for i = #createdHoles, 1, -1 do
+        local hole = createdHoles[i]
+        local hasAdjacent = false
+        
+        -- Check adjacent cells (up, down, left, right)
+        local directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+        for _, dir in ipairs(directions) do
+            local nx = hole.x + dir[1]
+            local ny = hole.y + dir[2]
+            
+            -- Check if this adjacent cell is also a win hole
+            if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                if level:getCellType(nx, ny) == CellTypes.TYPES.WIN_HOLE then
+                    hasAdjacent = true
+                    break
+                end
+            end
+        end
+        
+        -- If this hole has no adjacent win holes, remove it
+        if not hasAdjacent then
+            level:setCellType(hole.x, hole.y, CellTypes.TYPES.EMPTY)
+            print("Removing isolated win hole at", hole.x, hole.y)
+            table.remove(createdHoles, i)
         end
     end
 end
@@ -178,6 +230,9 @@ function love.update(dt)
     
     -- Update the physics world
     world:update(dt)
+    
+    -- Update camera shake effect
+    Sound.updateCameraShake(dt)
     
     -- Update the ball
     local ballStopped = ball:update(dt)
@@ -329,6 +384,16 @@ function love.draw()
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
+    -- Apply camera shake offset
+    local shakeX, shakeY = 0, 0
+    local cameraShakeActive = false
+    if Sound.cameraShake and Sound.cameraShake.active then
+        shakeX, shakeY = Sound.cameraShake.offsetX, Sound.cameraShake.offsetY
+        love.graphics.push()
+        love.graphics.translate(shakeX, shakeY)
+        cameraShakeActive = true
+    end
+    
     -- Draw gradient rectangle covering the entire screen
     love.graphics.setColor(BACKGROUND_COLOR_TOP[1], BACKGROUND_COLOR_TOP[2], BACKGROUND_COLOR_TOP[3], BACKGROUND_COLOR_TOP[4])
     love.graphics.rectangle("fill", 0, 0, width, height)
@@ -389,6 +454,11 @@ function love.draw()
     
     -- Draw active cells for debugging
     Debug.drawActiveCells(level)
+    
+    -- Reset camera shake before drawing UI
+    if cameraShakeActive then
+        love.graphics.pop()
+    end
     
     -- Draw UI
     UI.draw()
@@ -452,4 +522,13 @@ function love.mousereleased(x, y, button)
     if input:handleMouseReleased(button, ball) then
         attempts = attempts + 1
     end
+end
+
+-- Store the original pop function
+local originalPop = love.graphics.pop
+
+-- Override the pop function
+love.graphics.pop = function(...)
+    -- Call the original pop function
+    originalPop(...)
 end

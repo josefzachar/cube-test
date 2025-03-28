@@ -406,6 +406,10 @@ end
 
 -- Create a goal area (could be a hole or target)
 function createGoalArea(level, goalX, goalY)
+    -- Ball starting position
+    local ballStartX, ballStartY = 20, 20
+    local minDistanceFromBall = 40 -- Minimum distance from ball starting position
+    
     -- Choose a random position for the win hole
     -- We'll pick from several possible locations to ensure variety
     local possibleLocations = {
@@ -417,10 +421,24 @@ function createGoalArea(level, goalX, goalY)
         {x = level.width - 20, y = level.height / 2} -- Right middle
     }
     
-    -- Pick a random location
-    local randomIndex = math.random(1, #possibleLocations)
-    local holeX = math.floor(possibleLocations[randomIndex].x)
-    local holeY = math.floor(possibleLocations[randomIndex].y)
+    -- Remove any positions that are too close to the ball starting position
+    local validLocations = {}
+    for _, loc in ipairs(possibleLocations) do
+        local distance = math.sqrt((loc.x - ballStartX)^2 + (loc.y - ballStartY)^2)
+        if distance >= minDistanceFromBall then
+            table.insert(validLocations, loc)
+        end
+    end
+    
+    -- If no valid locations, use the bottom right corner
+    if #validLocations == 0 then
+        validLocations = {{x = level.width - 20, y = level.height - 20}}
+    end
+    
+    -- Pick a random location from valid locations
+    local randomIndex = math.random(1, #validLocations)
+    local holeX = math.floor(validLocations[randomIndex].x)
+    local holeY = math.floor(validLocations[randomIndex].y)
     
     -- Create a clear area around the win hole
     createClearArea(level, holeX, holeY, 10)
@@ -489,27 +507,38 @@ function createGoalArea(level, goalX, goalY)
     end
     
     -- Check for isolated win holes and remove them
-    for i = #createdHoles, 1, -1 do
-        local hole = createdHoles[i]
-        local hasAdjacent = false
+    -- First, mark all holes that are part of a connected group
+    local connected = {}
+    local function markConnected(x, y)
+        local key = x .. "," .. y
+        if connected[key] then return end
+        
+        connected[key] = true
         
         -- Check adjacent cells (up, down, left, right)
         local directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
         for _, dir in ipairs(directions) do
-            local nx = hole.x + dir[1]
-            local ny = hole.y + dir[2]
+            local nx = x + dir[1]
+            local ny = y + dir[2]
             
             -- Check if this adjacent cell is also a win hole
             if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
                 if level:getCellType(nx, ny) == CellTypes.TYPES.WIN_HOLE then
-                    hasAdjacent = true
-                    break
+                    markConnected(nx, ny)
                 end
             end
         end
+    end
+    
+    -- Start from the center hole and mark all connected holes
+    markConnected(holeX, holeY)
+    
+    -- Remove any holes that aren't connected to the main group
+    for i = #createdHoles, 1, -1 do
+        local hole = createdHoles[i]
+        local key = hole.x .. "," .. hole.y
         
-        -- If this hole has no adjacent win holes, remove it
-        if not hasAdjacent then
+        if not connected[key] then
             level:setCellType(hole.x, hole.y, CellTypes.TYPES.EMPTY)
             print("Removing isolated win hole at", hole.x, hole.y)
             table.remove(createdHoles, i)

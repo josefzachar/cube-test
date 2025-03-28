@@ -78,6 +78,11 @@ function ExplodingBall:explode(level, sandToConvert)
     -- Explosion radius
     local explosionRadius = 12 -- Much larger radius for more dramatic effect
     
+    -- Play explosion sound and trigger camera shake
+    -- The intensity of the shake is proportional to the explosion radius
+    local Sound = require("src.sound")
+    Sound.playExplosion(explosionRadius * 1.5)
+    
     -- Create fire explosion at the ball's position
     Fire.createExplosion(level, gridX, gridY, explosionRadius)
     

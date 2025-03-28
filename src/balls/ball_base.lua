@@ -53,6 +53,13 @@ end
 
 -- Update method - handles physics updates
 function Ball:update(dt)
+    -- Handle ball winning condition
+    if self.hasWon then
+        -- Simply hide the ball
+        self.scale = 0
+        return true -- Ball is stationary
+    end
+    
     -- Get ball velocity
     local vx, vy = self.body:getLinearVelocity()
     local speed = math.sqrt(vx*vx + vy*vy)
@@ -149,6 +156,11 @@ end
 
 -- Draw the ball
 function Ball:draw(debug)
+    -- Skip drawing if the ball has won (disappeared)
+    if self.scale and self.scale <= 0 then
+        return
+    end
+    
     love.graphics.push()
     
     -- Get base color based on ball type
