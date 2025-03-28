@@ -17,8 +17,7 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     
     love.graphics.setColor(1, 0, 0, 1)
     
-    -- FPS
-    love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
+    -- FPS is now displayed in main.lua for all modes
     
     -- Cell counts (only update every 10 frames to improve performance)
     if not level.cellCounts or love.timer.getTime() - (level.lastCountTime or 0) > 0.5 then
@@ -111,6 +110,24 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     
     love.graphics.print("Active Clusters: " .. activeClusterCount .. "/" .. totalClusters, 10, 260)
     love.graphics.print("Active Cells: " .. #level.activeCells, 10, 280)
+    
+    -- Display shortcuts legend
+    love.graphics.setColor(1, 1, 0, 1) -- Yellow for shortcuts
+    love.graphics.print("Shortcuts:", 10, 310)
+    love.graphics.print("D - Toggle debug mode", 10, 330)
+    love.graphics.print("1-4 - Switch ball types", 10, 350)
+    love.graphics.print("E - Explode (exploding ball)", 10, 370)
+    love.graphics.print("R - Reset level", 10, 390)
+    love.graphics.print("S - Add sand for testing", 10, 410)
+    love.graphics.print("P - Add sand pile at ball", 10, 430)
+    love.graphics.print("A - Toggle active cells view", 10, 450)
+    love.graphics.print("V - Toggle VSync", 10, 470)
+    love.graphics.print("W - Create water test level", 10, 490)
+    love.graphics.print("T - Create dirt-water test level", 10, 510)
+    love.graphics.print("G - Generate new level", 10, 530)
+    love.graphics.print("F - Add fire at ball position", 10, 550)
+    love.graphics.print("H - Add win hole at ball position", 10, 570)
+    love.graphics.print("Q - Add water pool at ball position", 10, 590)
     
     -- Only draw active clusters if specifically requested
     if Debug.showActiveCells then

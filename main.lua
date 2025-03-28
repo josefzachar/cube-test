@@ -418,8 +418,9 @@ function love.draw()
     -- Draw input (aim line, power indicator)
     input:draw(ball)
     
-    -- Display attempts counter and difficulty level
+    -- Display FPS, attempts counter and difficulty level
     love.graphics.setColor(WHITE)
+    love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
     love.graphics.print("Shots: " .. attempts, 250, 30)
     
     -- Display difficulty level
