@@ -31,23 +31,45 @@ Editor.setStartPosition = false -- Flag for setting start position
 Editor.setWinHolePosition = false -- Flag for setting win hole position
 Editor.winHoleX = 140 -- Default win hole position
 Editor.winHoleY = 20
+Editor.hideUI = false -- Flag to hide UI (toggled with SPACE)
 
--- Tool types (removed WIN_HOLE as requested)
+-- File selection state
+Editor.fileSelector = {
+    active = false,
+    mode = nil, -- "save" or "load"
+    files = {},
+    selectedIndex = 1,
+    scrollOffset = 0,
+    newFileName = ""
+}
+
+-- Tool types
 Editor.TOOLS = {
+    "draw",
+    "erase",
+    "fill",
+    "start",
+    "winhole"
+}
+
+-- Cell types
+Editor.CELL_TYPES = {
     "EMPTY",
     "DIRT",
     "SAND",
     "STONE",
-    "WATER"
+    "WATER",
+    "FIRE"
 }
 
--- Map tool names to cell types (removed WIN_HOLE mapping)
-Editor.TOOL_TO_CELL_TYPE = {
+-- Map cell type names to cell types
+Editor.CELL_TYPE_TO_TYPE = {
     ["EMPTY"] = CellTypes.TYPES.EMPTY,
     ["DIRT"] = CellTypes.TYPES.DIRT,
     ["SAND"] = CellTypes.TYPES.SAND,
     ["STONE"] = CellTypes.TYPES.STONE,
-    ["WATER"] = CellTypes.TYPES.WATER
+    ["WATER"] = CellTypes.TYPES.WATER,
+    ["FIRE"] = CellTypes.TYPES.FIRE
 }
 
 -- UI elements
@@ -83,12 +105,25 @@ function Editor.draw()
     -- Draw the grid
     Editor.drawGrid()
     
-    -- Draw the UI
-    EditorUI.drawUI(Editor)
+    -- Draw the UI if not hidden
+    if not Editor.hideUI then
+        EditorUI.drawUI(Editor)
+    end
     
     -- Draw the test ball if it exists
     if Editor.testBall then
         Editor.testBall:draw(false)
+    end
+    
+    -- Draw file selector if active (always show this even if UI is hidden)
+    if Editor.fileSelector.active then
+        EditorUI.drawFileSelector(Editor)
+    end
+    
+    -- If UI is hidden, show a small indicator
+    if Editor.hideUI then
+        love.graphics.setColor(1, 1, 1, 0.7)
+        love.graphics.print("Press SPACE to show UI", 10, 10)
     end
 end
 
@@ -164,17 +199,84 @@ function Editor.testPlay()
     return ball
 end
 
+-- Show file selector for loading or saving
+function Editor.showFileSelector(mode)
+    Editor.fileSelector.active = true
+    Editor.fileSelector.mode = mode
+    Editor.fileSelector.selectedIndex = 1
+    Editor.fileSelector.scrollOffset = 0
+    
+    if mode == "save" then
+        Editor.fileSelector.newFileName = Editor.levelName
+    end
+    
+    -- Get list of level files
+    EditorFile.refreshFileList(Editor)
+end
+
+-- Toggle UI visibility
+function Editor.toggleUI()
+    Editor.hideUI = not Editor.hideUI
+end
+
 -- Forward input handling to the appropriate submodule
 function Editor.handleMousePressed(x, y, button)
+    -- If UI is hidden, only handle file selector
+    if Editor.hideUI and not Editor.fileSelector.active then
+        return false
+    end
+    
+    -- If file selector is active, handle its input first
+    if Editor.fileSelector.active then
+        return EditorInput.handleFileSelectorMousePressed(Editor, x, y, button)
+    end
+    
     return EditorInput.handleMousePressed(Editor, x, y, button)
 end
 
 function Editor.handleKeyPressed(key)
+    -- Toggle UI with SPACE key
+    if key == "space" and not Editor.fileSelector.active and not Editor.textInput.active then
+        Editor.toggleUI()
+        return true
+    end
+    
+    -- If UI is hidden, only handle file selector and space key
+    if Editor.hideUI and not Editor.fileSelector.active and not Editor.textInput.active then
+        return false
+    end
+    
+    -- If file selector is active, handle its input first
+    if Editor.fileSelector.active then
+        return EditorInput.handleFileSelectorKeyPressed(Editor, key)
+    end
+    
+    -- If text input is active, handle its input first
+    if Editor.textInput.active then
+        return EditorInput.handleTextInputKeyPressed(Editor, key)
+    end
+    
     return EditorInput.handleKeyPressed(Editor, key)
 end
 
 function Editor.handleTextInput(text)
-    return EditorInput.handleTextInput(Editor, text)
+    -- If UI is hidden, only handle file selector
+    if Editor.hideUI and not Editor.fileSelector.active and not Editor.textInput.active then
+        return false
+    end
+    
+    -- If file selector is active and in save mode, handle filename input
+    if Editor.fileSelector.active and Editor.fileSelector.mode == "save" then
+        Editor.fileSelector.newFileName = Editor.fileSelector.newFileName .. text
+        return true
+    end
+    
+    -- Otherwise handle normal text input
+    if Editor.textInput.active then
+        return EditorInput.handleTextInput(Editor, text)
+    end
+    
+    return false
 end
 
 -- Forward file operations to the file submodule

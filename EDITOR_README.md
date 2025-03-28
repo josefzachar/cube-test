@@ -1,80 +1,116 @@
 # Square Golf Level Editor
 
-The Square Golf Level Editor allows you to create, save, and load custom levels for the game.
+The Square Golf Level Editor allows you to create and test custom levels for the game. This document explains how to use the editor effectively.
 
-## Accessing the Editor
+## Getting Started
 
-Press `F12` at any time during gameplay to toggle the editor mode.
-
-## Editor Controls
-
-### Basic Controls
-- `F12`: Toggle editor mode on/off
-- `Escape`: Exit editor mode
-- `G`: Toggle grid display
-
-### Drawing Tools
-- `1`: Select Empty tool (eraser)
-- `2`: Select Dirt tool
-- `3`: Select Sand tool
-- `4`: Select Stone tool
-- `5`: Select Water tool
-- `6`: Select Win Hole tool
-
-### Brush Size
-- `+` or `=`: Increase brush size
-- `-`: Decrease brush size
-
-### Level Management
-- `Ctrl+S`: Save the current level
-- `Ctrl+L`: Load a level
+To access the editor, you can:
+1. Press F12 during gameplay to toggle the editor mode
+2. Select "Editor" from the main menu
 
 ## Editor Interface
 
-The editor interface consists of two panels:
-- **Left Panel**: Contains drawing tools and brush size options
-- **Right Panel**: Contains level management options and ball type selection
+The editor interface consists of:
+- Left panel: Tools and cell types
+- Right panel: Level settings and actions
+- Main area: Level grid where you can draw and edit cells
 
-### Left Panel Options
-- **EMPTY**: Erases cells
-- **DIRT**: Places dirt blocks
-- **SAND**: Places sand that can be destroyed
-- **STONE**: Places solid stone blocks
-- **WATER**: Places water
-- **WIN_HOLE**: Places win holes
-- **SIZE 1-7**: Select brush size
+## Tools
 
-### Right Panel Options
-- **SAVE**: Save the current level
-- **LOAD**: Load a saved level
-- **CLEAR**: Clear the current level
-- **SET NAME**: Set the level name
-- **SET START**: Set the ball starting position
-- **TOGGLE GRID**: Toggle grid display
-- **TEST PLAY**: Test play the current level
-- **EXIT EDITOR**: Exit editor mode
-- **Ball Selection**: Toggle which ball types are available in the level
+The editor provides several tools to help you create levels:
 
-## Creating a Level
+### Draw Tool (D)
+- Allows you to place cells of the selected type
+- Use the brush size controls to adjust the drawing area
 
-1. Press `F12` to enter editor mode
-2. Use the drawing tools to create your level
-3. Set the starting position using the "SET START" button
-4. Select which ball types are available
-5. Set the level name using the "SET NAME" button
-6. Save your level using the "SAVE" button or `Ctrl+S`
+### Erase Tool (E)
+- Removes cells, setting them to empty
+- Also uses the brush size setting
 
-## Testing a Level
+### Fill Tool (F)
+- Fills an area with the selected cell type
+- Click on a cell to fill all connected cells of the same type
 
-Click the "TEST PLAY" button to test your level. This will exit the editor and place a ball at the starting position you set.
+### Start Position Tool (S)
+- Sets the starting position for the ball
+- Creates a clear area around the start position
 
-## Loading a Level
+### Win Hole Tool (W)
+- Creates a win hole at the selected position
+- The player must reach this to complete the level
 
-Click the "LOAD" button or press `Ctrl+L` to load a saved level. The editor will load the first level file it finds in the "levels" directory.
+## Cell Types
 
-## Tips for Level Design
+You can place different types of cells in your level:
 
-- Create a clear path from the starting position to the win hole
-- Use different cell types to create interesting challenges
-- Make sure the level is possible to complete
-- Test your level frequently to ensure it plays well
+- **EMPTY**: Clear space where the ball can move freely
+- **DIRT**: Basic terrain that can be destroyed
+- **SAND**: Loose terrain that slows the ball
+- **STONE**: Solid terrain that cannot be destroyed
+- **WATER**: Liquid that affects ball physics
+- **FIRE**: Hazard that can destroy certain balls
+
+## Controls
+
+### Keyboard Shortcuts
+
+- **D**: Select Draw tool
+- **E**: Select Erase tool
+- **F**: Select Fill tool
+- **S**: Select Start Position tool
+- **W**: Select Win Hole tool
+- **1-5**: Select cell types (DIRT, SAND, STONE, WATER, FIRE)
+- **+/-**: Increase/decrease brush size
+- **G**: Toggle grid display
+- **Space**: Toggle UI visibility
+- **Ctrl+S**: Save level
+- **Ctrl+L**: Load level
+- **Escape**: Exit editor
+
+### Mouse Controls
+
+- **Left Click**: Use the selected tool
+- **Right Click**: Cancel current action
+
+## Ball Types
+
+You can specify which ball types are available in your level:
+
+- **Standard Ball**: Basic ball with normal physics
+- **Heavy Ball**: Heavier ball that breaks through terrain more easily
+- **Exploding Ball**: Can be detonated to destroy surrounding terrain
+- **Sticky Ball**: Can stick to surfaces
+
+## Saving and Loading Levels
+
+- Click the "SAVE" button to save your level
+- Click the "LOAD" button to load an existing level
+- Levels are saved in the "levels" directory with a .json extension
+
+## Testing Your Level
+
+- Click the "TEST PLAY" button to play your level
+- This allows you to test the level without exiting the editor
+- Click the "TO EDITOR" button to return to editing
+
+## Tips for Good Level Design
+
+1. **Start Simple**: Begin with a clear path and gradually add challenges
+2. **Balance Difficulty**: Make levels challenging but not frustrating
+3. **Create Multiple Paths**: Give players different ways to solve the level
+4. **Use Terrain Variety**: Mix different cell types for interesting gameplay
+5. **Test Thoroughly**: Make sure your level is possible to complete
+6. **Consider Ball Types**: Design with different ball abilities in mind
+
+## Example Level Creation Process
+
+1. Clear the level using the "CLEAR" button
+2. Use the Start Position tool to set where the ball begins
+3. Create the basic terrain using the Draw tool with DIRT cells
+4. Add challenges with SAND, WATER, and other cell types
+5. Place a win hole at the destination
+6. Test play your level to ensure it works as expected
+7. Make adjustments as needed
+8. Save your level with a descriptive name
+
+Enjoy creating your own Square Golf levels!

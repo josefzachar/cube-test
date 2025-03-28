@@ -13,10 +13,12 @@ function Renderer.drawLevel(level, debug)
     
     -- Calculate visible cell range with some margin
     local margin = 5 -- Extra cells to draw outside the visible area
-    local minX = math.max(0, math.floor(0 / CellTypes.SIZE) - margin)
-    local maxX = math.min(level.width - 1, math.ceil(screenWidth / CellTypes.SIZE) + margin)
-    local minY = math.max(0, math.floor(0 / CellTypes.SIZE) - margin)
-    local maxY = math.min(level.height - 1, math.ceil(screenHeight / CellTypes.SIZE) + margin)
+    
+    -- Use the correct cell size (Cell.SIZE) for calculations
+    local minX = 0 -- Start from the leftmost cell
+    local maxX = level.width - 1 -- Go to the rightmost cell
+    local minY = 0 -- Start from the topmost cell
+    local maxY = level.height - 1 -- Go to the bottommost cell
     
     -- Batch drawing for better performance
     local sandBatch = {}

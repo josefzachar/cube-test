@@ -233,6 +233,25 @@ function UI.init(ballTypes)
         end
     )
     table.insert(buttons, winHoleButton)
+    
+    -- Get Game module
+    local Game = require("src.game")
+    
+    -- Create return to editor button (only visible in test play mode)
+    UI.returnToEditorButton = Button.new(
+        buttonX, 
+        ballButtonY + 6 * (buttonHeight + buttonMargin) + 20, 
+        buttonWidth, 
+        buttonHeight, 
+        "TO EDITOR", 
+        function()
+            -- Return to editor
+            local Editor = require("src.editor")
+            Editor.returnFromTestPlay()
+            Game.testPlayMode = false
+        end
+    )
+    table.insert(buttons, UI.returnToEditorButton)
 end
 
 -- Update the UI
@@ -244,7 +263,18 @@ function UI.update(mouseX, mouseY)
     
     if isUIVisible then
         for _, button in ipairs(buttons) do
+            -- Skip the "Return to Editor" button if not in test play mode
+            if button == UI.returnToEditorButton then
+                -- Get Game module
+                local Game = require("src.game")
+                if not Game.testPlayMode then
+                    goto continue
+                end
+            end
+            
             button:update(gameX, gameY)
+            
+            ::continue::
         end
     end
 end
@@ -302,7 +332,18 @@ function UI.draw()
         
         -- Draw all buttons
         for _, button in ipairs(buttons) do
+            -- Skip the "Return to Editor" button if not in test play mode
+            if button == UI.returnToEditorButton then
+                -- Get Game module
+                local Game = require("src.game")
+                if not Game.testPlayMode then
+                    goto continue
+                end
+            end
+            
             button:draw()
+            
+            ::continue::
         end
     end
     
@@ -337,9 +378,20 @@ function UI.handlePress(x, y)
     -- Check other buttons only if UI is visible
     if isUIVisible then
         for _, button in ipairs(buttons) do
+            -- Skip the "Return to Editor" button if not in test play mode
+            if button == UI.returnToEditorButton then
+                -- Get Game module
+                local Game = require("src.game")
+                if not Game.testPlayMode then
+                    goto continue
+                end
+            end
+            
             if button:handlePress(gameX, gameY) then
                 return true
             end
+            
+            ::continue::
         end
     end
     
