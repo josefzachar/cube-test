@@ -212,7 +212,7 @@ function Sound.playWin()
     -- Add a small camera shake for feedback
     Sound.startCameraShake(0.3, 5)
 
-    Sound.play("win", 1.0, 1)
+    Sound.play("win", 0.1)
     
     -- Schedule the nice sound to play after a delay
     Sound.scheduleNiceSound(1.5) -- Play nice sound 1.5 seconds after winning
