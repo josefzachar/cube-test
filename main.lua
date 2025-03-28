@@ -45,6 +45,16 @@ GAME_OFFSET_Y = 0
 
 -- Function to create a diamond-shaped win hole
 function createDiamondWinHole(level, holeX, holeY)
+    -- First, scan the entire level and clear any existing win holes
+    -- This ensures no win holes remain from previous level generations
+    for y = 0, level.height - 1 do
+        for x = 0, level.width - 1 do
+            if level:getCellType(x, y) == CellTypes.TYPES.WIN_HOLE then
+                level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+                print("Cleared existing win hole at", x, y)
+            end
+        end
+    end
     -- Ball starting position
     local ballStartX, ballStartY = 20, 20
     local minDistanceFromBall = 40 -- Minimum distance from ball starting position
@@ -476,14 +486,8 @@ function love.draw()
     -- Draw active cells for debugging
     Debug.drawActiveCells(level)
     
-    -- Reset camera shake and scaling transformation before drawing UI
-    -- Make sure we don't pop more transformations than we pushed
-    if cameraShakeActive then
-        -- Pop the camera shake transformation
-        love.graphics.pop()
-    end
-    
-    -- Pop the scaling transformation
+    -- Reset scaling transformation before drawing UI
+    -- We only pushed once at the beginning, so we only need to pop once
     love.graphics.pop()
     
     -- Draw UI (UI is drawn at screen coordinates, not scaled)
