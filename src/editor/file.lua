@@ -25,8 +25,8 @@ function EditorFile.drawFileSelector()
     local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
     
     -- Dialog dimensions
-    local dialogWidth = 500
-    local dialogHeight = 400
+    local dialogWidth = 600
+    local dialogHeight = 500
     local dialogX = (gameWidth - dialogWidth) / 2
     local dialogY = (gameHeight - dialogHeight) / 2
     
@@ -43,9 +43,40 @@ function EditorFile.drawFileSelector()
     local title = EditorFile.editor.fileSelector.mode == "save" and "Save Level" or "Load Level"
     love.graphics.print(title, dialogX + 20, dialogY + 20)
     
+    -- Draw breadcrumb path
+    local breadcrumbY = dialogY + 50
+    local breadcrumbX = dialogX + 20
+    love.graphics.setColor(0.7, 0.7, 0.7, 1)
+    
+    if EditorFile.editor.fileSelector.breadcrumbs then
+        for i, crumb in ipairs(EditorFile.editor.fileSelector.breadcrumbs) do
+            -- Draw breadcrumb
+            love.graphics.setColor(0.2, 0.5, 0.8, 1)
+            local crumbWidth = love.graphics.getFont():getWidth(crumb.name) + 20
+            love.graphics.rectangle("fill", breadcrumbX, breadcrumbY, crumbWidth, 20)
+            love.graphics.setColor(1, 1, 1, 1)
+            love.graphics.print(crumb.name, breadcrumbX + 10, breadcrumbY + 2)
+            
+            -- Store breadcrumb position for click detection
+            crumb.x = breadcrumbX
+            crumb.y = breadcrumbY
+            crumb.width = crumbWidth
+            crumb.height = 20
+            
+            breadcrumbX = breadcrumbX + crumbWidth + 5
+            
+            -- Draw separator if not the last breadcrumb
+            if i < #EditorFile.editor.fileSelector.breadcrumbs then
+                love.graphics.setColor(0.7, 0.7, 0.7, 1)
+                love.graphics.print(">", breadcrumbX - 3, breadcrumbY + 2)
+                breadcrumbX = breadcrumbX + 10
+            end
+        end
+    end
+    
     -- Draw file list
-    local fileListY = dialogY + 60
-    local fileListHeight = dialogHeight - 120
+    local fileListY = breadcrumbY + 30
+    local fileListHeight = dialogHeight - 180
     local fileItemHeight = 30
     
     -- Draw file list background
@@ -57,7 +88,6 @@ function EditorFile.drawFileSelector()
     love.graphics.rectangle("line", dialogX + 20, fileListY, dialogWidth - 40, fileListHeight)
     
     -- Draw files
-    love.graphics.setColor(1, 1, 1, 1)
     local visibleFiles = math.floor(fileListHeight / fileItemHeight)
     local startIndex = math.max(1, EditorFile.editor.fileSelector.selectedIndex - math.floor(visibleFiles / 2))
     startIndex = math.min(startIndex, math.max(1, #EditorFile.editor.fileSelector.files - visibleFiles + 1))
@@ -66,16 +96,61 @@ function EditorFile.drawFileSelector()
         local fileIndex = startIndex + i
         if fileIndex <= #EditorFile.editor.fileSelector.files then
             local file = EditorFile.editor.fileSelector.files[fileIndex]
+            local itemY = fileListY + i * fileItemHeight
             
             -- Draw selection highlight
             if fileIndex == EditorFile.editor.fileSelector.selectedIndex then
                 love.graphics.setColor(0.3, 0.3, 0.6, 1)
-                love.graphics.rectangle("fill", dialogX + 20, fileListY + i * fileItemHeight, dialogWidth - 40, fileItemHeight)
+                love.graphics.rectangle("fill", dialogX + 20, itemY, dialogWidth - 40, fileItemHeight)
+            end
+            
+            -- Draw file icon based on type
+            love.graphics.setColor(1, 1, 1, 1)
+            if file.isDirectory then
+                -- Draw folder icon
+                love.graphics.setColor(0.9, 0.7, 0.2, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 15)
+                love.graphics.setColor(0.7, 0.5, 0.1, 1)
+                love.graphics.rectangle("fill", dialogX + 25, itemY + 10, 30, 15)
+            elseif file.fileType == "json" then
+                -- Draw JSON file icon
+                love.graphics.setColor(0.2, 0.6, 0.8, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 20)
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.print("{ }", dialogX + 32, itemY + 7)
+            elseif file.fileType == "lua" then
+                -- Draw Lua file icon
+                love.graphics.setColor(0.2, 0.2, 0.8, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 20)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.print("lua", dialogX + 32, itemY + 7)
+            elseif file.fileType == "audio" then
+                -- Draw audio file icon
+                love.graphics.setColor(0.8, 0.2, 0.2, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 20)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.print("♪", dialogX + 35, itemY + 7)
+            elseif file.fileType == "image" then
+                -- Draw image file icon
+                love.graphics.setColor(0.2, 0.8, 0.2, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 20)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.print("IMG", dialogX + 32, itemY + 7)
+            else
+                -- Draw generic file icon
+                love.graphics.setColor(0.7, 0.7, 0.7, 1)
+                love.graphics.rectangle("fill", dialogX + 30, itemY + 5, 20, 20)
             end
             
             -- Draw file name
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print(file.displayName, dialogX + 30, fileListY + i * fileItemHeight + 5)
+            love.graphics.print(file.displayName, dialogX + 60, itemY + 5)
+            
+            -- Store file item position for double-click detection
+            file.x = dialogX + 20
+            file.y = itemY
+            file.width = dialogWidth - 40
+            file.height = fileItemHeight
         end
     end
     
@@ -120,27 +195,131 @@ function EditorFile.drawFileSelector()
     end
 end
 
--- Refresh the list of level files
+-- Refresh the list of files
 function EditorFile.refreshFileList()
-    -- Get list of level files
-    local files = love.filesystem.getDirectoryItems("levels")
     EditorFile.editor.fileSelector.files = {}
     
-    for _, file in ipairs(files) do
-        if string.match(file, "%.json$") then
-            -- Remove .json extension and replace underscores with spaces
-            local displayName = string.gsub(string.sub(file, 1, -6), "_", " ")
-            table.insert(EditorFile.editor.fileSelector.files, {
-                filename = file,
-                displayName = displayName
-            })
+    -- Get the current directory
+    local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+    print("Looking for files in: " .. currentDir)
+    
+    -- Add parent directory entry if not at root
+    if currentDir ~= "/" then
+        table.insert(EditorFile.editor.fileSelector.files, {
+            filename = "..",
+            displayName = "..",
+            isDirectory = true,
+            isParentDir = true
+        })
+    end
+    
+    -- List directories first
+    local dirs = {}
+    local dirCmd = io.popen('find "' .. currentDir .. '" -maxdepth 1 -type d -not -path "' .. currentDir .. '" | sort')
+    if dirCmd then
+        for dir in dirCmd:lines() do
+            -- Extract the directory name from the full path
+            local dirName = string.match(dir, ".*/([^/]+)$")
+            if dirName and dirName ~= "." and dirName ~= ".." then
+                table.insert(dirs, {
+                    filename = dirName,
+                    displayName = dirName,
+                    isDirectory = true,
+                    fullPath = dir
+                })
+            end
         end
+        dirCmd:close()
+    end
+    
+    -- Sort directories alphabetically
+    table.sort(dirs, function(a, b)
+        return a.displayName:lower() < b.displayName:lower()
+    end)
+    
+    -- Add directories to the file list
+    for _, dir in ipairs(dirs) do
+        table.insert(EditorFile.editor.fileSelector.files, dir)
+    end
+    
+    -- List files
+    local files = {}
+    local fileCmd = io.popen('find "' .. currentDir .. '" -maxdepth 1 -type f | sort')
+    if fileCmd then
+        for file in fileCmd:lines() do
+            -- Extract the file name from the full path
+            local fileName = string.match(file, ".*/([^/]+)$")
+            if fileName then
+                local fileType = "file"
+                local displayName = fileName
+                
+                -- Determine file type based on extension
+                if string.match(fileName, "%.json$") then
+                    fileType = "json"
+                    -- For JSON files, remove extension and replace underscores with spaces
+                    displayName = string.gsub(string.sub(fileName, 1, -6), "_", " ")
+                elseif string.match(fileName, "%.lua$") then
+                    fileType = "lua"
+                elseif string.match(fileName, "%.txt$") then
+                    fileType = "text"
+                elseif string.match(fileName, "%.mp3$") or string.match(fileName, "%.wav$") then
+                    fileType = "audio"
+                elseif string.match(fileName, "%.png$") or string.match(fileName, "%.jpg$") then
+                    fileType = "image"
+                end
+                
+                table.insert(files, {
+                    filename = fileName,
+                    displayName = displayName,
+                    fileType = fileType,
+                    fullPath = file
+                })
+            end
+        end
+        fileCmd:close()
     end
     
     -- Sort files alphabetically
-    table.sort(EditorFile.editor.fileSelector.files, function(a, b)
-        return a.displayName < b.displayName
+    table.sort(files, function(a, b)
+        return a.displayName:lower() < b.displayName:lower()
     end)
+    
+    -- Add files to the file list
+    for _, file in ipairs(files) do
+        table.insert(EditorFile.editor.fileSelector.files, file)
+    end
+    
+    -- Update breadcrumb path
+    EditorFile.updateBreadcrumbPath()
+end
+
+-- Update the breadcrumb path display
+function EditorFile.updateBreadcrumbPath()
+    local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+    
+    -- Split the path into components
+    local pathComponents = {}
+    for component in string.gmatch(currentDir, "[^/]+") do
+        table.insert(pathComponents, component)
+    end
+    
+    -- Create breadcrumb path
+    local breadcrumbPath = "/"
+    EditorFile.editor.fileSelector.breadcrumbs = {
+        { path = "/", name = "Root" }
+    }
+    
+    local currentPath = ""
+    for i, component in ipairs(pathComponents) do
+        currentPath = currentPath .. "/" .. component
+        table.insert(EditorFile.editor.fileSelector.breadcrumbs, {
+            path = currentPath,
+            name = component
+        })
+        breadcrumbPath = breadcrumbPath .. component .. "/"
+    end
+    
+    EditorFile.editor.fileSelector.breadcrumbPath = breadcrumbPath
 end
 
 -- Save the current level
@@ -193,6 +372,18 @@ function EditorFile.saveLevel()
     
     -- Write to file
     local success, message = love.filesystem.write(filename, levelJson)
+    
+    -- Also save to the project directory for easier access
+    local projectFilename = "/Users/joebrain/cube-test/levels/" .. string.gsub(EditorFile.editor.levelName, " ", "_") .. ".json"
+    print("Saving level to project directory: " .. projectFilename)
+    local file = io.open(projectFilename, "w")
+    if file then
+        file:write(levelJson)
+        file:close()
+        print("Level also saved to project directory: " .. projectFilename)
+    else
+        print("Failed to save level to project directory")
+    end
     
     if success then
         print("Level saved to " .. filename)
@@ -249,14 +440,34 @@ function EditorFile.loadLevel()
         return
     end
     
-    -- Read file
-    local filename = "levels/" .. selectedFile.filename
-    local contents, size = love.filesystem.read(filename)
+    local contents
     
-    if not contents then
-        print("Failed to read level file: " .. filename)
-        EditorFile.editor.fileSelector.active = false
-        return
+    -- Check if this is a project file or a LÖVE save file
+    if selectedFile.isProjectFile then
+        -- Read from project directory
+        local projectFilename = love.filesystem.getSourceBaseDirectory() .. "/cube-test/levels/" .. selectedFile.filename
+        print("Loading level from project directory: " .. projectFilename)
+        local file = io.open(projectFilename, "r")
+        if file then
+            contents = file:read("*all")
+            file:close()
+            print("Loading level from project directory: " .. projectFilename)
+        else
+            print("Failed to read level file from project directory: " .. projectFilename)
+            EditorFile.editor.fileSelector.active = false
+            return
+        end
+    else
+        -- Read from LÖVE save directory
+        local filename = "levels/" .. selectedFile.filename
+        local size
+        contents, size = love.filesystem.read(filename)
+        
+        if not contents then
+            print("Failed to read level file: " .. filename)
+            EditorFile.editor.fileSelector.active = false
+            return
+        end
     end
     
     -- Parse JSON
@@ -322,7 +533,7 @@ function EditorFile.loadLevel()
         print("Warning: No cells data found in level file")
     end
     
-    print("Level loaded from " .. filename)
+    print("Level loaded successfully")
     
     -- Close file selector
     EditorFile.editor.fileSelector.active = false
@@ -337,7 +548,11 @@ function EditorFile.showFileSelector(mode)
             mode = "load",
             files = {},
             selectedIndex = 1,
-            newFileName = ""
+            newFileName = "",
+            currentDir = "/Users/joebrain/cube-test",
+            breadcrumbs = {},
+            lastClickTime = 0,
+            lastClickIndex = 0
         }
     end
     
@@ -346,8 +561,14 @@ function EditorFile.showFileSelector(mode)
     EditorFile.editor.fileSelector.active = true
     EditorFile.editor.fileSelector.selectedIndex = 1
     
-    -- Refresh file list
-    EditorFile.refreshFileList()
+    -- If in save mode, navigate to levels directory
+    if mode == "save" and not EditorFile.editor.fileSelector.inLevelsDir then
+        EditorFile.navigateToDirectory("/Users/joebrain/cube-test/levels")
+        EditorFile.editor.fileSelector.inLevelsDir = true
+    else
+        -- Refresh file list
+        EditorFile.refreshFileList()
+    end
     
     -- Set default filename for save mode
     if mode == "save" then
@@ -409,6 +630,20 @@ function EditorFile.handleTextInput(text)
     return false
 end
 
+-- Navigate to a directory
+function EditorFile.navigateToDirectory(dirPath)
+    -- Update current directory
+    EditorFile.editor.fileSelector.currentDir = dirPath
+    
+    -- Reset selected index
+    EditorFile.editor.fileSelector.selectedIndex = 1
+    
+    -- Refresh file list
+    EditorFile.refreshFileList()
+    
+    print("Navigated to directory: " .. dirPath)
+end
+
 -- Handle mouse press in file selector
 function EditorFile.handleMousePressed(x, y, button)
     if not EditorFile.editor.fileSelector.active then
@@ -423,14 +658,29 @@ function EditorFile.handleMousePressed(x, y, button)
     local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
     
     -- Dialog dimensions
-    local dialogWidth = 500
-    local dialogHeight = 400
+    local dialogWidth = 600
+    local dialogHeight = 500
     local dialogX = (gameWidth - dialogWidth) / 2
     local dialogY = (gameHeight - dialogHeight) / 2
     
+    -- Check if clicking on breadcrumbs
+    if EditorFile.editor.fileSelector.breadcrumbs then
+        for _, crumb in ipairs(EditorFile.editor.fileSelector.breadcrumbs) do
+            if crumb.x and crumb.y and crumb.width and crumb.height then
+                if gameX >= crumb.x and gameX <= crumb.x + crumb.width and
+                   gameY >= crumb.y and gameY <= crumb.y + crumb.height then
+                    -- Navigate to the clicked breadcrumb path
+                    EditorFile.navigateToDirectory(crumb.path)
+                    return true
+                end
+            end
+        end
+    end
+    
     -- File list dimensions
-    local fileListY = dialogY + 60
-    local fileListHeight = dialogHeight - 120
+    local breadcrumbY = dialogY + 50
+    local fileListY = breadcrumbY + 30
+    local fileListHeight = dialogHeight - 180
     local fileItemHeight = 30
     
     -- Check if clicking in file list
@@ -443,11 +693,46 @@ function EditorFile.handleMousePressed(x, y, button)
         
         local clickedIndex = startIndex + math.floor((gameY - fileListY) / fileItemHeight)
         if clickedIndex >= 1 and clickedIndex <= #EditorFile.editor.fileSelector.files then
+            local clickedFile = EditorFile.editor.fileSelector.files[clickedIndex]
             EditorFile.editor.fileSelector.selectedIndex = clickedIndex
+            
+            -- Check for double-click
+            local currentTime = love.timer.getTime()
+            local lastClickTime = EditorFile.editor.fileSelector.lastClickTime or 0
+            local lastClickIndex = EditorFile.editor.fileSelector.lastClickIndex or 0
+            
+            -- Store current click info for double-click detection
+            EditorFile.editor.fileSelector.lastClickTime = currentTime
+            EditorFile.editor.fileSelector.lastClickIndex = clickedIndex
+            
+            -- Check if this is a double-click on the same item
+            if currentTime - lastClickTime < 0.5 and clickedIndex == lastClickIndex then
+                -- Handle double-click
+                if clickedFile.isDirectory then
+                    -- Navigate to directory
+                    if clickedFile.isParentDir then
+                        -- Go to parent directory
+                        local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+                        local parentDir = string.match(currentDir, "(.+)/[^/]+$") or "/"
+                        EditorFile.navigateToDirectory(parentDir)
+                    else
+                        -- Go to subdirectory
+                        local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+                        local newDir = currentDir .. "/" .. clickedFile.filename
+                        EditorFile.navigateToDirectory(newDir)
+                    end
+                elseif clickedFile.fileType == "json" and EditorFile.editor.fileSelector.mode == "load" then
+                    -- Load the JSON file
+                    EditorFile.loadLevel()
+                end
+                return true
+            end
             
             -- If in save mode, update the filename
             if EditorFile.editor.fileSelector.mode == "save" then
-                EditorFile.editor.fileSelector.newFileName = EditorFile.editor.fileSelector.files[clickedIndex].displayName
+                if not clickedFile.isDirectory then
+                    EditorFile.editor.fileSelector.newFileName = clickedFile.displayName
+                end
             end
             
             return true
@@ -468,7 +753,25 @@ function EditorFile.handleMousePressed(x, y, button)
         if EditorFile.editor.fileSelector.mode == "save" then
             EditorFile.saveLevel()
         else
-            EditorFile.loadLevel()
+            -- Check if selected item is a directory
+            local selectedFile = EditorFile.editor.fileSelector.files[EditorFile.editor.fileSelector.selectedIndex]
+            if selectedFile and selectedFile.isDirectory then
+                -- Navigate to directory
+                if selectedFile.isParentDir then
+                    -- Go to parent directory
+                    local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+                    local parentDir = string.match(currentDir, "(.+)/[^/]+$") or "/"
+                    EditorFile.navigateToDirectory(parentDir)
+                else
+                    -- Go to subdirectory
+                    local currentDir = EditorFile.editor.fileSelector.currentDir or "/Users/joebrain/cube-test"
+                    local newDir = currentDir .. "/" .. selectedFile.filename
+                    EditorFile.navigateToDirectory(newDir)
+                end
+            else
+                -- Load the selected file
+                EditorFile.loadLevel()
+            end
         end
         return true
     end

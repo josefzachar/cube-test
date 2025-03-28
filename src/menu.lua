@@ -65,19 +65,27 @@ end
 
 -- Refresh the count of available levels
 function Menu.refreshLevelCount()
-    local files = love.filesystem.getDirectoryItems("levels")
+    -- Check for level files in the project directory
+    local projectLevelsDir = love.filesystem.getSourceBaseDirectory() .. "/cube-test/levels"
+    print("Looking for levels in: " .. projectLevelsDir)
     local levelCount = 0
     
-    for _, file in ipairs(files) do
-        if string.match(file, "^level%d+%.json$") then
-            local levelNumber = tonumber(string.match(file, "level(%d+)"))
-            if levelNumber and levelNumber > levelCount then
-                levelCount = levelNumber
+    -- Use io.popen to list files in the project directory
+    local projectDir = io.popen('ls "' .. projectLevelsDir .. '"')
+    if projectDir then
+        for file in projectDir:lines() do
+            if string.match(file, "^level%d+%.json$") then
+                local levelNumber = tonumber(string.match(file, "level(%d+)"))
+                if levelNumber and levelNumber > levelCount then
+                    levelCount = levelNumber
+                end
             end
         end
+        projectDir:close()
     end
     
     Menu.totalLevels = levelCount
+    print("Found " .. levelCount .. " levels")
 end
 
 -- Draw the menu
@@ -308,19 +316,36 @@ end
 -- Load a specific level for play mode
 function Menu.loadLevel(levelNumber)
     local filename = "levels/level" .. levelNumber .. ".json"
+    local contents
     
-    -- Check if the file exists
-    if not love.filesystem.getInfo(filename) then
-        print("Level file not found: " .. filename)
-        return nil
-    end
+    -- First try to load from the project directory
+    local projectFilename = love.filesystem.getSourceBaseDirectory() .. "/cube-test/levels/level" .. levelNumber .. ".json"
+    print("Trying to load level from project directory: " .. projectFilename)
     
-    -- Read file
-    local contents, size = love.filesystem.read(filename)
-    
-    if not contents then
-        print("Failed to read level file: " .. filename)
-        return nil
+    local file = io.open(projectFilename, "r")
+    if file then
+        contents = file:read("*all")
+        file:close()
+        print("Level loaded from project directory: " .. projectFilename)
+    else
+        -- If not found in project directory, try LÖVE save directory
+        print("Level not found in project directory, trying LÖVE save directory")
+        
+        -- Check if the file exists in LÖVE save directory
+        if not love.filesystem.getInfo(filename) then
+            print("Level file not found: " .. filename)
+            return nil
+        end
+        
+        -- Read file from LÖVE save directory
+        contents, size = love.filesystem.read(filename)
+        
+        if not contents then
+            print("Failed to read level file: " .. filename)
+            return nil
+        end
+        
+        print("Level loaded from LÖVE save directory: " .. filename)
     end
     
     -- Parse JSON
