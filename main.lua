@@ -231,7 +231,8 @@ function love.update(dt)
     -- Update the physics world
     world:update(dt)
     
-    -- Update camera shake effect
+    -- Update sound system and camera shake effect
+    Sound.update(dt)
     Sound.updateCameraShake(dt)
     
     -- Update the ball

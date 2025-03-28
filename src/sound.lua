@@ -44,7 +44,8 @@ function Sound.load()
         water = {"sounds/water_hit.mp3"},
         stone = {"sounds/stone_hit.mp3"},
         explosion = {"sounds/explosion.mp3"},
-        win = {"sounds/win.mp3"}
+        win = {"sounds/win.mp3"},
+        nice = {"sounds/nice.mp3"}
     }
     
     -- Load each sound file if it exists
@@ -208,12 +209,45 @@ end
 
 -- Function to play win sound
 function Sound.playWin()
-    -- Play win sound at full volume with slight pitch variation
-    local pitchVariation = 0.95 + math.random() * 0.1 -- Random pitch between 0.95 and 1.05
-    Sound.play("win", 1.0, pitchVariation)
-    
     -- Add a small camera shake for feedback
     Sound.startCameraShake(0.3, 5)
+
+    Sound.play("win", 1.0, 1)
+    
+    -- Schedule the nice sound to play after a delay
+    Sound.scheduleNiceSound(1.5) -- Play nice sound 1.5 seconds after winning
+end
+
+-- Timer for the nice sound
+Sound.niceTimer = 0
+Sound.niceScheduled = false
+
+-- Function to schedule the nice sound to play after a delay
+function Sound.scheduleNiceSound(delay)
+    Sound.niceTimer = delay
+    Sound.niceScheduled = true
+    print("Nice sound scheduled to play in " .. delay .. " seconds")
+end
+
+-- Function to play nice sound
+function Sound.playNice()
+    -- Play nice sound at full volume with slight pitch variation
+    local pitchVariation = 0.95 + math.random() * 0.1 -- Random pitch between 0.95 and 1.05
+    Sound.play("nice", 1.0, pitchVariation)
+    
+    print("Nice sound played!")
+end
+
+-- Function to update timers
+function Sound.update(dt)
+    -- Update nice sound timer if scheduled
+    if Sound.niceScheduled then
+        Sound.niceTimer = Sound.niceTimer - dt
+        if Sound.niceTimer <= 0 then
+            Sound.playNice()
+            Sound.niceScheduled = false
+        end
+    end
 end
 
 return Sound
