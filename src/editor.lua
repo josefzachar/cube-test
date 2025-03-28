@@ -148,6 +148,28 @@ function Editor.draw()
         -- Draw the file selector
         EditorFile.drawFileSelector()
     end
+    
+    -- Draw cursor preview last, so it's on top of everything
+    if not Editor.fileSelector.active and not Editor.textInput.active then
+        -- Get mouse position
+        local mouseX, mouseY = love.mouse.getPosition()
+        
+        -- Convert screen coordinates to game coordinates
+        local gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get screen dimensions
+        local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+        
+        -- Check if mouse is in UI area (left or right panel)
+        if not (gameX < 140 or gameX > gameWidth - 140) then
+            -- Mouse is not in UI area, draw cursor preview
+            -- Reset transformation before drawing cursor preview
+            love.graphics.origin()
+            
+            -- Draw cursor preview
+            EditorUI.drawCursorPreview()
+        end
+    end
 end
 
 -- Handle key press in editor

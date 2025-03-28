@@ -54,6 +54,21 @@ function EditorTools.handleMouseDrag(gridX, gridY)
         return
     end
     
+    -- Get mouse position
+    local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    
+    -- Get screen dimensions
+    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    
+    -- Check if mouse is in UI area (left or right panel)
+    if gameX < 140 or gameX > gameWidth - 140 then
+        -- Mouse is in UI area, don't draw
+        return
+    end
+    
     -- Use the current tool
     local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
     if toolFunc then
@@ -165,6 +180,21 @@ end
 
 -- Handle mouse press for tools
 function EditorTools.handleMousePressed(gridX, gridY, button)
+    -- Get mouse position
+    local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Convert screen coordinates to game coordinates
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    
+    -- Get screen dimensions
+    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    
+    -- Check if mouse is in UI area (left or right panel)
+    if gameX < 140 or gameX > gameWidth - 140 then
+        -- Mouse is in UI area, don't use tool
+        return false
+    end
+    
     if button == 1 then -- Left mouse button
         -- Start using the current tool
         EditorTools.mouseDown = true

@@ -318,9 +318,6 @@ function EditorUI.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, 700)
     
-    -- Draw cursor/preview
-    EditorUI.drawCursorPreview()
-    
     -- Draw text input if active
     if EditorUI.editor.textInput.active then
         -- Draw input background
@@ -353,6 +350,15 @@ function EditorUI.drawCursorPreview()
     local mouseX, mouseY = love.mouse.getPosition()
     local gameX, gameY = EditorUI.editor.screenToGameCoords(mouseX, mouseY)
     local gridX, gridY = EditorUI.editor.level:getGridCoordinates(gameX, gameY)
+    
+    -- Get screen dimensions
+    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    
+    -- Check if mouse is in UI area (left or right panel)
+    if gameX < 140 or gameX > gameWidth - 140 then
+        -- Mouse is in UI area, don't draw cursor preview
+        return
+    end
     
     -- Only draw cursor/preview if mouse is in the level area
     if gridX >= 0 and gridX < EditorUI.editor.level.width and gridY >= 0 and gridY < EditorUI.editor.level.height then
