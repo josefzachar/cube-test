@@ -121,17 +121,17 @@ function Game.init(mode, levelNumber)
         -- Create the ball at the specified starting position
         Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
         
-        -- Create the win hole if it's not already in the level data
+        -- Create the win hole using the exact position from the level data
         local WinHoleGenerator = require("src.win_hole_generator")
-        print("Creating win hole for level at position:", levelData.winHoleX, levelData.winHoleY)
-        WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY)
+        print("Creating win hole at exact position from level file: (" .. levelData.winHoleX .. "," .. levelData.winHoleY .. ")")
+        WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY, levelData.startX, levelData.startY)
         
         -- Only allow balls specified in the level
         UI.availableBalls = levelData.availableBalls
         else
             -- Fallback to procedural level if level file not found
             Game.level:createProceduralLevel(currentDifficulty)
-            WinHoleGenerator.createDiamondWinHole(Game.level)
+            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
             Game.ball = Balls.createBall(Game.world, 20 * Cell.SIZE, 20 * Cell.SIZE, Balls.TYPES.STANDARD)
             UI.availableBalls = {
                 [Balls.TYPES.STANDARD] = true,
@@ -147,7 +147,7 @@ function Game.init(mode, levelNumber)
         Game.level:createProceduralLevel(currentDifficulty)
         
         -- Create a diamond-shaped win hole at a random position
-        WinHoleGenerator.createDiamondWinHole(Game.level)
+        WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
         
         -- Create the square ball at the starting position (matching the level generator)
         Game.ball = Balls.createBall(Game.world, 20 * Cell.SIZE, 20 * Cell.SIZE, Game.currentBallType)

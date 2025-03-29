@@ -650,6 +650,9 @@ function EditorFile.handleMousePressed(x, y, button)
         return false
     end
     
+    -- Always return true when file selector is active to prevent painting
+    -- This ensures that no other mouse handlers will process this event
+    
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = EditorFile.editor.screenToGameCoords(x, y)
     

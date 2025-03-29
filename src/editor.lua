@@ -111,8 +111,8 @@ function Editor.update(dt)
         EditorTools.update(dt, gridX, gridY)
     end
     
-    -- Handle mouse drag for drawing
-    if love.mouse.isDown(1) and Editor.currentTool then
+    -- Handle mouse drag for drawing (only if file selector is not active)
+    if love.mouse.isDown(1) and Editor.currentTool and not Editor.fileSelector.active then
         EditorTools.handleMouseDrag(gridX, gridY)
     end
     
@@ -239,18 +239,18 @@ end
 
 -- Handle mouse press in editor
 function Editor.handleMousePressed(x, y, button)
+    -- If file selector is active, handle file selector mouse press and prevent any other handlers
+    if Editor.fileSelector.active then
+        -- Always return true to prevent any other mouse handlers from processing this event
+        EditorFile.handleMousePressed(x, y, button)
+        return true
+    end
+    
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = Editor.screenToGameCoords(x, y)
     
     -- Get grid coordinates
     local gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
-    
-    -- If file selector is active, handle file selector mouse press
-    if Editor.fileSelector.active then
-        if EditorFile.handleMousePressed(x, y, button) then
-            return true
-        end
-    end
     
     -- Check if UI handled the mouse press
     if Editor.showUI and EditorUI.handleMousePressed(x, y, button) then
@@ -267,6 +267,11 @@ end
 
 -- Handle mouse release in editor
 function Editor.handleMouseReleased(x, y, button)
+    -- If file selector is active, don't handle mouse release for tools
+    if Editor.fileSelector.active then
+        return false
+    end
+    
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = Editor.screenToGameCoords(x, y)
     
@@ -316,6 +321,8 @@ function Editor.saveLevel(filename)
         height = Editor.level.height,
         startX = Editor.startX,
         startY = Editor.startY,
+        winHoleX = Editor.winHoleX,
+        winHoleY = Editor.winHoleY,
         availableBalls = {
             standard = Editor.availableBalls.standard,
             heavy = Editor.availableBalls.heavy,
@@ -375,6 +382,8 @@ function Editor.loadLevel(filename)
     Editor.levelName = levelData.name or "Unnamed Level"
     Editor.startX = levelData.startX or 20
     Editor.startY = levelData.startY or 20
+    Editor.winHoleX = levelData.winHoleX or 140
+    Editor.winHoleY = levelData.winHoleY or 20
     
     -- Set available balls
     if levelData.availableBalls then

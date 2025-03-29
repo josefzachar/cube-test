@@ -6,10 +6,10 @@ local Menu = {}
 Menu.active = false
 Menu.selectedOption = 1
 Menu.options = {
-    { text = "PLAY", description = "Play through levels in sequence" },
-    { text = "EDITOR", description = "Create and edit levels" },
-    { text = "SANDBOX", description = "Free play with all features" },
-    { text = "EXIT", description = "Quit the game" }
+    { text = "PLAY" },
+    { text = "EDITOR" },
+    { text = "SANDBOX" },
+    { text = "EXIT" }
 }
 
 -- Current level in play mode
@@ -55,7 +55,22 @@ function Menu.calculateButtonPositions()
     
     -- Calculate button positions
     for i, option in ipairs(Menu.options) do
-        local y = 300 + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
+        local y = 300
+        
+        -- Add space for level selector after PLAY button
+        if i > 1 then
+            -- Extra spacing after the PLAY button for level info and navigation
+            local extraSpace = 70
+            y = y + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
+            
+            -- Add extra space after the PLAY button
+            if i > 1 then
+                y = y + extraSpace
+            end
+        else
+            y = y + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
+        end
+        
         option.x = (gameWidth - Menu.buttonWidth) / 2
         option.y = y
         option.width = Menu.buttonWidth
@@ -131,15 +146,6 @@ function Menu.draw()
         
         local optionWidth = Menu.optionFont:getWidth(option.text)
         love.graphics.print(option.text, option.x + (option.width - optionWidth) / 2, option.y + 10)
-        
-        -- Draw description for selected option
-        if i == Menu.selectedOption then
-            love.graphics.setFont(Menu.descriptionFont)
-            love.graphics.setColor(0.8, 0.8, 0.8, 1)
-            local descWidth = Menu.descriptionFont:getWidth(option.description)
-            love.graphics.print(option.description, (gameWidth - descWidth) / 2, option.y + option.height + 10)
-            love.graphics.setFont(Menu.optionFont)
-        end
     end
     
     -- Draw level info if PLAY is selected
@@ -148,25 +154,25 @@ function Menu.draw()
         love.graphics.setColor(0.8, 0.8, 0.8, 1)
         local levelInfo = "Level " .. Menu.currentLevel .. " / " .. Menu.totalLevels
         local levelInfoWidth = Menu.descriptionFont:getWidth(levelInfo)
-        love.graphics.print(levelInfo, (gameWidth - levelInfoWidth) / 2, Menu.options[1].y + Menu.buttonHeight + 40)
+        love.graphics.print(levelInfo, (gameWidth - levelInfoWidth) / 2, Menu.options[1].y + Menu.buttonHeight + 25)
         
         -- Draw level navigation buttons
         if Menu.totalLevels > 1 then
             -- Left arrow
             love.graphics.setColor(0.2, 0.2, 0.4, 1)
-            love.graphics.rectangle("fill", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 40, 30, 30)
+            love.graphics.rectangle("fill", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(0, 0.8, 0.8, 1)
-            love.graphics.rectangle("line", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 40, 30, 30)
+            love.graphics.rectangle("line", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print("<", (gameWidth - levelInfoWidth) / 2 - 35, Menu.options[1].y + Menu.buttonHeight + 40)
+            love.graphics.print("<", (gameWidth - levelInfoWidth) / 2 - 35, Menu.options[1].y + Menu.buttonHeight + 20)
             
             -- Right arrow
             love.graphics.setColor(0.2, 0.2, 0.4, 1)
-            love.graphics.rectangle("fill", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 40, 30, 30)
+            love.graphics.rectangle("fill", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(0, 0.8, 0.8, 1)
-            love.graphics.rectangle("line", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 40, 30, 30)
+            love.graphics.rectangle("line", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print(">", (gameWidth + levelInfoWidth) / 2 + 15, Menu.options[1].y + Menu.buttonHeight + 40)
+            love.graphics.print(">", (gameWidth + levelInfoWidth) / 2 + 15, Menu.options[1].y + Menu.buttonHeight + 20)
         end
     end
     

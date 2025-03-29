@@ -32,6 +32,11 @@ end
 
 -- Update the tools
 function EditorTools.update(dt, gridX, gridY)
+    -- If file selector is active, don't update tools
+    if EditorTools.editor.fileSelector.active then
+        return
+    end
+    
     -- If mouse is down, continue using the current tool
     if EditorTools.mouseDown and (gridX ~= EditorTools.lastGridX or gridY ~= EditorTools.lastGridY) then
         -- Only update if the grid position has changed
@@ -180,6 +185,11 @@ end
 
 -- Handle mouse press for tools
 function EditorTools.handleMousePressed(gridX, gridY, button)
+    -- If file selector is active, don't handle mouse press for tools
+    if EditorTools.editor.fileSelector.active then
+        return false
+    end
+    
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
@@ -219,6 +229,11 @@ end
 
 -- Handle mouse release for tools
 function EditorTools.handleMouseReleased(gridX, gridY, button)
+    -- If file selector is active, don't handle mouse release for tools
+    if EditorTools.editor.fileSelector.active then
+        return false
+    end
+    
     if button == 1 then -- Left mouse button
         -- Stop using the current tool
         EditorTools.mouseDown = false
@@ -376,8 +391,21 @@ function EditorTools.winholeTool(gridX, gridY)
         return
     end
     
+    -- First, clear any existing win holes
+    for y = 0, EditorTools.editor.level.height - 1 do
+        for x = 0, EditorTools.editor.level.width - 1 do
+            if EditorTools.editor.level:getCellType(x, y) == CellTypes.TYPES.WIN_HOLE then
+                EditorTools.editor.level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+            end
+        end
+    end
+    
     -- Create win hole
     WinHole.createWinHoleArea(EditorTools.editor.level, gridX, gridY, 3, 3)
+    
+    -- Update win hole position in editor
+    EditorTools.editor.winHoleX = gridX
+    EditorTools.editor.winHoleY = gridY
     
     print("Win hole created at: " .. gridX .. ", " .. gridY)
 end

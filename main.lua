@@ -49,6 +49,12 @@ function love.mousereleased(x, y, button)
     Game.handleMouseReleased(x, y, button)
 end
 
+-- Global function to create a diamond-shaped win hole (used by debug.lua)
+_G.createDiamondWinHole = function(level)
+    local WinHoleGenerator = require("src.win_hole_generator")
+    WinHoleGenerator.createDiamondWinHole(level, nil, nil, 20, 20)
+end
+
 -- Function to convert screen coordinates to game coordinates
 function screenToGameCoords(screenX, screenY)
     -- Get screen dimensions

@@ -6,7 +6,7 @@ local WinHole = require("src.win_hole")
 local WinHoleGenerator = {}
 
 -- Function to create a diamond-shaped win hole
-function WinHoleGenerator.createDiamondWinHole(level, holeX, holeY)
+function WinHoleGenerator.createDiamondWinHole(level, holeX, holeY, startX, startY)
     -- First, scan the entire level and clear any existing win holes
     -- This ensures no win holes remain from previous level generations
     for y = 0, level.height - 1 do
@@ -17,9 +17,10 @@ function WinHoleGenerator.createDiamondWinHole(level, holeX, holeY)
         end
     end
     
-    -- Ball starting position
-    local ballStartX, ballStartY = 20, 20
-    local minDistanceFromBall = 40 -- Minimum distance from ball starting position
+    -- Ball starting position (use provided values or default to 20, 20)
+    local ballStartX = startX or 20
+    local ballStartY = startY or 20
+    local minDistanceFromBall = 10 -- Minimum distance from ball starting position
     
     -- If no position is provided, choose a random position
     if not holeX or not holeY then
@@ -49,13 +50,9 @@ function WinHoleGenerator.createDiamondWinHole(level, holeX, holeY)
         holeX = math.floor(validLocations[randomIndex].x)
         holeY = math.floor(validLocations[randomIndex].y)
     else
-        -- If position is provided, check if it's too close to the ball starting position
-        local distance = math.sqrt((holeX - ballStartX)^2 + (holeY - ballStartY)^2)
-        if distance < minDistanceFromBall then
-            -- If too close, move it to a valid position
-            holeX = level.width - 20
-            holeY = level.height - 20
-        end
+        -- If position is provided, use it exactly as specified
+        -- Log the position for debugging
+        print("Win hole position: Using exact position from level file (" .. holeX .. "," .. holeY .. ")")
     end
     
     -- The pattern is:
