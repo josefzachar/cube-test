@@ -59,13 +59,17 @@ function WinHole.createWinHoleArea(level, x, y, _, _)
         {0, 0, 1, 0, 0}
     }
     
+    -- Calculate the offset to center the pattern at the clicked position
+    local offsetX = -2
+    local offsetY = -2
+    
     -- Create win holes based on the pattern
     for dy = 0, 4 do
         for dx = 0, 4 do
             -- Only create a win hole if the pattern has a 1 at this position
             if pattern[dy + 1][dx + 1] == 1 then
-                local cellX = x + dx
-                local cellY = y + dy
+                local cellX = x + dx + offsetX
+                local cellY = y + dy + offsetY
                 
                 -- Only create win holes within the level bounds
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then

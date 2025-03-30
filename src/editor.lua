@@ -131,6 +131,25 @@ function Editor.draw()
     -- Draw the editor tools
     EditorTools.draw()
     
+    -- Draw a flag at the start position
+    if Editor.startX and Editor.startY then
+        local x = Editor.startX * Cell.SIZE + Cell.SIZE / 2
+        local y = Editor.startY * Cell.SIZE + Cell.SIZE / 2
+        
+        -- Draw flag pole
+        love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Brown
+        love.graphics.setLineWidth(2)
+        love.graphics.line(x, y, x, y - 20)
+        
+        -- Draw flag
+        love.graphics.setColor(0, 1, 0, 1) -- Green
+        love.graphics.polygon("fill", x, y - 20, x + 15, y - 15, x, y - 10)
+        
+        -- Draw base
+        love.graphics.setColor(0.6, 0.4, 0.2, 1) -- Brown
+        love.graphics.circle("fill", x, y, 3)
+    end
+    
     -- Draw the editor UI if enabled
     if Editor.showUI then
         -- Reset transformation before drawing UI

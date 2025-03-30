@@ -208,9 +208,35 @@ end
 
 -- Draw the editor UI
 function EditorUI.draw()
-    -- Get screen dimensions
+    -- Get game dimensions
     local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
     local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    
+    -- Get actual screen dimensions
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Calculate scaled dimensions
+    local scaleX = screenWidth / gameWidth
+    local scaleY = screenHeight / gameHeight
+    local scale = math.min(scaleX, scaleY)
+    
+    -- Calculate offsets for centering
+    local scaledWidth = screenWidth / scale
+    local scaledHeight = screenHeight / scale
+    local offsetX = (scaledWidth - gameWidth) / 2
+    local offsetY = (scaledHeight - gameHeight) / 2
+    
+    -- Save current transformation
+    love.graphics.push()
+    
+    -- Reset transformation to draw UI in screen coordinates
+    love.graphics.origin()
+    
+    -- Apply scaling to match game coordinates
+    love.graphics.scale(scale, scale)
+    
+    -- Apply offset for centering
+    love.graphics.translate(offsetX, offsetY)
     
     -- Draw left panel background
     love.graphics.setColor(0.1, 0.1, 0.2, 0.9)
@@ -325,18 +351,18 @@ function EditorUI.draw()
     -- Draw help panel
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("SHORTCUTS:", 10, 730)
-    love.graphics.print("1: Empty, 2: Dirt, 3: Sand", 10, 750)
-    love.graphics.print("4: Stone, 5: Water, 6: Fire", 10, 770)
-    love.graphics.print("Q/E: Decrease/Increase Brush Size", 10, 790)
-    love.graphics.print("Mouse Wheel: Change Brush Size", 10, 810)
-    love.graphics.print("Left Click: Draw with Selected Material", 10, 830)
-    love.graphics.print("Right Click: Erase", 10, 850)
-    love.graphics.print("D: Draw Tool", 10, 870)
-    love.graphics.print("F: Fill Tool", 10, 890)
-    love.graphics.print("X: Erase Tool", 10, 910)
-    love.graphics.print("S: Start Position Tool", 10, 930)
-    love.graphics.print("H: Win Hole Tool", 10, 950)
-    love.graphics.print("Space: Toggle UI", 10, 970)
+    love.graphics.print("A/D: Previous/Next Material", 10, 750)
+    love.graphics.print("W/S: Increase/Decrease Brush Size", 10, 770)
+    love.graphics.print("Mouse Wheel: Change Brush Size", 10, 790)
+    love.graphics.print("Left Click: Draw with Selected Material", 10, 810)
+    love.graphics.print("Right Click: Erase", 10, 830)
+    love.graphics.print("T: Draw Tool", 10, 850)
+    love.graphics.print("F: Fill Tool", 10, 870)
+    love.graphics.print("X: Erase Tool", 10, 890)
+    love.graphics.print("P: Start Position Tool", 10, 910)
+    love.graphics.print("H: Win Hole Tool", 10, 930)
+    love.graphics.print("Space: Toggle UI", 10, 950)
+    love.graphics.print("1-6: Quick Select Materials", 10, 970)
     
     -- Draw text input if active
     if EditorUI.editor.textInput.active then
@@ -362,21 +388,52 @@ function EditorUI.draw()
             love.graphics.rectangle("fill", cursorX, gameHeight/2, 2, 20)
         end
     end
+    
+    -- Restore previous transformation
+    love.graphics.pop()
 end
 
 -- Draw cursor preview based on current tool
 function EditorUI.drawCursorPreview()
+    -- Get game dimensions
+    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    
+    -- Get actual screen dimensions
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Calculate scaled dimensions
+    local scaleX = screenWidth / gameWidth
+    local scaleY = screenHeight / gameHeight
+    local scale = math.min(scaleX, scaleY)
+    
+    -- Calculate offsets for centering
+    local scaledWidth = screenWidth / scale
+    local scaledHeight = screenHeight / scale
+    local offsetX = (scaledWidth - gameWidth) / 2
+    local offsetY = (scaledHeight - gameHeight) / 2
+    
+    -- Save current transformation
+    love.graphics.push()
+    
+    -- Reset transformation to draw in screen coordinates
+    love.graphics.origin()
+    
+    -- Apply scaling to match game coordinates
+    love.graphics.scale(scale, scale)
+    
+    -- Apply offset for centering
+    love.graphics.translate(offsetX, offsetY)
+    
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     local gameX, gameY = EditorUI.editor.screenToGameCoords(mouseX, mouseY)
     local gridX, gridY = EditorUI.editor.level:getGridCoordinates(gameX, gameY)
     
-    -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    
     -- Check if mouse is in UI area (left or right panel)
     if gameX < 140 or gameX > gameWidth - 140 then
         -- Mouse is in UI area, don't draw cursor preview
+        love.graphics.pop() -- Restore previous transformation
         return
     end
     
@@ -472,6 +529,9 @@ function EditorUI.drawCursorPreview()
             end
         end
     end
+    
+    -- Restore previous transformation
+    love.graphics.pop()
 end
 
 -- Handle mouse press in UI

@@ -54,6 +54,16 @@ function love.wheelmoved(x, y)
     Game.handleMouseWheel(x, y)
 end
 
+function love.resize(width, height)
+    -- Handle window resize
+    -- This is important to refresh UI and cursor position after resizing
+    if Editor.active then
+        -- Recreate UI elements to adjust to new window size
+        local EditorUI = require("src.editor.ui")
+        EditorUI.createUI()
+    end
+end
+
 -- Global function to create a diamond-shaped win hole (used by debug.lua)
 _G.createDiamondWinHole = function(level)
     local WinHoleGenerator = require("src.win_hole_generator")

@@ -125,7 +125,7 @@ end
 -- Handle key press for tools
 function EditorTools.handleKeyPressed(key)
     -- Tool selection
-    if key == "d" then
+    if key == "t" then
         EditorTools.editor.currentTool = "draw"
         return true
     elseif key == "x" then
@@ -134,7 +134,7 @@ function EditorTools.handleKeyPressed(key)
     elseif key == "f" then
         EditorTools.editor.currentTool = "fill"
         return true
-    elseif key == "s" then
+    elseif key == "p" then
         EditorTools.editor.currentTool = "start"
         return true
     elseif key == "h" then
@@ -143,7 +143,7 @@ function EditorTools.handleKeyPressed(key)
     end
     
     -- Brush size
-    if key == "e" or key == "=" or key == "+" then
+    if key == "w" then
         -- Increase brush size
         local sizes = {1, 2, 3, 5, 7}
         local currentSize = EditorTools.editor.brushSize
@@ -163,7 +163,7 @@ function EditorTools.handleKeyPressed(key)
         end
         
         return true
-    elseif key == "q" or key == "-" then
+    elseif key == "s" then
         -- Decrease brush size
         local sizes = {1, 2, 3, 5, 7}
         local currentSize = EditorTools.editor.brushSize
@@ -185,7 +185,36 @@ function EditorTools.handleKeyPressed(key)
         return true
     end
     
-    -- Cell type selection
+    -- Cell type selection with A/D keys
+    if key == "a" or key == "d" then
+        local cellTypes = {"EMPTY", "DIRT", "SAND", "STONE", "WATER", "FIRE"}
+        local currentType = EditorTools.editor.currentCellType
+        local currentIndex = 1
+        
+        -- Find current type index
+        for i, cellType in ipairs(cellTypes) do
+            if cellType == currentType then
+                currentIndex = i
+                break
+            end
+        end
+        
+        -- Change to next/previous type
+        if key == "d" then
+            -- Next type
+            currentIndex = currentIndex % #cellTypes + 1
+        else -- key == "a"
+            -- Previous type
+            currentIndex = (currentIndex - 2) % #cellTypes + 1
+        end
+        
+        -- Set new cell type
+        EditorTools.editor.currentCellType = cellTypes[currentIndex]
+        EditorTools.editor.currentTool = "draw"
+        return true
+    end
+    
+    -- Cell type selection with number keys (keep for compatibility)
     if key == "1" then
         EditorTools.editor.currentCellType = "EMPTY"
         EditorTools.editor.currentTool = "draw"
@@ -435,6 +464,12 @@ function EditorTools.startTool(gridX, gridY)
                 EditorTools.editor.level:setCellType(x, y, CellTypes.TYPES.EMPTY)
             end
         end
+    end
+    
+    -- Clean up any existing test ball
+    if EditorTools.editor.testBall then
+        EditorTools.editor.testBall.body:destroy()
+        EditorTools.editor.testBall = nil
     end
     
     print("Start position set to: " .. gridX .. ", " .. gridY)

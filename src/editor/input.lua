@@ -3,6 +3,7 @@
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
 local Balls = require("src.balls")
+local EditorTools = require("src.editor.tools")
 
 local EditorInput = {
     editor = nil
@@ -179,7 +180,7 @@ function EditorInput.handleMouseDrag(dt)
             
             -- Create a diamond-shaped win hole at the clicked position
             local WinHole = require("src.win_hole")
-            WinHole.createWinHoleArea(EditorInput.editor.level, gridX - 2, gridY - 2, 5, 5)
+            WinHole.createWinHoleArea(EditorInput.editor.level, gridX, gridY, 5, 5)
         elseif EditorInput.editor.currentTool == "draw" then
             -- Draw with brush
             local cellType = EditorInput.editor.CELL_TYPE_TO_TYPE[EditorInput.editor.currentCellType]
