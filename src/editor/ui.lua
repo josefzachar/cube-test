@@ -293,7 +293,11 @@ function EditorUI.draw()
     -- Draw main buttons
     for _, button in ipairs(EditorUI.editor.buttons) do
         -- Button background
-        love.graphics.setColor(0.2, 0.2, 0.4, 1)
+        if button.isSelected and button.isSelected() then
+            love.graphics.setColor(0.3, 0.3, 0.6, 1)
+        else
+            love.graphics.setColor(0.2, 0.2, 0.4, 1)
+        end
         love.graphics.rectangle("fill", button.x, button.y, button.width, button.height)
         
         -- Button border
@@ -317,6 +321,22 @@ function EditorUI.draw()
     -- Draw start position
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, 700)
+    
+    -- Draw help panel
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.print("SHORTCUTS:", 10, 730)
+    love.graphics.print("1: Empty, 2: Dirt, 3: Sand", 10, 750)
+    love.graphics.print("4: Stone, 5: Water, 6: Fire", 10, 770)
+    love.graphics.print("Q/E: Decrease/Increase Brush Size", 10, 790)
+    love.graphics.print("Mouse Wheel: Change Brush Size", 10, 810)
+    love.graphics.print("Left Click: Draw with Selected Material", 10, 830)
+    love.graphics.print("Right Click: Erase", 10, 850)
+    love.graphics.print("D: Draw Tool", 10, 870)
+    love.graphics.print("F: Fill Tool", 10, 890)
+    love.graphics.print("X: Erase Tool", 10, 910)
+    love.graphics.print("S: Start Position Tool", 10, 930)
+    love.graphics.print("H: Win Hole Tool", 10, 950)
+    love.graphics.print("Space: Toggle UI", 10, 970)
     
     -- Draw text input if active
     if EditorUI.editor.textInput.active then
@@ -408,7 +428,6 @@ function EditorUI.drawCursorPreview()
             end
         elseif EditorUI.editor.currentTool then
             -- Draw brush outline
-            love.graphics.setColor(1, 1, 1, 0.5)
             local brushSize = EditorUI.editor.brushSize
             local cellSize = Cell.SIZE
             
@@ -418,8 +437,39 @@ function EditorUI.drawCursorPreview()
             local brushWidth = brushSize * cellSize
             local brushHeight = brushSize * cellSize
             
+            -- Set color based on material type
+            if EditorUI.editor.currentTool == "draw" or EditorUI.editor.currentTool == "fill" then
+                if EditorUI.editor.currentCellType == "DIRT" then
+                    love.graphics.setColor(0.5, 0.3, 0.1, 0.5) -- Brown for dirt
+                elseif EditorUI.editor.currentCellType == "SAND" then
+                    love.graphics.setColor(0.9, 0.8, 0.2, 0.5) -- Yellow for sand
+                elseif EditorUI.editor.currentCellType == "STONE" then
+                    love.graphics.setColor(0.5, 0.5, 0.5, 0.5) -- Gray for stone
+                elseif EditorUI.editor.currentCellType == "WATER" then
+                    love.graphics.setColor(0.2, 0.4, 0.8, 0.5) -- Blue for water
+                elseif EditorUI.editor.currentCellType == "FIRE" then
+                    love.graphics.setColor(0.9, 0.3, 0.1, 0.5) -- Red for fire
+                else
+                    love.graphics.setColor(1, 1, 1, 0.5) -- White for empty
+                end
+                
+                -- Fill the brush area with a semi-transparent color
+                love.graphics.rectangle("fill", brushX, brushY, brushWidth, brushHeight)
+            else
+                -- For erase tool, use white outline
+                love.graphics.setColor(1, 1, 1, 0.5)
+            end
+            
             -- Draw brush outline
             love.graphics.rectangle("line", brushX, brushY, brushWidth, brushHeight)
+            
+            -- Display material type text above the brush
+            if EditorUI.editor.currentTool == "draw" or EditorUI.editor.currentTool == "fill" then
+                love.graphics.setColor(1, 1, 1, 1)
+                local text = EditorUI.editor.currentCellType
+                local textWidth = EditorUI.editor.buttonFont:getWidth(text)
+                love.graphics.print(text, brushX + (brushWidth - textWidth) / 2, brushY - 25)
+            end
         end
     end
 end

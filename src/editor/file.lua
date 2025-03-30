@@ -352,6 +352,9 @@ function EditorFile.saveLevel()
         cells = {}
     }
     
+    -- Initialize grass on top of dirt cells
+    EditorFile.editor.level:initializeGrass()
+    
     -- Save cell data
     for y = 0, EditorFile.editor.level.height - 1 do
         levelData.cells[y] = {}
@@ -534,6 +537,9 @@ function EditorFile.loadLevel()
     end
     
     print("Level loaded successfully")
+    
+    -- Initialize grass on top of dirt cells
+    EditorFile.editor.level:initializeGrass()
     
     -- Close file selector
     EditorFile.editor.fileSelector.active = false

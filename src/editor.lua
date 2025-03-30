@@ -286,6 +286,12 @@ function Editor.handleMouseReleased(x, y, button)
     return false
 end
 
+-- Handle mouse wheel in editor
+function Editor.handleMouseWheel(x, y)
+    -- Pass to input handler
+    return EditorInput.handleMouseWheel(x, y)
+end
+
 -- Function to convert screen coordinates to game coordinates
 function Editor.screenToGameCoords(screenX, screenY)
     -- Get screen dimensions
@@ -402,6 +408,9 @@ function Editor.loadLevel(filename)
         end
     end
     
+    -- Initialize grass on top of dirt cells
+    Editor.level:initializeGrass()
+    
     print("Level loaded from: levels/" .. filename)
     return true
 end
@@ -423,10 +432,16 @@ function Editor.clearLevel()
         exploding = false,
         sticky = false
     }
+    
+    -- Initialize grass on top of dirt cells
+    Editor.level:initializeGrass()
 end
 
 -- Test play the level
 function Editor.testPlay()
+    -- Initialize grass on top of dirt cells
+    Editor.level:initializeGrass()
+    
     -- Create a ball at the start position
     local ball = Balls.createBall(Editor.world, Editor.startX * Cell.SIZE, Editor.startY * Cell.SIZE, Balls.TYPES.STANDARD)
     ball.body:setUserData(ball)
@@ -459,6 +474,12 @@ function Editor.returnFromTestPlay()
         Editor.testBall.body:destroy()
         Editor.testBall = nil
     end
+end
+
+-- Handle mouse wheel in editor
+function Editor.handleMouseWheel(x, y)
+    -- Pass to input handler
+    return EditorInput.handleMouseWheel(x, y)
 end
 
 return Editor

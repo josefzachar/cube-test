@@ -40,9 +40,17 @@ function EditorTools.update(dt, gridX, gridY)
     -- If mouse is down, continue using the current tool
     if EditorTools.mouseDown and (gridX ~= EditorTools.lastGridX or gridY ~= EditorTools.lastGridY) then
         -- Only update if the grid position has changed
-        local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
-        if toolFunc then
-            toolFunc(gridX, gridY)
+        
+        -- Check which mouse button is down
+        if love.mouse.isDown(1) then -- Left mouse button
+            -- Use the current tool
+            local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
+            if toolFunc then
+                toolFunc(gridX, gridY)
+            end
+        elseif love.mouse.isDown(2) then -- Right mouse button
+            -- Use the erase tool
+            EditorTools.eraseTool(gridX, gridY)
         end
         
         -- Update last grid position
@@ -120,7 +128,7 @@ function EditorTools.handleKeyPressed(key)
     if key == "d" then
         EditorTools.editor.currentTool = "draw"
         return true
-    elseif key == "e" then
+    elseif key == "x" then
         EditorTools.editor.currentTool = "erase"
         return true
     elseif key == "f" then
@@ -129,35 +137,78 @@ function EditorTools.handleKeyPressed(key)
     elseif key == "s" then
         EditorTools.editor.currentTool = "start"
         return true
-    elseif key == "w" then
+    elseif key == "h" then
         EditorTools.editor.currentTool = "winhole"
         return true
     end
     
     -- Brush size
-    if key == "=" or key == "+" then
-        EditorTools.editor.brushSize = math.min(EditorTools.editor.brushSize + 1, 10)
+    if key == "e" or key == "=" or key == "+" then
+        -- Increase brush size
+        local sizes = {1, 2, 3, 5, 7}
+        local currentSize = EditorTools.editor.brushSize
+        local currentIndex = 1
+        
+        -- Find current size index
+        for i, size in ipairs(sizes) do
+            if size == currentSize then
+                currentIndex = i
+                break
+            end
+        end
+        
+        -- Increase size if not at max
+        if currentIndex < #sizes then
+            EditorTools.editor.brushSize = sizes[currentIndex + 1]
+        end
+        
         return true
-    elseif key == "-" or key == "_" then
-        EditorTools.editor.brushSize = math.max(EditorTools.editor.brushSize - 1, 1)
+    elseif key == "q" or key == "-" then
+        -- Decrease brush size
+        local sizes = {1, 2, 3, 5, 7}
+        local currentSize = EditorTools.editor.brushSize
+        local currentIndex = 1
+        
+        -- Find current size index
+        for i, size in ipairs(sizes) do
+            if size == currentSize then
+                currentIndex = i
+                break
+            end
+        end
+        
+        -- Decrease size if not at min
+        if currentIndex > 1 then
+            EditorTools.editor.brushSize = sizes[currentIndex - 1]
+        end
+        
         return true
     end
     
     -- Cell type selection
     if key == "1" then
-        EditorTools.editor.currentCellType = CellTypes.TYPES.DIRT
+        EditorTools.editor.currentCellType = "EMPTY"
+        EditorTools.editor.currentTool = "draw"
         return true
     elseif key == "2" then
-        EditorTools.editor.currentCellType = CellTypes.TYPES.SAND
+        EditorTools.editor.currentCellType = "DIRT"
+        EditorTools.editor.currentTool = "draw"
         return true
     elseif key == "3" then
-        EditorTools.editor.currentCellType = CellTypes.TYPES.STONE
+        EditorTools.editor.currentCellType = "SAND"
+        EditorTools.editor.currentTool = "draw"
         return true
     elseif key == "4" then
-        EditorTools.editor.currentCellType = CellTypes.TYPES.WATER
+        EditorTools.editor.currentCellType = "STONE"
+        EditorTools.editor.currentTool = "draw"
         return true
     elseif key == "5" then
-        EditorTools.editor.currentCellType = CellTypes.TYPES.FIRE
+        EditorTools.editor.currentCellType = "WATER"
+        EditorTools.editor.currentTool = "draw"
+        return true
+    elseif key == "6" then
+        EditorTools.editor.currentCellType = "FIRE"
+        EditorTools.editor.currentTool = "draw"
         return true
     end
     
@@ -166,15 +217,15 @@ function EditorTools.handleKeyPressed(key)
         -- Toggle standard ball
         EditorTools.editor.availableBalls.standard = not EditorTools.editor.availableBalls.standard
         return true
-    elseif key == "h" then
+    elseif key == "v" then
         -- Toggle heavy ball
         EditorTools.editor.availableBalls.heavy = not EditorTools.editor.availableBalls.heavy
         return true
-    elseif key == "x" then
+    elseif key == "n" then
         -- Toggle exploding ball
         EditorTools.editor.availableBalls.exploding = not EditorTools.editor.availableBalls.exploding
         return true
-    elseif key == "t" then
+    elseif key == "m" then
         -- Toggle sticky ball
         EditorTools.editor.availableBalls.sticky = not EditorTools.editor.availableBalls.sticky
         return true
@@ -219,8 +270,14 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
         
         return true
     elseif button == 2 then -- Right mouse button
-        -- Stop using the current tool
-        EditorTools.mouseDown = false
+        -- Use the erase tool
+        EditorTools.mouseDown = true
+        EditorTools.lastGridX = gridX
+        EditorTools.lastGridY = gridY
+        
+        -- Erase at the current position
+        EditorTools.eraseTool(gridX, gridY)
+        
         return true
     end
     
@@ -234,7 +291,7 @@ function EditorTools.handleMouseReleased(gridX, gridY, button)
         return false
     end
     
-    if button == 1 then -- Left mouse button
+    if button == 1 or button == 2 then -- Left or right mouse button
         -- Stop using the current tool
         EditorTools.mouseDown = false
         return true

@@ -118,6 +118,9 @@ function Game.init(mode, levelNumber)
             end
             print("Loaded", cellCount, "non-empty cells from level file")
             
+            -- Initialize grass on top of dirt cells
+            Game.level:initializeGrass()
+            
         -- Create the ball at the specified starting position
         Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
         
@@ -573,6 +576,23 @@ function Game.handleMouseReleased(x, y, button)
     if Game.input:handleMouseReleased(button, Game.ball, gameX, gameY) then
         Game.attempts = Game.attempts + 1
     end
+end
+
+-- Handle mouse wheel
+function Game.handleMouseWheel(x, y)
+    -- If menu is active, don't handle game mouse wheel
+    if Game.currentMode == Game.MODES.MENU then
+        return
+    end
+    
+    -- If editor is active, handle editor mouse wheel
+    if Editor.active then
+        Editor.handleMouseWheel(x, y)
+        return
+    end
+    
+    -- In the future, we could add mouse wheel handling for the game itself
+    -- For example, zooming in/out, scrolling through inventory, etc.
 end
 
 -- Function to convert screen coordinates to game coordinates

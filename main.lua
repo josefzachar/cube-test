@@ -49,6 +49,11 @@ function love.mousereleased(x, y, button)
     Game.handleMouseReleased(x, y, button)
 end
 
+function love.wheelmoved(x, y)
+    -- Handle mouse wheel movement
+    Game.handleMouseWheel(x, y)
+end
+
 -- Global function to create a diamond-shaped win hole (used by debug.lua)
 _G.createDiamondWinHole = function(level)
     local WinHoleGenerator = require("src.win_hole_generator")

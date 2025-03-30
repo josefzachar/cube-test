@@ -129,64 +129,89 @@ end
 
 -- Handle mouse drag for drawing
 function EditorInput.handleMouseDrag(dt)
-    -- Handle mouse input for drawing
-    if love.mouse.isDown(1) and not EditorInput.editor.textInput.active and not EditorInput.editor.fileSelector.active then
-        local mouseX, mouseY = love.mouse.getPosition()
-        local gameX, gameY = EditorInput.editor.screenToGameCoords(mouseX, mouseY)
-        local gridX, gridY = EditorInput.editor.level:getGridCoordinates(gameX, gameY)
-        
-        -- Check if mouse is in the level area and not over UI
-        local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-        if gridX >= 0 and gridX < EditorInput.editor.level.width and gridY >= 0 and gridY < EditorInput.editor.level.height and
-           gameX > 140 and gameX < gameWidth - 140 then
-            -- If we're in "set start position" mode
-            if EditorInput.editor.setStartPosition then
-                EditorInput.editor.startX = gridX
-                EditorInput.editor.startY = gridY
-                EditorInput.editor.setStartPosition = false
-                
-                -- Create a ball at the start position to visualize it
-                if EditorInput.editor.testBall then
-                    EditorInput.editor.testBall.body:destroy()
-                    EditorInput.editor.testBall = nil
+    -- Check if text input or file selector is active
+    if EditorInput.editor.textInput.active or EditorInput.editor.fileSelector.active then
+        return
+    end
+    
+    local mouseX, mouseY = love.mouse.getPosition()
+    local gameX, gameY = EditorInput.editor.screenToGameCoords(mouseX, mouseY)
+    local gridX, gridY = EditorInput.editor.level:getGridCoordinates(gameX, gameY)
+    
+    -- Check if mouse is in the level area and not over UI
+    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    if gridX < 0 or gridX >= EditorInput.editor.level.width or gridY < 0 or gridY >= EditorInput.editor.level.height or
+       gameX <= 140 or gameX >= gameWidth - 140 then
+        return
+    end
+    
+    -- Left mouse button - draw or use current tool
+    if love.mouse.isDown(1) then
+        -- If we're in "set start position" mode
+        if EditorInput.editor.setStartPosition then
+            EditorInput.editor.startX = gridX
+            EditorInput.editor.startY = gridY
+            EditorInput.editor.setStartPosition = false
+            
+            -- Create a ball at the start position to visualize it
+            if EditorInput.editor.testBall then
+                EditorInput.editor.testBall.body:destroy()
+                EditorInput.editor.testBall = nil
+            end
+            
+            EditorInput.editor.testBall = Balls.createBall(EditorInput.editor.world, EditorInput.editor.startX * Cell.SIZE, EditorInput.editor.startY * Cell.SIZE, Balls.TYPES.STANDARD)
+            EditorInput.editor.testBall.body:setUserData(EditorInput.editor.testBall)
+            EditorInput.editor.testBall.body:setType("static") -- Make it static so it doesn't fall
+        -- If we're in "set win hole position" mode
+        elseif EditorInput.editor.setWinHolePosition then
+            EditorInput.editor.winHoleX = gridX
+            EditorInput.editor.winHoleY = gridY
+            EditorInput.editor.setWinHolePosition = false
+            
+            -- First, clear any existing win holes
+            for y = 0, EditorInput.editor.level.height - 1 do
+                for x = 0, EditorInput.editor.level.width - 1 do
+                    if EditorInput.editor.level:getCellType(x, y) == CellTypes.TYPES.WIN_HOLE then
+                        EditorInput.editor.level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+                    end
                 end
-                
-                EditorInput.editor.testBall = Balls.createBall(EditorInput.editor.world, EditorInput.editor.startX * Cell.SIZE, EditorInput.editor.startY * Cell.SIZE, Balls.TYPES.STANDARD)
-                EditorInput.editor.testBall.body:setUserData(EditorInput.editor.testBall)
-                EditorInput.editor.testBall.body:setType("static") -- Make it static so it doesn't fall
-            -- If we're in "set win hole position" mode
-            elseif EditorInput.editor.setWinHolePosition then
-                EditorInput.editor.winHoleX = gridX
-                EditorInput.editor.winHoleY = gridY
-                EditorInput.editor.setWinHolePosition = false
-                
-                -- First, clear any existing win holes
-                for y = 0, EditorInput.editor.level.height - 1 do
-                    for x = 0, EditorInput.editor.level.width - 1 do
-                        if EditorInput.editor.level:getCellType(x, y) == CellTypes.TYPES.WIN_HOLE then
-                            EditorInput.editor.level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+            end
+            
+            -- Create a diamond-shaped win hole at the clicked position
+            local WinHole = require("src.win_hole")
+            WinHole.createWinHoleArea(EditorInput.editor.level, gridX - 2, gridY - 2, 5, 5)
+        elseif EditorInput.editor.currentTool == "draw" then
+            -- Draw with brush
+            local cellType = EditorInput.editor.CELL_TYPE_TO_TYPE[EditorInput.editor.currentCellType]
+            
+            -- Apply brush with size for all cell types
+            for y = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
+                for x = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
+                    local distance = math.sqrt(x*x + y*y)
+                    if distance < EditorInput.editor.brushSize then
+                        local cellX = gridX + x
+                        local cellY = gridY + y
+                        if cellX >= 0 and cellX < EditorInput.editor.level.width and cellY >= 0 and cellY < EditorInput.editor.level.height then
+                            EditorInput.editor.level:setCellType(cellX, cellY, cellType)
                         end
                     end
                 end
-                
-                -- Create a diamond-shaped win hole at the clicked position
-                local WinHole = require("src.win_hole")
-                WinHole.createWinHoleArea(EditorInput.editor.level, gridX - 2, gridY - 2, 5, 5)
-            elseif EditorInput.editor.currentTool == "draw" then
-                -- Draw with brush
-                local cellType = EditorInput.editor.CELL_TYPE_TO_TYPE[EditorInput.editor.currentCellType]
-                
-                -- Apply brush with size for all cell types
-                for y = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
-                    for x = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
-                        local distance = math.sqrt(x*x + y*y)
-                        if distance < EditorInput.editor.brushSize then
-                            local cellX = gridX + x
-                            local cellY = gridY + y
-                            if cellX >= 0 and cellX < EditorInput.editor.level.width and cellY >= 0 and cellY < EditorInput.editor.level.height then
-                                EditorInput.editor.level:setCellType(cellX, cellY, cellType)
-                            end
-                        end
+            end
+        end
+    -- Right mouse button - erase
+    elseif love.mouse.isDown(2) then
+        -- Erase with brush
+        local emptyType = EditorInput.editor.CELL_TYPE_TO_TYPE["EMPTY"]
+        
+        -- Apply brush with size
+        for y = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
+            for x = -EditorInput.editor.brushSize + 1, EditorInput.editor.brushSize - 1 do
+                local distance = math.sqrt(x*x + y*y)
+                if distance < EditorInput.editor.brushSize then
+                    local cellX = gridX + x
+                    local cellY = gridY + y
+                    if cellX >= 0 and cellX < EditorInput.editor.level.width and cellY >= 0 and cellY < EditorInput.editor.level.height then
+                        EditorInput.editor.level:setCellType(cellX, cellY, emptyType)
                     end
                 end
             end
@@ -196,51 +221,15 @@ end
 
 -- Handle key press in editor
 function EditorInput.handleKeyPressed(key)
-    -- Shortcut keys for tools (removed WIN_HOLE shortcut)
-    if key == "1" then
-        EditorInput.editor.currentTool = "EMPTY"
-        EditorInput.editor.setStartPosition = false
-        EditorInput.editor.setWinHolePosition = false
+    -- If editor tools handles the key press, return
+    if EditorTools.handleKeyPressed(key) then
         return true
-    elseif key == "2" then
-        EditorInput.editor.currentTool = "DIRT"
-        EditorInput.editor.setStartPosition = false
-        EditorInput.editor.setWinHolePosition = false
-        return true
-    elseif key == "3" then
-        EditorInput.editor.currentTool = "SAND"
-        EditorInput.editor.setStartPosition = false
-        EditorInput.editor.setWinHolePosition = false
-        return true
-    elseif key == "4" then
-        EditorInput.editor.currentTool = "STONE"
-        EditorInput.editor.setStartPosition = false
-        EditorInput.editor.setWinHolePosition = false
-        return true
-    elseif key == "5" then
-        EditorInput.editor.currentTool = "WATER"
-        EditorInput.editor.setStartPosition = false
-        EditorInput.editor.setWinHolePosition = false
-        return true
-    elseif key == "=" or key == "+" then
-        -- Increase brush size
-        local sizes = {1, 2, 3, 5, 7}
-        for i, size in ipairs(sizes) do
-            if EditorInput.editor.brushSize == size and i < #sizes then
-                EditorInput.editor.brushSize = sizes[i+1]
-                break
-            end
-        end
-        return true
-    elseif key == "-" then
-        -- Decrease brush size
-        local sizes = {1, 2, 3, 5, 7}
-        for i, size in ipairs(sizes) do
-            if EditorInput.editor.brushSize == size and i > 1 then
-                EditorInput.editor.brushSize = sizes[i-1]
-                break
-            end
-        end
+    end
+    
+    -- Otherwise, handle other editor key presses
+    if key == "s" and (love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl")) then
+        -- Save level
+        EditorInput.editor.saveLevel()
         return true
     elseif key == "s" and (love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl")) then
         -- Save level
@@ -338,6 +327,42 @@ function EditorInput.handleTextInput(text)
         return true
     end
     return false
+end
+
+-- Handle mouse wheel movement
+function EditorInput.handleMouseWheel(x, y)
+    -- If text input or file selector is active, don't handle mouse wheel
+    if EditorInput.editor.textInput.active or EditorInput.editor.fileSelector.active then
+        return false
+    end
+    
+    -- Change brush size with mouse wheel
+    local sizes = {1, 2, 3, 5, 7}
+    local currentSize = EditorInput.editor.brushSize
+    local currentIndex = 1
+    
+    -- Find current size index
+    for i, size in ipairs(sizes) do
+        if size == currentSize then
+            currentIndex = i
+            break
+        end
+    end
+    
+    -- Adjust size based on wheel direction
+    if y > 0 then
+        -- Wheel up - decrease size
+        if currentIndex > 1 then
+            EditorInput.editor.brushSize = sizes[currentIndex - 1]
+        end
+    elseif y < 0 then
+        -- Wheel down - increase size
+        if currentIndex < #sizes then
+            EditorInput.editor.brushSize = sizes[currentIndex + 1]
+        end
+    end
+    
+    return true
 end
 
 return EditorInput
