@@ -182,11 +182,11 @@ function UI.init(ballTypes)
     end
     
     -- Create ball type buttons
-    local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY"}
+    local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
     
     -- Create ball type buttons vertically stacked on the right
     local ballButtonY = buttonMargin + 6 * (buttonHeight + buttonMargin) + 70
-    for i = 1, 4 do
+    for i = 1, 5 do
         local button = Button.new(
             buttonX, 
             ballButtonY + (i-1) * (buttonHeight + buttonMargin), 

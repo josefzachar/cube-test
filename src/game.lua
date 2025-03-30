@@ -157,7 +157,8 @@ function Game.init(mode, levelNumber)
             [Balls.TYPES.STANDARD] = true,
             [Balls.TYPES.HEAVY] = true,
             [Balls.TYPES.EXPLODING] = true,
-            [Balls.TYPES.STICKY] = true
+            [Balls.TYPES.STICKY] = true,
+            [Balls.TYPES.SPRAYING] = true
         }
     end
     
@@ -183,7 +184,8 @@ function Game.init(mode, levelNumber)
                 Balls.TYPES.STANDARD,
                 Balls.TYPES.HEAVY,
                 Balls.TYPES.EXPLODING,
-                Balls.TYPES.STICKY
+                Balls.TYPES.STICKY,
+                Balls.TYPES.SPRAYING
             }
             
             Game.currentBallType = ballTypes[ballTypeIndex]
@@ -192,7 +194,7 @@ function Game.init(mode, levelNumber)
             Game.ball = newBall
             Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
             
-            local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky"}
+            local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying"}
             print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
         end
         
@@ -372,6 +374,20 @@ function Game.handleKeyPressed(key)
         Game.ball = newBall
         Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
         print("Switched to Sticky Ball")
+    elseif key == "5" then
+        Game.currentBallType = Balls.TYPES.SPRAYING
+        local newBall = Balls.changeBallType(Game.ball, Game.world, Game.currentBallType)
+        Game.ball.body:destroy() -- Destroy old ball's body
+        Game.ball = newBall
+        Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
+        print("Switched to Spraying Ball")
+    elseif key == "m" then
+        -- Cycle through material types for the spraying ball
+        if Game.ball.ballType == Balls.TYPES.SPRAYING and Game.ball.cycleMaterial then
+            Game.ball:cycleMaterial()
+        else
+            print("Material cycling only works with the Spraying Ball")
+        end
     elseif key == "e" then
         -- Always switch to exploding ball and trigger explosion immediately
         if Game.ball.ballType ~= Balls.TYPES.EXPLODING then

@@ -10,7 +10,8 @@ Ball.TYPES = {
     STANDARD = 1,
     HEAVY = 2,
     EXPLODING = 3,
-    STICKY = 4
+    STICKY = 4,
+    SPRAYING = 5
 }
 
 -- Colors
@@ -20,7 +21,8 @@ Ball.COLORS = {
     SAND_TINT = {1, 0.9, 0.7, 1}, -- Slight yellow/brown tint for when ball is in sand
     HEAVY_COLOR = {0.6, 0.6, 0.8, 1}, -- Dark blue for heavy ball
     EXPLODING_COLOR = {1, 0.4, 0.2, 1}, -- Orange-red for exploding ball
-    STICKY_COLOR = {0.3, 0.8, 0.3, 1} -- Green for sticky ball
+    STICKY_COLOR = {0.3, 0.8, 0.3, 1}, -- Green for sticky ball
+    SPRAYING_COLOR = {0.9, 0.8, 0.3, 1} -- Yellow-orange for spraying ball
 }
 
 -- Base constructor for all ball types

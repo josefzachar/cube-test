@@ -103,7 +103,10 @@ function Collision.beginContact(a, b, coll, level, ball)
             
             -- Tell the ball it's in sand
             if ball and ball.enterSand then
-                ball:enterSand(gridX, gridY)
+                -- Special case for spraying ball - don't enter sand if it's a spraying ball
+                if not (ball.ballType == Balls.TYPES.SPRAYING) then
+                    ball:enterSand(gridX, gridY)
+                end
             end
         end
         
@@ -241,14 +244,17 @@ function Collision.beginContact(a, b, coll, level, ball)
             
             -- Slow down the ball more when it hits sand
             if otherData == "sand" then
-                -- Apply a stronger damping force to the ball when it hits sand
-                local dampingFactor = 0.7  -- Higher value means more damping
-                local vx, vy = ballBody:getLinearVelocity()
-                ballBody:setLinearVelocity(vx * (1 - dampingFactor), vy * (1 - dampingFactor))
-                
-                -- Also reduce angular velocity
-                local av = ballBody:getAngularVelocity()
-                ballBody:setAngularVelocity(av * (1 - dampingFactor))
+                -- Special case for spraying ball - don't slow down if it's a spraying ball
+                if not (ballObject and ballObject.ballType == Balls.TYPES.SPRAYING) then
+                    -- Apply a stronger damping force to the ball when it hits sand
+                    local dampingFactor = 0.7  -- Higher value means more damping
+                    local vx, vy = ballBody:getLinearVelocity()
+                    ballBody:setLinearVelocity(vx * (1 - dampingFactor), vy * (1 - dampingFactor))
+                    
+                    -- Also reduce angular velocity
+                    local av = ballBody:getAngularVelocity()
+                    ballBody:setAngularVelocity(av * (1 - dampingFactor))
+                end
             end
             
             -- Create the crater with visual particles
@@ -433,7 +439,61 @@ function Collision.endContact(a, b, coll, level)
 end
 
 function Collision.preSolve(a, b, coll)
-    -- Not used but required by LÖVE
+    local aData = a:getUserData()
+    local bData = b:getUserData()
+    
+    -- Check if the ball is involved in the collision
+    local isBallCollision = (aData == "ball" or bData == "ball")
+    
+    if isBallCollision then
+        -- Get the ball fixture and the other fixture
+        local ballFixture, otherFixture
+        if aData == "ball" then
+            ballFixture = a
+            otherFixture = b
+        else
+            ballFixture = b
+            otherFixture = a
+        end
+        
+        local ballBody = ballFixture:getBody()
+        local ballObject = ballBody:getUserData() -- Get the ball object
+        local otherData = otherFixture:getUserData()
+        
+        -- If it's a spraying ball, only disable collisions with the material it's currently spraying
+        if ballObject and ballObject.ballType == Balls.TYPES.SPRAYING then
+            -- Get the current material the ball is spraying
+            local currentMaterial = ballObject.currentMaterial
+            local materialMode = ballObject.materialMode
+            
+            -- If in random mode, we need to check the current material
+            if materialMode == require("src.balls.spraying_ball").RANDOM_MODE then
+                -- In random mode, we still need to collide with the ground
+                -- Only disable collisions if we're sure it's a material the ball just sprayed
+                -- This is a simplification - we'll only disable sand collisions in random mode
+                if otherData == "sand" then
+                    coll:setEnabled(false)
+                end
+            else
+                -- Check if the collision is with the material the ball is currently spraying
+                local shouldDisable = false
+                
+                if currentMaterial == CellTypes.TYPES.SAND and otherData == "sand" then
+                    shouldDisable = true
+                elseif currentMaterial == CellTypes.TYPES.DIRT and otherData == "dirt" then
+                    shouldDisable = true
+                elseif currentMaterial == CellTypes.TYPES.STONE and otherData == "stone" then
+                    shouldDisable = true
+                elseif currentMaterial == CellTypes.TYPES.WATER and otherData == "water" then
+                    shouldDisable = true
+                end
+                
+                if shouldDisable then
+                    coll:setEnabled(false) -- Disable the collision
+                end
+            end
+        end
+    end
 end
 
 function Collision.postSolve(a, b, coll, normalImpulse, tangentImpulse)

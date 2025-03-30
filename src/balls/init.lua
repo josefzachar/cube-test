@@ -5,6 +5,7 @@ local StandardBall = require("src.balls.standard_ball")
 local HeavyBall = require("src.balls.heavy_ball")
 local ExplodingBall = require("src.balls.exploding_ball")
 local StickyBall = require("src.balls.sticky_ball")
+local SprayingBall = require("src.balls.spraying_ball")
 
 local Balls = {
     -- Ball types enum
@@ -15,6 +16,7 @@ local Balls = {
     HeavyBall = HeavyBall,
     ExplodingBall = ExplodingBall,
     StickyBall = StickyBall,
+    SprayingBall = SprayingBall,
     
     -- Factory function to create a ball of the specified type
     createBall = function(world, x, y, ballType)
@@ -26,6 +28,8 @@ local Balls = {
             return ExplodingBall.new(world, x, y)
         elseif ballType == BaseBall.TYPES.STICKY then
             return StickyBall.new(world, x, y)
+        elseif ballType == BaseBall.TYPES.SPRAYING then
+            return SprayingBall.new(world, x, y)
         else
             return StandardBall.new(world, x, y)
         end
@@ -48,6 +52,8 @@ local Balls = {
             newBall = ExplodingBall.new(world, x, y)
         elseif newType == BaseBall.TYPES.STICKY then
             newBall = StickyBall.new(world, x, y)
+        elseif newType == BaseBall.TYPES.SPRAYING then
+            newBall = SprayingBall.new(world, x, y)
         else
             newBall = StandardBall.new(world, x, y)
         end
