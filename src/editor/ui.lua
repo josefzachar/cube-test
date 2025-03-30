@@ -107,7 +107,7 @@ function EditorUI.createUI()
     
     for i, ball in ipairs(ballTypes) do
         local button = {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 50 + (i-1) * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -128,7 +128,7 @@ function EditorUI.createUI()
     -- Create main editor buttons
     local mainButtons = {
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200,
             width = buttonWidth,
             height = buttonHeight,
@@ -138,7 +138,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200 + buttonHeight + buttonMargin,
             width = buttonWidth,
             height = buttonHeight,
@@ -148,7 +148,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200 + 2 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -158,7 +158,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200 + 3 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -170,7 +170,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200 + 4 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -190,13 +190,23 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth - 10,
+            x = gameWidth - panelWidth + 20,
             y = 200 + 5 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "EXIT EDITOR",
             action = function()
                 EditorUI.editor.active = false
+            end
+        },
+        {
+            x = gameWidth - panelWidth + 20,
+            y = 200 + 6 * (buttonHeight + buttonMargin),
+            width = buttonWidth,
+            height = buttonHeight,
+            text = "?",
+            action = function()
+                EditorUI.editor.showHelp = not EditorUI.editor.showHelp
             end
         }
     }
@@ -348,21 +358,37 @@ function EditorUI.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, 700)
     
-    -- Draw help panel
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print("SHORTCUTS:", 10, 730)
-    love.graphics.print("A/D: Previous/Next Material", 10, 750)
-    love.graphics.print("W/S: Increase/Decrease Brush Size", 10, 770)
-    love.graphics.print("Mouse Wheel: Change Brush Size", 10, 790)
-    love.graphics.print("Left Click: Draw with Selected Material", 10, 810)
-    love.graphics.print("Right Click: Erase", 10, 830)
-    love.graphics.print("T: Draw Tool", 10, 850)
-    love.graphics.print("F: Fill Tool", 10, 870)
-    love.graphics.print("X: Erase Tool", 10, 890)
-    love.graphics.print("P: Start Position Tool", 10, 910)
-    love.graphics.print("H: Win Hole Tool", 10, 930)
-    love.graphics.print("Space: Toggle UI", 10, 950)
-    love.graphics.print("1-6: Quick Select Materials", 10, 970)
+    -- Draw help panel if enabled
+    if EditorUI.editor.showHelp then
+        -- Draw semi-transparent background for help panel
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", gameWidth/2 - 200, 100, 400, 400)
+        
+        -- Draw help panel border
+        love.graphics.setColor(0, 0.8, 0.8, 1)
+        love.graphics.rectangle("line", gameWidth/2 - 200, 100, 400, 400)
+        
+        -- Draw help panel title
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print("EDITOR SHORTCUTS", gameWidth/2 - 180, 110)
+        
+        -- Draw help panel content
+        local y = 140
+        local lineHeight = 20
+        love.graphics.print("A/D: Previous/Next Material", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("W/S: Increase/Decrease Brush Size", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Mouse Wheel: Change Brush Size", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Left Click: Draw with Selected Material", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Right Click: Erase", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("T: Draw Tool", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("F: Fill Tool", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("X: Erase Tool", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("P: Start Position Tool", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("H: Win Hole Tool", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Space: Toggle UI", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("1-6: Quick Select Materials", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("?: Toggle Help Panel", gameWidth/2 - 180, y); y = y + lineHeight
+    end
     
     -- Draw text input if active
     if EditorUI.editor.textInput.active then

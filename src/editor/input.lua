@@ -352,14 +352,14 @@ function EditorInput.handleMouseWheel(x, y)
     
     -- Adjust size based on wheel direction
     if y > 0 then
-        -- Wheel up - decrease size
-        if currentIndex > 1 then
-            EditorInput.editor.brushSize = sizes[currentIndex - 1]
-        end
-    elseif y < 0 then
-        -- Wheel down - increase size
+        -- Wheel up - increase size
         if currentIndex < #sizes then
             EditorInput.editor.brushSize = sizes[currentIndex + 1]
+        end
+    elseif y < 0 then
+        -- Wheel down - decrease size
+        if currentIndex > 1 then
+            EditorInput.editor.brushSize = sizes[currentIndex - 1]
         end
     end
     

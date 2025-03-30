@@ -19,6 +19,7 @@ local Editor = {
     currentCellType = "DIRT",
     brushSize = 1,
     showUI = true,
+    showHelp = false, -- Help panel visibility
     
     -- Start position for the ball
     startX = 20,
