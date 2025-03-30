@@ -534,8 +534,12 @@ function Game.handleMousePressed(x, y, button)
                     print("Difficulty increased to:", currentDifficulty)
                 end
                 
-                -- Reload the level
-                Game.init(Game.currentMode)
+                -- Reload the level with the next level number
+                if Game.currentMode == Game.MODES.PLAY then
+                    Game.init(Game.currentMode, Menu.currentLevel)
+                else
+                    Game.init(Game.currentMode)
+                end
                 return
             end
         end
