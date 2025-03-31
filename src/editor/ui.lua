@@ -102,8 +102,8 @@ function EditorUI.createUI()
     }
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local gameWidth = 1600  -- Original design width
+    local gameHeight = 1000  -- Original design height
     
     for i, ball in ipairs(ballTypes) do
         local button = {
@@ -204,6 +204,16 @@ function EditorUI.createUI()
             y = 200 + 6 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
+            text = "BOUNDARIES",
+            action = function()
+                EditorUI.editor.createBoundaries()
+            end
+        },
+        {
+            x = gameWidth - panelWidth + 20,
+            y = 200 + 7 * (buttonHeight + buttonMargin),
+            width = buttonWidth,
+            height = buttonHeight,
             text = "?",
             action = function()
                 EditorUI.editor.showHelp = not EditorUI.editor.showHelp
@@ -219,8 +229,8 @@ end
 -- Draw the editor UI
 function EditorUI.draw()
     -- Get game dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local gameWidth = 1600  -- Original design width
+    local gameHeight = 1000  -- Original design height
     
     -- Get actual screen dimensions
     local screenWidth, screenHeight = love.graphics.getDimensions()
@@ -421,40 +431,34 @@ end
 
 -- Draw cursor preview based on current tool
 function EditorUI.drawCursorPreview()
+    -- Get mouse position first
+    local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Get grid coordinates
+    local gridX, gridY
+    local gameX, gameY
+    
+    -- Always use the MobileInput module for conversion
+    local MobileInput = require("src.mobile_input")
+    local Cell = require("cell")
+    gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+    gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+    
+    -- Get cell size
+    local cellSize = Cell.SIZE
+    
+    -- Get game dimensions for drawing
+    
     -- Get game dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
-    
-    -- Get actual screen dimensions
-    local screenWidth, screenHeight = love.graphics.getDimensions()
-    
-    -- Calculate scaled dimensions
-    local scaleX = screenWidth / gameWidth
-    local scaleY = screenHeight / gameHeight
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Calculate offsets for centering
-    local scaledWidth = screenWidth / scale
-    local scaledHeight = screenHeight / scale
-    local offsetX = (scaledWidth - gameWidth) / 2
-    local offsetY = (scaledHeight - gameHeight) / 2
+    local gameWidth = 1600  -- Original design width
+    local gameHeight = 1000  -- Original design height
     
     -- Save current transformation
     love.graphics.push()
     
-    -- Reset transformation to draw in screen coordinates
-    love.graphics.origin()
-    
-    -- Apply scaling to match game coordinates
-    love.graphics.scale(scale, scale)
-    
-    -- Apply offset for centering
-    love.graphics.translate(offsetX, offsetY)
-    
-    -- Get mouse position
-    local mouseX, mouseY = love.mouse.getPosition()
-    local gameX, gameY = EditorUI.editor.screenToGameCoords(mouseX, mouseY)
-    local gridX, gridY = EditorUI.editor.level:getGridCoordinates(gameX, gameY)
+    -- Always use the MobileInput module for transformation
+    local MobileInput = require("src.mobile_input")
+    MobileInput.applyDrawTransform()
     
     -- Check if mouse is in UI area (left or right panel)
     if gameX < 140 or gameX > gameWidth - 140 then
@@ -465,12 +469,29 @@ function EditorUI.drawCursorPreview()
     
     -- Only draw cursor/preview if mouse is in the level area
     if gridX >= 0 and gridX < EditorUI.editor.level.width and gridY >= 0 and gridY < EditorUI.editor.level.height then
+        -- Get brush size
+        local brushSize = EditorUI.editor.brushSize
+        
+        -- Calculate brush dimensions based on brush size
+        local brushWidth = cellSize * brushSize
+        local brushHeight = cellSize * brushSize
+        
+        -- Calculate brush position (centered on cursor)
+        local brushX = gameX - (brushSize * cellSize) / 2
+        local brushY = gameY - (brushSize * cellSize) / 2
+        
+        -- Convert brush position to grid coordinates
+        local startGridX = math.floor(brushX / cellSize)
+        local startGridY = math.floor(brushY / cellSize)
+        
+        -- Calculate brush position for drawing
+        
         if EditorUI.editor.currentTool == "start" then
-            -- Draw ball cursor
+            -- Draw start position cursor (green square)
             love.graphics.setColor(0, 1, 0, 0.7)
-            love.graphics.rectangle("fill", gridX * Cell.SIZE, gridY * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            love.graphics.rectangle("fill", brushX, brushY, cellSize, cellSize)
             love.graphics.setColor(0, 1, 0, 1)
-            love.graphics.rectangle("line", gridX * Cell.SIZE, gridY * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            love.graphics.rectangle("line", brushX, brushY, cellSize, cellSize)
         elseif EditorUI.editor.currentTool == "winhole" then
             -- Draw win hole cursor (diamond shape)
             love.graphics.setColor(1, 1, 0, 0.7)
@@ -490,7 +511,7 @@ function EditorUI.drawCursorPreview()
                         local cellX = (gridX - 2) + dx
                         local cellY = (gridY - 2) + dy
                         if cellX >= 0 and cellX < EditorUI.editor.level.width and cellY >= 0 and cellY < EditorUI.editor.level.height then
-                            love.graphics.rectangle("fill", cellX * Cell.SIZE, cellY * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+                            love.graphics.rectangle("fill", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
                         end
                     end
                 end
@@ -504,66 +525,78 @@ function EditorUI.drawCursorPreview()
                         local cellX = (gridX - 2) + dx
                         local cellY = (gridY - 2) + dy
                         if cellX >= 0 and cellX < EditorUI.editor.level.width and cellY >= 0 and cellY < EditorUI.editor.level.height then
-                            love.graphics.rectangle("line", cellX * Cell.SIZE, cellY * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+                            love.graphics.rectangle("line", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
                         end
                     end
                 end
             end
-        elseif EditorUI.editor.currentTool then
-            -- Draw brush outline
-            local brushSize = EditorUI.editor.brushSize
-            local cellSize = Cell.SIZE
-            
-            -- Calculate brush rectangle
-            local brushX = gridX * cellSize - (brushSize - 1) * cellSize / 2
-            local brushY = gridY * cellSize - (brushSize - 1) * cellSize / 2
-            local brushWidth = brushSize * cellSize
-            local brushHeight = brushSize * cellSize
-            
+        elseif EditorUI.editor.currentTool == "draw" or EditorUI.editor.currentTool == "fill" then
             -- Set color based on material type
-            if EditorUI.editor.currentTool == "draw" or EditorUI.editor.currentTool == "fill" then
-                if EditorUI.editor.currentCellType == "DIRT" then
-                    love.graphics.setColor(0.5, 0.3, 0.1, 0.5) -- Brown for dirt
-                elseif EditorUI.editor.currentCellType == "SAND" then
-                    love.graphics.setColor(0.9, 0.8, 0.2, 0.5) -- Yellow for sand
-                elseif EditorUI.editor.currentCellType == "STONE" then
-                    love.graphics.setColor(0.5, 0.5, 0.5, 0.5) -- Gray for stone
-                elseif EditorUI.editor.currentCellType == "WATER" then
-                    love.graphics.setColor(0.2, 0.4, 0.8, 0.5) -- Blue for water
-                elseif EditorUI.editor.currentCellType == "FIRE" then
-                    love.graphics.setColor(0.9, 0.3, 0.1, 0.5) -- Red for fire
-                else
-                    love.graphics.setColor(1, 1, 1, 0.5) -- White for empty
-                end
-                
-                -- Fill the brush area with a semi-transparent color
-                love.graphics.rectangle("fill", brushX, brushY, brushWidth, brushHeight)
+            if EditorUI.editor.currentCellType == "DIRT" then
+                love.graphics.setColor(0.5, 0.3, 0.1, 0.5) -- Brown for dirt
+            elseif EditorUI.editor.currentCellType == "SAND" then
+                love.graphics.setColor(0.9, 0.8, 0.2, 0.5) -- Yellow for sand
+            elseif EditorUI.editor.currentCellType == "STONE" then
+                love.graphics.setColor(0.5, 0.5, 0.5, 0.5) -- Gray for stone
+            elseif EditorUI.editor.currentCellType == "WATER" then
+                love.graphics.setColor(0.2, 0.4, 0.8, 0.5) -- Blue for water
+            elseif EditorUI.editor.currentCellType == "FIRE" then
+                love.graphics.setColor(0.9, 0.3, 0.1, 0.5) -- Red for fire
             else
-                -- For erase tool, use white outline
-                love.graphics.setColor(1, 1, 1, 0.5)
+                love.graphics.setColor(1, 1, 1, 0.5) -- White for empty
             end
             
-            -- Draw brush outline
-            love.graphics.rectangle("line", brushX, brushY, brushWidth, brushHeight)
+            -- Draw brush with proper size
+            for by = 0, brushSize - 1 do
+                for bx = 0, brushSize - 1 do
+                    local cellX = startGridX + bx
+                    local cellY = startGridY + by
+                    if cellX >= 0 and cellX < EditorUI.editor.level.width and cellY >= 0 and cellY < EditorUI.editor.level.height then
+                        -- Fill the cell with a semi-transparent color
+                        love.graphics.rectangle("fill", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
+                        -- Draw cell outline
+                        love.graphics.rectangle("line", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
+                    end
+                end
+            end
             
             -- Display material type text above the brush
-            if EditorUI.editor.currentTool == "draw" or EditorUI.editor.currentTool == "fill" then
-                love.graphics.setColor(1, 1, 1, 1)
-                local text = EditorUI.editor.currentCellType
-                local textWidth = EditorUI.editor.buttonFont:getWidth(text)
-                love.graphics.print(text, brushX + (brushWidth - textWidth) / 2, brushY - 25)
+            love.graphics.setColor(1, 1, 1, 1)
+            local text = EditorUI.editor.currentCellType
+            local textWidth = EditorUI.editor.buttonFont:getWidth(text)
+            love.graphics.print(text, brushX + (brushWidth - textWidth) / 2, brushY - 25)
+        elseif EditorUI.editor.currentTool == "erase" then
+            -- For erase tool, use white outline
+            love.graphics.setColor(1, 1, 1, 0.5)
+            
+            -- Draw brush with proper size
+            for by = 0, brushSize - 1 do
+                for bx = 0, brushSize - 1 do
+                    local cellX = startGridX + bx
+                    local cellY = startGridY + by
+                    if cellX >= 0 and cellX < EditorUI.editor.level.width and cellY >= 0 and cellY < EditorUI.editor.level.height then
+                        -- Draw cell outline
+                        love.graphics.rectangle("line", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
+                    end
+                end
             end
         end
     end
     
     -- Restore previous transformation
     love.graphics.pop()
+    
+    -- End of cursor preview drawing
 end
 
 -- Handle mouse press in UI
 function EditorUI.handleMousePressed(x, y, button)
     -- Convert screen coordinates to game coordinates
-    local gameX, gameY = EditorUI.editor.screenToGameCoords(x, y)
+    local gameX, gameY
+    
+    -- Always use MobileInput for coordinate conversion
+    local MobileInput = require("src.mobile_input")
+    gameX, gameY = MobileInput.screenToGameCoords(x, y)
     
     -- Check if clicking on a button
     for _, buttonGroup in ipairs({EditorUI.editor.toolButtons, EditorUI.editor.brushButtons, EditorUI.editor.ballButtons, EditorUI.editor.buttons}) do
@@ -577,8 +610,8 @@ function EditorUI.handleMousePressed(x, y, button)
     end
     
     -- If text input is active, clicking outside closes it
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local gameWidth = 1600  -- Original design width
+    local gameHeight = 1000  -- Original design height
     if EditorUI.editor.textInput.active and 
        (gameX < gameWidth/2 - 200 or gameX > gameWidth/2 + 200 or
         gameY < gameHeight/2 - 50 or gameY > gameHeight/2 + 50) then

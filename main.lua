@@ -11,11 +11,11 @@ local MobileUI = require("src.mobile_ui")
 local MobileOptimizations = require("src.mobile_optimizations")
 
 -- Enable mobile features by default on all platforms
-local isMobile = true
+_G.isMobile = true
 
 -- Option to disable mobile features with 'D' key
 if love.keyboard.isDown("d") then
-    isMobile = false
+    _G.isMobile = false
     print("Desktop mode forced (mobile features disabled)")
 else
     print("Mobile features enabled by default")
@@ -38,7 +38,7 @@ function love.load()
     Game.init(Game.MODES.SANDBOX)
     
     -- Initialize mobile features if on mobile
-    if isMobile then
+    if _G.isMobile then
         Game.touchInput = TouchInput.new()
         print("Mobile device detected, touch input enabled")
         
@@ -72,7 +72,7 @@ function love.update(dt)
     Game.update(dt)
     
     -- Update mobile features if on mobile
-    if isMobile then
+    if _G.isMobile then
         -- Update touch input
         if Game.touchInput then
             Game.touchInput:update(Game.ball, Game.level, dt)
@@ -108,7 +108,7 @@ end
 
 function love.draw()
     -- Apply mobile rendering optimizations
-    if isMobile and Game.mobileOptimizations then
+    if _G.isMobile and Game.mobileOptimizations then
         Game.mobileOptimizations.optimizeRendering()
     end
     
@@ -116,7 +116,7 @@ function love.draw()
     Draw.draw(Game)
     
     -- Draw mobile features if on mobile
-    if isMobile and not Menu.active and not Editor.active then
+    if _G.isMobile and not Menu.active and not Editor.active then
         -- Draw touch input overlay
         if Game.touchInput then
             Game.touchInput:draw(Game.ball, Game.attempts)
@@ -160,7 +160,7 @@ function love.resize(width, height)
     end
     
     -- Update UI scaling for mobile
-    if isMobile then
+    if _G.isMobile then
         -- Recalculate UI scaling factors
         GAME_SCALE = math.min(width / Game.ORIGINAL_WIDTH, height / Game.ORIGINAL_HEIGHT)
         GAME_OFFSET_X = (width / GAME_SCALE - Game.ORIGINAL_WIDTH) / 2
@@ -170,7 +170,7 @@ end
 
 -- Touch event callbacks for mobile devices
 function love.touchpressed(id, x, y, dx, dy, pressure)
-    if isMobile then
+    if _G.isMobile then
         -- If menu is active, handle menu touch presses
         if Game.currentMode == Game.MODES.MENU then
             local result = Menu.handleMousePressed(x, y, 1) -- Treat as left mouse button
@@ -261,13 +261,13 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
 end
 
 function love.touchmoved(id, x, y, dx, dy, pressure)
-    if isMobile and Game.touchInput then
+    if _G.isMobile and Game.touchInput then
         Game.touchInput:handleTouchMoved(id, x, y)
     end
 end
 
 function love.touchreleased(id, x, y, dx, dy, pressure)
-    if isMobile then
+    if _G.isMobile then
         -- Check if mobile UI handled the touch release
         if Game.mobileUI and Game.mobileUI.handleTouchReleased(id, x, y, Game) then
             return -- Mobile UI handled the release
@@ -306,8 +306,8 @@ function screenToGameCoords(screenX, screenY)
     local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
     
     -- Convert screen coordinates to game coordinates
-    local gameX = (screenX / scale) - offsetX
-    local gameY = (screenY / scale) - offsetY
+    local gameX = (screenX - offsetX) / scale
+    local gameY = (screenY - offsetY) / scale
     
     return gameX, gameY
 end

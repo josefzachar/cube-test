@@ -21,8 +21,8 @@ function EditorFile.drawFileSelector()
     end
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local gameWidth = 1280  -- Updated to match conf.lua
+    local gameHeight = 720  -- Updated to match conf.lua
     
     -- Dialog dimensions
     local dialogWidth = 600
@@ -663,8 +663,8 @@ function EditorFile.handleMousePressed(x, y, button)
     local gameX, gameY = EditorFile.editor.screenToGameCoords(x, y)
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local gameWidth = 1280  -- Updated to match conf.lua
+    local gameHeight = 720  -- Updated to match conf.lua
     
     -- Dialog dimensions
     local dialogWidth = 600
@@ -801,7 +801,7 @@ function EditorFile.handleMousePressed(x, y, button)
         return true
     end
     
-    return false
+    return true
 end
 
 return EditorFile

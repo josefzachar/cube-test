@@ -64,6 +64,7 @@ The file manager displays different icons for different file types:
    - Place dirt, sand, water, and other cell types
    - Set the ball starting position with **B**
    - Place a win hole with **H**
+   - Click the **BOUNDARIES** button to automatically add stone walls around the level
 3. Press **Ctrl+S** to save your level
 4. Enter a name for your level and click **OK**
 
@@ -79,4 +80,5 @@ The file manager displays different icons for different file types:
 - Place the win hole in a location that requires skill to reach
 - Test your level frequently to ensure it's playable
 - Consider which ball types should be available for your level
+- Use the **BOUNDARIES** button to quickly add stone walls around your level
 - Save your work often!

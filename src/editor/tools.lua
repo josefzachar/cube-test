@@ -3,6 +3,8 @@
 local CellTypes = require("src.cell_types")
 local Cell = require("cell")
 local WinHole = require("src.win_hole")
+-- Use a constant for the original width to avoid circular dependency
+local ORIGINAL_WIDTH = 1600
 
 local EditorTools = {
     editor = nil,
@@ -70,11 +72,21 @@ function EditorTools.handleMouseDrag(gridX, gridY)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    -- Get game coordinates and check if mouse is in UI area
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+        
+        -- Process drag event
+    else
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    end
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    local gameWidth = ORIGINAL_WIDTH
     
     -- Check if mouse is in UI area (left or right panel)
     if gameX < 140 or gameX > gameWidth - 140 then
@@ -96,29 +108,145 @@ end
 -- Draw the tools
 function EditorTools.draw()
     -- Draw the current tool cursor
-    if EditorTools.editor.currentTool == "draw" or EditorTools.editor.currentTool == "erase" then
+    if EditorTools.editor.currentTool == "start" then
         -- Get mouse position
         local mouseX, mouseY = love.mouse.getPosition()
         
-        -- Convert screen coordinates to game coordinates
-        local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        -- Get grid coordinates
+        local gridX, gridY
+        local gameX, gameY
+        
+        -- For mobile devices, use the MobileInput module for direct conversion
+        if _G.isMobile then
+            local MobileInput = require("src.mobile_input")
+            local Cell = require("cell")
+            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        else
+            -- Desktop approach
+            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
+        end
+        
+        -- Calculate position
+        local cellSize = Cell.SIZE
+        local cursorX = gridX * cellSize
+        local cursorY = gridY * cellSize
+        
+        -- Display position text next to cursor
+        love.graphics.setColor(1, 1, 1, 1)
+        local posText = "Start: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
+        love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
+        
+        -- Display start position
+    elseif EditorTools.editor.currentTool == "winhole" then
+        -- Get mouse position
+        local mouseX, mouseY = love.mouse.getPosition()
         
         -- Get grid coordinates
-        local gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
+        local gridX, gridY
+        local gameX, gameY
         
-        -- Draw brush outline
-        love.graphics.setColor(1, 1, 1, 0.5)
+        -- For mobile devices, use the MobileInput module for direct conversion
+        if _G.isMobile then
+            local MobileInput = require("src.mobile_input")
+            local Cell = require("cell")
+            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        else
+            -- Desktop approach
+            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
+        end
+        
+        -- Calculate position
+        local cellSize = Cell.SIZE
+        local cursorX = gridX * cellSize
+        local cursorY = gridY * cellSize
+        
+        -- Display position text next to cursor
+        love.graphics.setColor(1, 1, 1, 1)
+        local posText = "Hole: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
+        love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
+        
+        -- Display hole position
+    elseif EditorTools.editor.currentTool == "fill" then
+        -- Get mouse position
+        local mouseX, mouseY = love.mouse.getPosition()
+        
+        -- Get grid coordinates
+        local gridX, gridY
+        local gameX, gameY
+        
+        -- For mobile devices, use the MobileInput module for direct conversion
+        if _G.isMobile then
+            local MobileInput = require("src.mobile_input")
+            local Cell = require("cell")
+            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        else
+            -- Desktop approach
+            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
+        end
+        
+        -- Calculate position
+        local cellSize = Cell.SIZE
+        local cursorX = gridX * cellSize
+        local cursorY = gridY * cellSize
+        
+        -- Display position text next to cursor
+        love.graphics.setColor(1, 1, 1, 1)
+        local posText = "Fill: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
+        love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
+        
+        -- Display fill position
+    elseif EditorTools.editor.currentTool == "draw" or EditorTools.editor.currentTool == "erase" then
+        -- Get mouse position
+        local mouseX, mouseY = love.mouse.getPosition()
+        
+        -- Get grid coordinates
+        local gridX, gridY
+        local gameX, gameY
+        
+        -- For mobile devices, use the MobileInput module for direct conversion
+        if _G.isMobile then
+            local MobileInput = require("src.mobile_input")
+            local Cell = require("cell")
+            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+            
+            -- Process mobile input
+        else
+            -- Desktop approach
+            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
+        end
+        
+        -- Get brush size and cell size
         local brushSize = EditorTools.editor.brushSize
         local cellSize = Cell.SIZE
         
-        -- Calculate brush rectangle
-        local brushX = gridX * cellSize - (brushSize - 1) * cellSize / 2
-        local brushY = gridY * cellSize - (brushSize - 1) * cellSize / 2
-        local brushWidth = brushSize * cellSize
-        local brushHeight = brushSize * cellSize
+        -- Calculate cursor position
+        local cursorX = gridX * cellSize
+        local cursorY = gridY * cellSize
         
-        -- Draw brush outline
-        love.graphics.rectangle("line", brushX, brushY, brushWidth, brushHeight)
+        -- Draw cursor indicator (green square)
+        love.graphics.setColor(0, 1, 0, 0.7)
+        love.graphics.rectangle("fill", cursorX, cursorY, cellSize, cellSize)
+        love.graphics.setColor(0, 1, 0, 1)
+        love.graphics.rectangle("line", cursorX, cursorY, cellSize, cellSize)
+        
+        -- No need to display debug information
+        
+        -- Display position text next to cursor
+        love.graphics.setColor(1, 1, 1, 1)
+        local posText = "Cursor: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
+        love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
+        
+        -- We don't need to draw a direct mouse position indicator anymore
+        
+        -- Draw cursor and position information
     end
 end
 
@@ -273,11 +401,21 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    -- Get game coordinates and check if mouse is in UI area
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+        
+        -- Process mobile input for mouse press
+    else
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    end
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    local gameWidth = ORIGINAL_WIDTH
     
     -- Check if mouse is in UI area (left or right panel)
     if gameX < 140 or gameX > gameWidth - 140 then
@@ -337,24 +475,50 @@ function EditorTools.drawTool(gridX, gridY)
         return
     end
     
-    -- Get brush size
+    -- Get mouse position
+    local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Get game coordinates
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+    else
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    end
+    
+    -- Get cell type
+    local cellType = EditorTools.editor.CELL_TYPE_TO_TYPE[EditorTools.editor.currentCellType]
+    
+    -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
+    local cellSize = Cell.SIZE
     
-    -- Calculate brush bounds
-    local startX = gridX - math.floor((brushSize - 1) / 2)
-    local startY = gridY - math.floor((brushSize - 1) / 2)
-    local endX = startX + brushSize - 1
-    local endY = startY + brushSize - 1
+    -- Calculate brush position (using direct game coordinates)
+    local brushX = gameX - (brushSize * cellSize) / 2
+    local brushY = gameY - (brushSize * cellSize) / 2
     
-    -- Draw cells within brush
-    for y = startY, endY do
-        for x = startX, endX do
+    -- Convert brush position to grid coordinates
+    local startGridX = math.floor(brushX / cellSize)
+    local startGridY = math.floor(brushY / cellSize)
+    
+    print("EditorTools.drawTool - Drawing at game: " .. math.floor(gameX) .. "," .. math.floor(gameY) .. " with brush size: " .. brushSize)
+    print("EditorTools.drawTool - Brush at: " .. math.floor(brushX) .. "," .. math.floor(brushY))
+    print("EditorTools.drawTool - Grid start: " .. startGridX .. "," .. startGridY)
+    
+    -- Draw with brush size
+    for y = 0, brushSize - 1 do
+        for x = 0, brushSize - 1 do
+            local cellX = startGridX + x
+            local cellY = startGridY + y
+            
             -- Check if cell coordinates are valid
-            if x >= 0 and x < EditorTools.editor.level.width and
-               y >= 0 and y < EditorTools.editor.level.height then
+            if cellX >= 0 and cellX < EditorTools.editor.level.width and
+               cellY >= 0 and cellY < EditorTools.editor.level.height then
                 -- Set cell type
-                local cellType = EditorTools.editor.CELL_TYPE_TO_TYPE[EditorTools.editor.currentCellType]
-                EditorTools.editor.level:setCellType(x, y, cellType)
+                EditorTools.editor.level:setCellType(cellX, cellY, cellType)
             end
         end
     end
@@ -368,23 +532,47 @@ function EditorTools.eraseTool(gridX, gridY)
         return
     end
     
-    -- Get brush size
+    -- Get mouse position
+    local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Get game coordinates
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+    else
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+    end
+    
+    -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
+    local cellSize = Cell.SIZE
     
-    -- Calculate brush bounds
-    local startX = gridX - math.floor((brushSize - 1) / 2)
-    local startY = gridY - math.floor((brushSize - 1) / 2)
-    local endX = startX + brushSize - 1
-    local endY = startY + brushSize - 1
+    -- Calculate brush position (using direct game coordinates)
+    local brushX = gameX - (brushSize * cellSize) / 2
+    local brushY = gameY - (brushSize * cellSize) / 2
     
-    -- Erase cells within brush
-    for y = startY, endY do
-        for x = startX, endX do
+    -- Convert brush position to grid coordinates
+    local startGridX = math.floor(brushX / cellSize)
+    local startGridY = math.floor(brushY / cellSize)
+    
+    print("EditorTools.eraseTool - Erasing at game: " .. math.floor(gameX) .. "," .. math.floor(gameY) .. " with brush size: " .. brushSize)
+    print("EditorTools.eraseTool - Brush at: " .. math.floor(brushX) .. "," .. math.floor(brushY))
+    print("EditorTools.eraseTool - Grid start: " .. startGridX .. "," .. startGridY)
+    
+    -- Erase with brush size
+    for y = 0, brushSize - 1 do
+        for x = 0, brushSize - 1 do
+            local cellX = startGridX + x
+            local cellY = startGridY + y
+            
             -- Check if cell coordinates are valid
-            if x >= 0 and x < EditorTools.editor.level.width and
-               y >= 0 and y < EditorTools.editor.level.height then
+            if cellX >= 0 and cellX < EditorTools.editor.level.width and
+               cellY >= 0 and cellY < EditorTools.editor.level.height then
                 -- Set cell type to empty
-                EditorTools.editor.level:setCellType(x, y, CellTypes.TYPES.EMPTY)
+                EditorTools.editor.level:setCellType(cellX, cellY, CellTypes.TYPES.EMPTY)
             end
         end
     end

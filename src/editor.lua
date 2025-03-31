@@ -101,11 +101,23 @@ function Editor.update(dt)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
-    
     -- Get grid coordinates
-    local gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    local gridX, gridY
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        local Cell = require("cell")
+        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+        gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        
+        -- Process mobile input
+    else
+        -- Desktop approach
+        gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
+        gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    end
     
     -- Update editor tools
     if EditorTools.update then
@@ -174,11 +186,19 @@ function Editor.draw()
         -- Get mouse position
         local mouseX, mouseY = love.mouse.getPosition()
         
-        -- Convert screen coordinates to game coordinates
-        local gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
+        -- Get game coordinates
+        local gameX, gameY
+        
+        -- For mobile devices, use the MobileInput module for direct conversion
+        if _G.isMobile then
+            local MobileInput = require("src.mobile_input")
+            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
+        else
+            gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
+        end
         
         -- Get screen dimensions
-        local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+        local gameWidth = 1600  -- Original design width
         
         -- Check if mouse is in UI area (left or right panel)
         if not (gameX < 140 or gameX > gameWidth - 140) then
@@ -266,11 +286,21 @@ function Editor.handleMousePressed(x, y, button)
         return true
     end
     
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = Editor.screenToGameCoords(x, y)
-    
     -- Get grid coordinates
-    local gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    local gridX, gridY
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        local Cell = require("cell")
+        gameX, gameY = MobileInput.screenToGameCoords(x, y)
+        gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+    else
+        -- Desktop approach
+        gameX, gameY = Editor.screenToGameCoords(x, y)
+        gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    end
     
     -- Check if UI handled the mouse press
     if Editor.showUI and EditorUI.handleMousePressed(x, y, button) then
@@ -292,11 +322,23 @@ function Editor.handleMouseReleased(x, y, button)
         return false
     end
     
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = Editor.screenToGameCoords(x, y)
-    
     -- Get grid coordinates
-    local gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    local gridX, gridY
+    local gameX, gameY
+    
+    -- For mobile devices, use the MobileInput module for direct conversion
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        local Cell = require("cell")
+        gameX, gameY = MobileInput.screenToGameCoords(x, y)
+        gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        
+        -- Process mobile input for mouse release
+    else
+        -- Desktop approach
+        gameX, gameY = Editor.screenToGameCoords(x, y)
+        gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
+    end
     
     -- Handle tools
     if EditorTools.handleMouseReleased(gridX, gridY, button) then
@@ -314,28 +356,35 @@ end
 
 -- Function to convert screen coordinates to game coordinates
 function Editor.screenToGameCoords(screenX, screenY)
-    -- Get screen dimensions
-    local width, height = love.graphics.getDimensions()
-    
-    -- Calculate scale factors
-    local scaleX = width / 1600
-    local scaleY = height / 1000
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - 1600) / 2
-    local offsetY = (scaledHeight - 1000) / 2
-    
-    -- Convert screen coordinates to game coordinates
-    local gameX = (screenX / scale) - offsetX
-    local gameY = (screenY / scale) - offsetY
-    
-    return gameX, gameY
+    -- For mobile devices, use the MobileInput module
+    if _G.isMobile then
+        local MobileInput = require("src.mobile_input")
+        return MobileInput.screenToGameCoords(screenX, screenY)
+    else
+        -- Desktop approach (unchanged)
+        -- Get screen dimensions
+        local width, height = love.graphics.getDimensions()
+        
+        -- Calculate scale factors
+        local scaleX = width / 1600  -- Original design width
+        local scaleY = height / 1000  -- Original design height
+        local scale = math.min(scaleX, scaleY)
+        
+        -- Ensure minimum scale to prevent rendering issues
+        scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+        
+        -- Calculate offsets for centering
+        local scaledWidth = width / scale
+        local scaledHeight = height / scale
+        local offsetX = (scaledWidth - 1600) / 2  -- Original design width
+        local offsetY = (scaledHeight - 1000) / 2  -- Original design height
+        
+        -- Convert screen coordinates to game coordinates
+        local gameX = (screenX - offsetX) / scale
+        local gameY = (screenY - offsetY) / scale
+        
+        return gameX, gameY
+    end
 end
 
 -- Save the current level
@@ -455,6 +504,28 @@ function Editor.clearLevel()
     
     -- Initialize grass on top of dirt cells
     Editor.level:initializeGrass()
+end
+
+-- Create stone boundaries around the level
+function Editor.createBoundaries()
+    -- Add stone cells around the perimeter of the level
+    for x = 0, Editor.level.width - 1 do
+        -- Top boundary
+        Editor.level:setCellType(x, 0, CellTypes.TYPES.STONE)
+        
+        -- Bottom boundary
+        Editor.level:setCellType(x, Editor.level.height - 1, CellTypes.TYPES.STONE)
+    end
+    
+    for y = 0, Editor.level.height - 1 do
+        -- Left boundary
+        Editor.level:setCellType(0, y, CellTypes.TYPES.STONE)
+        
+        -- Right boundary
+        Editor.level:setCellType(Editor.level.width - 1, y, CellTypes.TYPES.STONE)
+    end
+    
+    print("Stone boundaries created around the level")
 end
 
 -- Test play the level
