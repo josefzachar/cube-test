@@ -1,17 +1,24 @@
 function love.conf(t)
     t.title = "Square Golf"        -- The title of the window
     t.version = "11.3"             -- The LÖVE version this game was made for
-    t.window.width = 1600          -- The window width
-    t.window.height = 1000         -- The window height
+    
+    -- Mobile-friendly configuration
+    t.window.width = 1280          -- 16:9 aspect ratio, common for mobile
+    t.window.height = 720          -- HD resolution, good balance for mobile
     t.window.resizable = true      -- Allow the window to be resized
-    t.window.minwidth = 1200       -- Minimum window width
-    t.window.minheight = 800       -- Minimum window height
+    t.window.minwidth = 320        -- Lower minimum window width for mobile
+    t.window.minheight = 180       -- Lower minimum window height for mobile
     
-    -- Disable VSync to allow unlimited FPS
-    t.window.vsync = 0             -- 0 = No VSync, 1 = VSync, 2 = Adaptive VSync
+    -- Enable VSync for mobile to save battery
+    t.window.vsync = 1             -- 0 = No VSync, 1 = VSync, 2 = Adaptive VSync
     
-    -- For simplicity, we'll disable unused modules
+    -- Enable touch for all devices
     t.modules.joystick = false
-    t.modules.touch = false
+    t.modules.touch = true         -- Always enable touch module
     t.modules.video = false
+    
+    -- Mobile-specific settings
+    t.window.highdpi = true        -- Enable high-DPI mode for crisp rendering on mobile
+    t.window.fullscreen = false    -- Start windowed, can be toggled to fullscreen
+    t.window.fullscreentype = "desktop" -- "desktop" fullscreen uses the desktop resolution
 end

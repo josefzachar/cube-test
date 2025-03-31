@@ -2,6 +2,7 @@
 
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
+local MobileOptimizations = require("src.mobile_optimizations")
 
 local Effects = {}
 
@@ -11,8 +12,42 @@ function Effects.processSandConversion(sandToConvert, level)
         -- Initialize the visual particles table once
         level.visualSandCells = level.visualSandCells or {}
         
-        -- Process all cells in the sandToConvert array
-        for i, cell in ipairs(sandToConvert) do
+        -- Apply mobile optimizations if enabled
+        local particlesToProcess = sandToConvert
+        if MobileOptimizations.enabled then
+            -- Limit the number of particles to process on mobile
+            local maxParticles = MobileOptimizations.reduceParticles(#sandToConvert, #sandToConvert)
+            
+            -- If we have more particles than the limit, randomly select some to process
+            if #sandToConvert > maxParticles then
+                particlesToProcess = {}
+                
+                -- Create a copy of the array to avoid modifying the original
+                local tempArray = {}
+                for i, cell in ipairs(sandToConvert) do
+                    table.insert(tempArray, cell)
+                end
+                
+                -- Randomly select particles to process
+                for i = 1, maxParticles do
+                    if #tempArray == 0 then
+                        break
+                    end
+                    
+                    -- Select a random index
+                    local randomIndex = math.random(1, #tempArray)
+                    
+                    -- Add the particle to the process list
+                    table.insert(particlesToProcess, tempArray[randomIndex])
+                    
+                    -- Remove the selected particle from the temp array
+                    table.remove(tempArray, randomIndex)
+                end
+            end
+        end
+        
+        -- Process the selected cells
+        for i, cell in ipairs(particlesToProcess) do
             -- Skip cells that shouldn't be converted
             -- Only process cells that have shouldConvert set to true
             if not cell.shouldConvert then
@@ -56,24 +91,34 @@ function Effects.processSandConversion(sandToConvert, level)
                 -- Only create visual particles if the speed is above the threshold
                 -- AND the cell has a non-zero velocity
                 if cell.shouldConvert and (cell.vx ~= 0 or cell.vy ~= 0) then
-                    -- Create a visual effect of flying particle
-                    -- We'll just create a new cell at the same position with the appropriate visual type
-                    local visualParticle = Cell.new(level.world, cell.x, cell.y, visualType)
-                    
-                    -- Adjust velocity based on material properties
-                    if CellTypes.PROPERTIES[cellType] then
-                        -- Use the velocity multiplier from material properties
-                        local multiplier = CellTypes.PROPERTIES[cellType].velocityMultiplier
-                        visualParticle.velocityX = cell.vx * multiplier
-                        visualParticle.velocityY = cell.vy * multiplier
-                    else
-                        -- Default behavior if no properties are defined
-                        visualParticle.velocityX = cell.vx
-                        visualParticle.velocityY = cell.vy
+                    -- Check if we're under the particle limit for mobile
+                    if not MobileOptimizations.enabled or 
+                       #level.visualSandCells < MobileOptimizations.maxParticles then
+                        
+                        -- Create a visual effect of flying particle
+                        -- We'll just create a new cell at the same position with the appropriate visual type
+                        local visualParticle = Cell.new(level.world, cell.x, cell.y, visualType)
+                        
+                        -- Adjust velocity based on material properties
+                        if CellTypes.PROPERTIES[cellType] then
+                            -- Use the velocity multiplier from material properties
+                            local multiplier = CellTypes.PROPERTIES[cellType].velocityMultiplier
+                            visualParticle.velocityX = cell.vx * multiplier
+                            visualParticle.velocityY = cell.vy * multiplier
+                        else
+                            -- Default behavior if no properties are defined
+                            visualParticle.velocityX = cell.vx
+                            visualParticle.velocityY = cell.vy
+                        end
+                        
+                        -- On mobile, reduce particle lifetime for better performance
+                        if MobileOptimizations.enabled then
+                            visualParticle.maxLifetime = (visualParticle.maxLifetime or 2.0) * 0.7
+                        end
+                        
+                        -- Add the visual particle to the level's cells array
+                        table.insert(level.visualSandCells, visualParticle)
                     end
-                    
-                    -- Add the visual particle to the level's cells array
-                    table.insert(level.visualSandCells, visualParticle)
                 end
             end
             

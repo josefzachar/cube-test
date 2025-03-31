@@ -1,4 +1,5 @@
 -- input.lua - Input handling (mouse, keyboard)
+-- Note: This module now works alongside touch_input.lua for a unified input experience
 
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
@@ -13,29 +14,8 @@ local BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0} -- Dark blue (base color)
 local Input = {}
 Input.__index = Input
 
--- Game modes
-local MODES = {
-    SHOOT = 1,
-    SPRAY = 2
-}
-
--- Available material types for spraying (excluding visual effects)
-local MATERIALS = {
-    CellTypes.TYPES.SAND,
-    CellTypes.TYPES.STONE,
-    CellTypes.TYPES.WATER,
-    CellTypes.TYPES.DIRT,
-    CellTypes.TYPES.FIRE
-}
-
--- Material names for display
-local MATERIAL_NAMES = {
-    [CellTypes.TYPES.SAND] = "SAND",
-    [CellTypes.TYPES.STONE] = "STONE",
-    [CellTypes.TYPES.WATER] = "WATER",
-    [CellTypes.TYPES.DIRT] = "DIRT",
-    [CellTypes.TYPES.FIRE] = "FIRE"
-}
+-- Shooting mode only
+local SHOOT_MODE = 1
 
 function Input.new()
     local self = setmetatable({}, Input)
@@ -49,11 +29,8 @@ function Input.new()
     self.clickPosition = {x = nil, y = nil}  -- Store the position where the user clicked
     self.isAiming = false  -- Flag to track if the user is currently aiming
     
-    -- Material spraying properties
-    self.mode = MODES.SHOOT -- Start in shooting mode
-    self.sprayRadius = 2 -- Radius of spray
-    self.sprayRate = 5 -- Number of particles per update
-    self.currentMaterialIndex = 1 -- Start with first material (SAND)
+    -- Shooting mode only
+    self.mode = SHOOT_MODE -- Always in shooting mode
     
     return self
 end
@@ -91,17 +68,9 @@ function Input:update(ball, level)
         self.mouseX, self.mouseY = screenX, screenY
     end
     
-    -- Handle mode switching
-    if self.mode == MODES.SHOOT then
-        -- Only calculate aim if ball is not moving and user is aiming
-        if not ball:isMoving() and self.isAiming then
-            self:calculateAim(ball)
-        end
-    elseif self.mode == MODES.SPRAY then
-        -- Handle material spraying
-        if love.mouse.isDown(1) then -- Left mouse button
-            self:sprayMaterial(level)
-        end
+    -- Only calculate aim if ball is not moving and user is aiming
+    if not ball:isMoving() and self.isAiming then
+        self:calculateAim(ball)
     end
 end
 
@@ -122,39 +91,6 @@ function Input:calculateAim(ball)
     
     -- Note: We no longer update the click position here
     -- The click position stays at the original click location
-end
-
-function Input:sprayMaterial(level)
-    -- Convert mouse position to grid coordinates
-    local gridX, gridY = level:getGridCoordinates(self.mouseX, self.mouseY)
-    
-    -- Get current material type
-    local materialType = MATERIALS[self.currentMaterialIndex]
-    
-    -- Spray material in a radius around the mouse position
-    for i = 1, self.sprayRate do
-        -- Random position within spray radius
-        local offsetX = math.random(-self.sprayRadius, self.sprayRadius)
-        local offsetY = math.random(-self.sprayRadius, self.sprayRadius)
-        
-        local cellX = gridX + offsetX
-        local cellY = gridY + offsetY
-        
-        -- Check if the position is valid and empty
-        if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
-            if level:getCellType(cellX, cellY) == CellTypes.TYPES.EMPTY then
-                -- Special handling for fire
-                if materialType == CellTypes.TYPES.FIRE then
-                    -- Use the Fire module to create fire properly
-                    local Fire = require("src.fire")
-                    Fire.createFire(level, cellX, cellY)
-                else
-                    -- Create a new cell of the current material type
-                    level:setCellType(cellX, cellY, materialType)
-                end
-            end
-        end
-    end
 end
 
 -- Function to draw a dashed line made of cells
@@ -253,89 +189,61 @@ end
 function Input:draw(ball, attempts)
     -- Draw mode indicator
     love.graphics.setColor(1, 1, 1, 1) -- White
-    if self.mode == MODES.SHOOT then
-        love.graphics.print("Mode: SHOOT (press SPACE to switch)", 10, 30)
-        love.graphics.print("Shots: " .. attempts, 10, 50)
+    love.graphics.print("Shots: " .. attempts, 10, 30)
+    
+    -- Draw aim line if ball is not moving and user is aiming
+    if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
+        local lineLength = self.aimPower / 5 -- Scale down for visual purposes
+        local cellSize = 8  -- Size of each cell in pixels
+        local cellSpacing = 6  -- Space between cells
         
-        -- Draw aim line if ball is not moving and user is aiming
-        if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
-            local lineLength = self.aimPower / 5 -- Scale down for visual purposes
-            local cellSize = 8  -- Size of each cell in pixels
-            local cellSpacing = 6  -- Space between cells
-            
-            -- Draw original aim line (dashed cells)
-            love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
-            local endX = self.clickPosition.x + self.aimDirection.x * lineLength
-            local endY = self.clickPosition.y + self.aimDirection.y * lineLength
-            self:drawDashedCellLine(
-                self.clickPosition.x, 
-                self.clickPosition.y, 
-                endX, 
-                endY,
-                cellSize,
-                cellSpacing
-            )
-            
-            -- Draw opposite aim line (actual shot direction)
-            love.graphics.setColor(1, 1, 1, 1) -- Red for shot direction
-            local shotEndX = self.clickPosition.x - self.aimDirection.x * lineLength
-            local shotEndY = self.clickPosition.y - self.aimDirection.y * lineLength
-            self:drawDashedCellLine(
-                self.clickPosition.x, 
-                self.clickPosition.y, 
-                shotEndX, 
-                shotEndY,
-                8,
-                0
-            )
-            
-            -- Draw pixelated arrow at the end of the red line
-            self:drawPixelatedArrow(
-                shotEndX, 
-                shotEndY, 
-                -self.aimDirection.x, 
-                -self.aimDirection.y, 
-                24 -- Arrow size
-            )
-            
-            -- Draw a small indicator at the clicked position
-            -- First draw the filled circle with background color
-            love.graphics.setColor(BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3], BACKGROUND_COLOR[4])
-            self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "fill")
-            -- Then draw the white border over it
-            love.graphics.setColor(1, 1, 1, 1) -- White
-            self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "line")
-            love.graphics.setColor(1, 1, 1, 1) -- Reset to white
-            
-            -- Draw power indicator
-            local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
-            love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
-        end
-    else
-        -- Get the current material type and name
-        local materialType = MATERIALS[self.currentMaterialIndex]
-        local materialName = MATERIAL_NAMES[materialType]
+        -- Draw original aim line (dashed cells)
+        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
+        local endX = self.clickPosition.x + self.aimDirection.x * lineLength
+        local endY = self.clickPosition.y + self.aimDirection.y * lineLength
+        self:drawDashedCellLine(
+            self.clickPosition.x, 
+            self.clickPosition.y, 
+            endX, 
+            endY,
+            cellSize,
+            cellSpacing
+        )
         
-        -- Get the color for the current material
-        local materialColor = CellTypes.COLORS[materialType]
+        -- Draw opposite aim line (actual shot direction)
+        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction
+        local shotEndX = self.clickPosition.x - self.aimDirection.x * lineLength
+        local shotEndY = self.clickPosition.y - self.aimDirection.y * lineLength
+        self:drawDashedCellLine(
+            self.clickPosition.x, 
+            self.clickPosition.y, 
+            shotEndX, 
+            shotEndY,
+            8,
+            0
+        )
         
-        -- Display mode and shots
-        love.graphics.print("Mode: SPRAY - Material: " .. materialName .. " (press SPACE to switch, RIGHT-CLICK to change material)", 10, 30)
-        love.graphics.print("Shots: " .. attempts, 10, 50)
+        -- Draw pixelated arrow at the end of the white line
+        self:drawPixelatedArrow(
+            shotEndX, 
+            shotEndY, 
+            -self.aimDirection.x, 
+            -self.aimDirection.y, 
+            24 -- Arrow size
+        )
         
-        -- Draw spray indicator with current material color
-        local gridX, gridY = math.floor(self.mouseX / CellTypes.SIZE), math.floor(self.mouseY / CellTypes.SIZE)
+        -- Draw a small indicator at the clicked position
+        -- First draw the filled circle with background color
+        love.graphics.setColor(BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3], BACKGROUND_COLOR[4])
+        self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "fill")
+        -- Then draw the white border over it
+        love.graphics.setColor(1, 1, 1, 1) -- White
+        self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "line")
+        love.graphics.setColor(1, 1, 1, 1) -- Reset to white
         
-        -- Draw filled circle with semi-transparency
-        love.graphics.setColor(materialColor[1], materialColor[2], materialColor[3], 0.5)
-        love.graphics.circle("fill", gridX * CellTypes.SIZE + CellTypes.SIZE/2, gridY * CellTypes.SIZE + CellTypes.SIZE/2, self.sprayRadius * CellTypes.SIZE)
-        
-        -- Draw outline with full opacity
-        love.graphics.setColor(materialColor[1], materialColor[2], materialColor[3], 1)
-        love.graphics.circle("line", gridX * CellTypes.SIZE + CellTypes.SIZE/2, gridY * CellTypes.SIZE + CellTypes.SIZE/2, self.sprayRadius * CellTypes.SIZE)
-        
-        -- Reset color
-        love.graphics.setColor(1, 1, 1, 1)
+        -- Draw power indicator
+        local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
+        love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
     end
 end
 
@@ -344,33 +252,26 @@ function Input:handleMousePressed(button, ball, gameX, gameY)
     local clickX = gameX or self.mouseX
     local clickY = gameY or self.mouseY
     
-    if self.mode == MODES.SHOOT then
-        if button == 1 and not ball:isMoving() then -- Left mouse button
-            -- Start aiming
-            self.isAiming = true
-            
-            -- Store the clicked position
-            self.clickPosition.x = clickX
-            self.clickPosition.y = clickY
-            
-            -- Update mouse position to match game coordinates
-            if gameX and gameY then
-                self.mouseX = gameX
-                self.mouseY = gameY
-            end
-            
-            -- Calculate initial aim
-            self:calculateAim(ball)
-            
-            return false -- No shot taken yet
+    if button == 1 and not ball:isMoving() then -- Left mouse button
+        -- Start aiming
+        self.isAiming = true
+        
+        -- Store the clicked position
+        self.clickPosition.x = clickX
+        self.clickPosition.y = clickY
+        
+        -- Update mouse position to match game coordinates
+        if gameX and gameY then
+            self.mouseX = gameX
+            self.mouseY = gameY
         end
-    elseif self.mode == MODES.SPRAY then
-        if button == 2 then -- Right mouse button
-            -- Cycle to next material
-            self:cycleMaterial()
-            return false
-        end
+        
+        -- Calculate initial aim
+        self:calculateAim(ball)
+        
+        return false -- No shot taken yet
     end
+    
     return false -- No shot taken
 end
 
@@ -382,23 +283,22 @@ function Input:handleMouseReleased(button, ball, gameX, gameY)
         self.mouseY = gameY
     end
     
-    if self.mode == MODES.SHOOT then
-        if button == 1 and self.isAiming and not ball:isMoving() then -- Left mouse button
-            -- Stop aiming
-            self.isAiming = false
-            
-            -- For slingshot, we want to fire in the direction from mouse to ball
-            -- The aimDirection already points from ball to mouse, so we use the negative
-            local slingDirection = {
-                x = -self.aimDirection.x,
-                y = -self.aimDirection.y
-            }
-            
-            -- Shoot the ball using the slingshot direction
-            ball:shoot(slingDirection, self.aimPower)
-            return true -- Shot was taken
-        end
+    if button == 1 and self.isAiming and not ball:isMoving() then -- Left mouse button
+        -- Stop aiming
+        self.isAiming = false
+        
+        -- For slingshot, we want to fire in the direction from mouse to ball
+        -- The aimDirection already points from ball to mouse, so we use the negative
+        local slingDirection = {
+            x = -self.aimDirection.x,
+            y = -self.aimDirection.y
+        }
+        
+        -- Shoot the ball using the slingshot direction
+        ball:shoot(slingDirection, self.aimPower)
+        return true -- Shot was taken
     end
+    
     return false -- No shot taken
 end
 
@@ -424,30 +324,8 @@ function Input:handleKeyPressed(key, ball)
         self.clickPosition.y = nil
         self.isAiming = false
         return true -- Reset was performed
-    elseif key == "space" then
-        -- Switch between shooting and spraying modes
-        if self.mode == MODES.SHOOT then
-            self.mode = MODES.SPRAY
-        else
-            self.mode = MODES.SHOOT
-        end
-        -- Reset aiming state when switching modes
-        self.isAiming = false
-    elseif key == "1" or key == "2" or key == "3" or key == "4" then
-        -- Number keys 1-4 for quick material selection
-        if self.mode == MODES.SPRAY then
-            local index = tonumber(key)
-            if index <= #MATERIALS then
-                self.currentMaterialIndex = index
-            end
-        end
     end
     return false -- No action taken
-end
-
-function Input:cycleMaterial()
-    -- Cycle to the next material
-    self.currentMaterialIndex = self.currentMaterialIndex % #MATERIALS + 1
 end
 
 return Input

@@ -2,6 +2,8 @@
 
 A physics-based golf game where the ball is a square and the level is made of cells that behave like cellular automata. The game is viewed from the side and features interactive sand that can be disrupted by the ball.
 
+**NEW**: Mobile-friendly features are now enabled by default with simplified controls! See [MOBILE_README.md](MOBILE_README.md) for details.
+
 ## How to Play
 
 1. Install LÖVE (Love2D) from https://love2d.org/
@@ -11,17 +13,27 @@ A physics-based golf game where the ball is a square and the level is made of ce
 
 ## Game Controls
 
+### Touch Controls (Default)
+- **Touch and Drag**: Aim the ball (direction and power)
+- **Double Tap**: Reset the ball
+- **On-screen Buttons**: Use buttons at bottom of screen for common actions
+
+### Keyboard Controls
+- **D** (at startup): Switch to desktop mode (disables mobile features)
 - **Mouse**: Aim the ball (direction and power)
 - **Left Click**: Shoot the square ball
 - **R**: Reset the ball to the starting position
-- **D**: Toggle debug mode
-- **S**: Add 1000 random sand cells (for performance testing)
-- **P**: Add a sand pile at the ball's position
-- **E**: Add a dirt block at the ball's position
-- **Q**: Add a water pool at the ball's position
-- **G**: Generate a new procedural level
-- **W**: Create a water test level
-- **T**: Create a dirt-water test level
+- **Space**: Toggle between shooting and spraying modes
+- **1-5**: Switch ball types
+- **Debug Keys**:
+  - **D**: Toggle debug mode
+  - **S**: Add 1000 random sand cells (for performance testing)
+  - **P**: Add a sand pile at the ball's position
+  - **E**: Add a dirt block at the ball's position
+  - **Q**: Add a water pool at the ball's position
+  - **G**: Generate a new procedural level
+  - **W**: Create a water test level
+  - **T**: Create a dirt-water test level
 
 ## Game Features
 

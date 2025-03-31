@@ -1,6 +1,7 @@
 -- updater.lua - Cell update utilities
 
 local CellTypes = require("src.cell_types")
+local MobileOptimizations = require("src.mobile_optimizations")
 
 local Updater = {}
 
@@ -149,14 +150,32 @@ function Updater.updateActiveClusters(level, dt, ball)
         local ballX, ballY = ball.body:getPosition()
         local gridX, gridY = level:getGridCoordinates(ballX, ballY)
         
-        -- Mark a 3x3 grid of clusters around the ball as active
+        -- Mark clusters around the ball as active
         local clusterX = math.floor(gridX / level.clusterSize)
         local clusterY = math.floor(gridY / level.clusterSize)
         
-        for cy = clusterY - 1, clusterY + 1 do
-            for cx = clusterX - 1, clusterX + 1 do
+        -- Determine the radius of active clusters (smaller on mobile)
+        local radius = 1 -- Default 3x3 grid on desktop
+        
+        -- On mobile, use a dynamic radius based on optimization settings
+        if MobileOptimizations.enabled then
+            -- Use a smaller radius on mobile to improve performance
+            radius = 1 -- 3x3 grid
+        end
+        
+        for cy = clusterY - radius, clusterY + radius do
+            for cx = clusterX - radius, clusterX + radius do
                 if cy >= 0 and cy < clusterRows and cx >= 0 and cx < clusterCols then
-                    level.clusters[cy][cx].active = true
+                    -- On mobile, only activate clusters within the update distance
+                    if not MobileOptimizations.enabled or 
+                       MobileOptimizations.shouldUpdateCluster(cx, cy, clusterX, clusterY, level.clusterSize) then
+                        level.clusters[cy][cx].active = true
+                        
+                        -- Store distance to ball for prioritization
+                        local distX = cx - clusterX
+                        local distY = cy - clusterY
+                        level.clusters[cy][cx].distanceToBall = math.sqrt(distX * distX + distY * distY)
+                    end
                 end
             end
         end
@@ -174,6 +193,33 @@ function Updater.updateActiveClusters(level, dt, ball)
             if clusterY + 1 < clusterRows then
                 level.clusters[clusterY + 1][clusterX].active = true
             end
+        end
+    end
+    
+    -- Collect active clusters for limiting on mobile
+    if MobileOptimizations.enabled then
+        local activeClusters = {}
+        for cy = 0, clusterRows - 1 do
+            for cx = 0, clusterCols - 1 do
+                if level.clusters[cy][cx].active then
+                    table.insert(activeClusters, level.clusters[cy][cx])
+                end
+            end
+        end
+        
+        -- Limit the number of active clusters on mobile
+        activeClusters = MobileOptimizations.limitActiveClusters(activeClusters)
+        
+        -- Reset all clusters to inactive
+        for cy = 0, clusterRows - 1 do
+            for cx = 0, clusterCols - 1 do
+                level.clusters[cy][cx].active = false
+            end
+        end
+        
+        -- Mark only the limited set of clusters as active
+        for _, cluster in ipairs(activeClusters) do
+            cluster.active = true
         end
     end
     
