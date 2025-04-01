@@ -235,16 +235,9 @@ function EditorUI.draw()
     -- Get actual screen dimensions
     local screenWidth, screenHeight = love.graphics.getDimensions()
     
-    -- Calculate scaled dimensions
+    -- Calculate scale factors for fullscreen stretching
     local scaleX = screenWidth / gameWidth
     local scaleY = screenHeight / gameHeight
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Calculate offsets for centering
-    local scaledWidth = screenWidth / scale
-    local scaledHeight = screenHeight / scale
-    local offsetX = (scaledWidth - gameWidth) / 2
-    local offsetY = (scaledHeight - gameHeight) / 2
     
     -- Save current transformation
     love.graphics.push()
@@ -252,11 +245,8 @@ function EditorUI.draw()
     -- Reset transformation to draw UI in screen coordinates
     love.graphics.origin()
     
-    -- Apply scaling to match game coordinates
-    love.graphics.scale(scale, scale)
-    
-    -- Apply offset for centering
-    love.graphics.translate(offsetX, offsetY)
+    -- Apply scaling to fill the entire screen
+    love.graphics.scale(scaleX, scaleY)
     
     -- Draw left panel background
     love.graphics.setColor(0.1, 0.1, 0.2, 0.9)

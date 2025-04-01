@@ -112,7 +112,7 @@ function Draw.draw(Game)
         modeText = modeText .. " (TEST PLAY)"
     end
     
-    love.graphics.print(modeText, 10, 30)
+    love.graphics.print(modeText, 10, 50)
     
     -- Debug info
     Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)

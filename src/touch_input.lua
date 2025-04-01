@@ -39,6 +39,11 @@ function TouchInput.new()
 end
 
 function TouchInput:update(ball, level, dt)
+    -- Reset aiming if ball is moving or no active touch
+    if ball:isMoving() or not self.touchId then
+        self.isAiming = false
+    end
+    
     -- If aiming, update aim direction and power
     if self.isAiming and self.touchId and self.touchStartX and self.touchCurrentX then
         self:calculateAim()
@@ -165,85 +170,21 @@ function TouchInput:screenToGameCoords(screenX, screenY)
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
-    -- Calculate scale factors
+    -- Calculate scale factors for fullscreen stretching
     local scaleX = width / ORIGINAL_WIDTH
     local scaleY = height / ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
     
     -- Convert screen coordinates to game coordinates
-    local gameX = (screenX / scale) - offsetX
-    local gameY = (screenY / scale) - offsetY
+    -- Since we're stretching to fill the screen, we simply divide by the scale factors
+    local gameX = screenX / scaleX
+    local gameY = screenY / scaleY
     
     return gameX, gameY
 end
 
 function TouchInput:draw(ball, attempts)
-    -- Draw mode indicator
-    love.graphics.setColor(1, 1, 1, 1) -- White
-    
-    love.graphics.print("Shots: " .. attempts, 10, 30)
-    
-    -- Draw aim line if ball is not moving and user is aiming
-    if not ball:isMoving() and self.isAiming and self.touchStartX ~= nil then
-        local lineLength = self.aimPower / 5 -- Scale down for visual purposes
-        local cellSize = 8  -- Size of each cell in pixels
-        local cellSpacing = 6  -- Space between cells
-        
-        -- Draw original aim line (dashed cells)
-        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
-        local endX = self.touchStartX + self.aimDirection.x * lineLength
-        local endY = self.touchStartY + self.aimDirection.y * lineLength
-        self:drawDashedCellLine(
-            self.touchStartX, 
-            self.touchStartY, 
-            endX, 
-            endY,
-            cellSize,
-            cellSpacing
-        )
-        
-        -- Draw opposite aim line (actual shot direction)
-        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction
-        local shotEndX = self.touchStartX - self.aimDirection.x * lineLength
-        local shotEndY = self.touchStartY - self.aimDirection.y * lineLength
-        self:drawDashedCellLine(
-            self.touchStartX, 
-            self.touchStartY, 
-            shotEndX, 
-            shotEndY,
-            8,
-            0
-        )
-        
-        -- Draw pixelated arrow at the end of the white line
-        self:drawPixelatedArrow(
-            shotEndX, 
-            shotEndY, 
-            -self.aimDirection.x, 
-            -self.aimDirection.y, 
-            24 -- Arrow size
-        )
-        
-        -- Draw power indicator
-        local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
-        love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
-    end
-    
-    -- Draw mobile controls help
-    love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.print("Mobile Controls:", 10, love.graphics.getHeight() - 60)
-    love.graphics.print("• Touch and drag: Aim and shoot", 10, love.graphics.getHeight() - 40)
-    love.graphics.print("• Double tap: Reset ball", 10, love.graphics.getHeight() - 20)
-    love.graphics.setColor(1, 1, 1, 1)
+    -- Touch input doesn't draw its own aiming gizmo anymore
+    -- The regular input system (input.lua) handles drawing the aiming gizmo
 end
 
 -- Function to draw a dashed line made of cells (copied from input.lua)

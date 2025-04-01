@@ -604,23 +604,14 @@ function screenToGameCoords(screenX, screenY)
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
-    -- Calculate scale factors
+    -- Calculate scale factors for fullscreen stretching
     local scaleX = width / Game.ORIGINAL_WIDTH
     local scaleY = height / Game.ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
     
     -- Convert screen coordinates to game coordinates
-    local gameX = (screenX / scale) - offsetX
-    local gameY = (screenY / scale) - offsetY
+    -- Since we're stretching to fill the screen, we simply divide by the scale factors
+    local gameX = screenX / scaleX
+    local gameY = screenY / scaleY
     
     return gameX, gameY
 end

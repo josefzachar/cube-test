@@ -117,10 +117,7 @@ function love.draw()
     
     -- Draw mobile features if on mobile
     if _G.isMobile and not Menu.active and not Editor.active then
-        -- Draw touch input overlay
-        if Game.touchInput then
-            Game.touchInput:draw(Game.ball, Game.attempts)
-        end
+        -- Don't draw touch input overlay anymore to avoid duplicate aiming gizmos
         
         -- Draw mobile UI
         if Game.mobileUI then
@@ -291,23 +288,14 @@ function screenToGameCoords(screenX, screenY)
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
-    -- Calculate scale factors
+    -- Calculate scale factors for fullscreen stretching
     local scaleX = width / Game.ORIGINAL_WIDTH
     local scaleY = height / Game.ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
     
     -- Convert screen coordinates to game coordinates
-    local gameX = (screenX - offsetX) / scale
-    local gameY = (screenY - offsetY) / scale
+    -- Since we're stretching to fill the screen, we simply divide by the scale factors
+    local gameX = screenX / scaleX
+    local gameY = screenY / scaleY
     
     return gameX, gameY
 end

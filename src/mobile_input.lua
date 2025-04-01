@@ -13,21 +13,14 @@ function MobileInput.screenToGameCoords(screenX, screenY)
     
     -- Get screen dimensions for coordinate conversion
     
-    -- Calculate scale factors
+    -- Calculate scale factors for fullscreen stretching
     local scaleX = screenWidth / MobileInput.GAME_WIDTH
     local scaleY = screenHeight / MobileInput.GAME_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Calculate offsets for centering
-    local offsetX = (screenWidth - (MobileInput.GAME_WIDTH * scale)) / 2
-    local offsetY = (screenHeight - (MobileInput.GAME_HEIGHT * scale)) / 2
     
     -- Convert screen coordinates to game coordinates
-    -- This is the inverse of the transformation applied in applyDrawTransform
-    -- In applyDrawTransform, we do: scale, then translate
-    -- So here we need to: subtract offset, then divide by scale
-    local gameX = (screenX - offsetX) / scale
-    local gameY = (screenY - offsetY) / scale
+    -- Since we're stretching to fill the screen, we simply divide by the scale factors
+    local gameX = screenX / scaleX
+    local gameY = screenY / scaleY
     
     -- Return the converted coordinates
     
@@ -63,21 +56,13 @@ function MobileInput.applyDrawTransform()
     -- Reset transformation
     love.graphics.origin()
     
-    -- Calculate scale to fit the screen
+    -- Calculate scale to fill the screen (stretch to fullscreen)
     local scaleX = screenWidth / MobileInput.GAME_WIDTH
     local scaleY = screenHeight / MobileInput.GAME_HEIGHT
-    local scale = math.min(scaleX, scaleY)
     
-    -- Calculate offsets for centering
-    local offsetX = (screenWidth - (MobileInput.GAME_WIDTH * scale)) / 2
-    local offsetY = (screenHeight - (MobileInput.GAME_HEIGHT * scale)) / 2
-    
-    -- Apply the transformation to match the game coordinates
-    
-    -- Apply transformation: first scale, then translate
-    -- This matches how the green indicator position is calculated
-    love.graphics.scale(scale, scale)
-    love.graphics.translate(offsetX / scale, offsetY / scale)
+    -- Apply transformation: scale to fill the entire screen
+    -- This will stretch the content to fill the screen completely
+    love.graphics.scale(scaleX, scaleY)
 end
 
 return MobileInput
