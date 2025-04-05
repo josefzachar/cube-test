@@ -50,26 +50,27 @@ function Menu.calculateButtonPositions()
     
     -- Calculate button positions
     for i, option in ipairs(Menu.options) do
-        local y = 300
-        
-        -- Add space for level selector after PLAY button
-        if i > 1 then
-            -- Extra spacing after the PLAY button for level info and navigation
-            local extraSpace = 70
-            y = y + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
-            
-            -- Add extra space after the PLAY button
-            if i > 1 then
-                y = y + extraSpace
-            end
-        else
-            y = y + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
-        end
-        
-        option.x = (width - Menu.buttonWidth) / 2
-        option.y = y
+        -- Set width and height
         option.width = Menu.buttonWidth
         option.height = Menu.buttonHeight
+        
+        -- Center horizontally
+        option.x = (width - option.width) / 2
+        
+        -- Set vertical position with proper spacing
+        if i == 1 then
+            -- First button position
+            option.y = 200
+        else
+            local extraSpace = 0
+            -- Add extra space after PLAY button for level selector
+            if i == 2 then
+                extraSpace = 70
+            end
+            
+            -- Previous button's bottom position + spacing + any extra space
+            option.y = Menu.options[i-1].y + Menu.buttonHeight + Menu.buttonSpacing + extraSpace
+        end
     end
 end
 
@@ -169,18 +170,11 @@ function Menu.draw()
             love.graphics.print(">", (width + levelInfoWidth) / 2 + 15, Menu.options[1].y + Menu.buttonHeight + 20)
         end
     end
-    
-    -- Draw controls info
-    love.graphics.setFont(Menu.descriptionFont)
-    love.graphics.setColor(0.7, 0.7, 0.7, 1)
-    local controls = "Use UP/DOWN to navigate, ENTER to select, or click with mouse"
-    local controlsWidth = Menu.descriptionFont:getWidth(controls)
-    love.graphics.print(controls, (width - controlsWidth) / 2, height - 100)
 end
 
 -- Update the menu
 function Menu.update(dt)
-    -- Nothing to update for now
+    Menu.calculateButtonPositions()
 end
 
 -- Handle key press in menu
