@@ -100,11 +100,11 @@ function Draw.draw(Game)
     -- Draw the level (only if editor is not active)
     Game.level:draw(Game.debug) -- Pass debug flag to level:draw
     
-    -- Draw the ball
-    Game.ball:draw(Game.debug) -- Pass debug flag to ball:draw
-    
-    -- Draw input (aim line, power indicator)
+    -- Draw input (aim line, power indicator) BEFORE the ball so ball appears on top
     Game.input:draw(Game.ball, Game.attempts)
+    
+    -- Draw the ball on top of everything
+    Game.ball:draw(Game.debug) -- Pass debug flag to ball:draw
     
     -- Debug info
     Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)

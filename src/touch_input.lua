@@ -102,10 +102,9 @@ function TouchInput:handleTouchPressed(id, x, y, ball, level)
     -- Store the touch ID and position
     self.touchId = id
     
-    -- Use the ball's position as the start position for aiming
-    local ballX, ballY = ball:getPosition()
-    self.touchStartX = ballX
-    self.touchStartY = ballY
+    -- Use the actual touch position as the start position for aiming
+    self.touchStartX = gameX
+    self.touchStartY = gameY
     
     self.touchCurrentX = gameX
     self.touchCurrentY = gameY
@@ -152,7 +151,7 @@ function TouchInput:handleTouchReleased(id, x, y, ball)
         self.isAiming = false
         
         -- For slingshot, we want to fire in the direction from touch to ball
-        -- The aimDirection already points from ball to touch, so we use the negative
+        -- The aimDirection already points from touch start to current touch position
         local slingDirection = {
             x = -self.aimDirection.x,
             y = -self.aimDirection.y
@@ -173,8 +172,84 @@ function TouchInput:screenToGameCoords(screenX, screenY)
 end
 
 function TouchInput:draw(ball, attempts)
-    -- Touch input doesn't draw its own aiming gizmo anymore
-    -- The regular input system (input.lua) handles drawing the aiming gizmo
+    -- Draw aim line if ball is not moving and user is aiming
+    if not ball:isMoving() and self.isAiming and self.touchId then
+        local lineLength = self.aimPower / 5 -- Scale down for visual purposes
+        local cellSize = 8  -- Size of each cell in pixels
+        local cellSpacing = 6  -- Space between cells
+        
+        -- Get ball position for drawing the aim lines
+        local ballX, ballY = ball:getPosition()
+        
+        -- Draw original aim line (dashed cells) from ball position
+        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
+        local endX = ballX + self.aimDirection.x * lineLength
+        local endY = ballY + self.aimDirection.y * lineLength
+        self:drawDashedCellLine(
+            ballX, 
+            ballY, 
+            endX, 
+            endY,
+            cellSize,
+            cellSpacing
+        )
+        
+        -- Draw opposite aim line (actual shot direction) from ball position
+        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction
+        local shotEndX = ballX - self.aimDirection.x * lineLength
+        local shotEndY = ballY - self.aimDirection.y * lineLength
+        self:drawDashedCellLine(
+            ballX, 
+            ballY, 
+            shotEndX, 
+            shotEndY,
+            8,
+            0
+        )
+        
+        -- Draw pixelated arrow at the end of the white line
+        self:drawPixelatedArrow(
+            shotEndX, 
+            shotEndY, 
+            -self.aimDirection.x, 
+            -self.aimDirection.y, 
+            24 -- Arrow size
+        )
+        
+        -- Reset color to white
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+end
+
+-- Function to draw a pixelated circle (copied from input.lua)
+function TouchInput:drawPixelatedCircle(x, y, radius, pixelSize, mode)
+    -- Calculate bounding box
+    local minX = math.floor(x - radius - pixelSize)
+    local minY = math.floor(y - radius - pixelSize)
+    local maxX = math.ceil(x + radius + pixelSize)
+    local maxY = math.ceil(y + radius + pixelSize)
+    
+    -- Determine which pixels to draw based on distance from center
+    for px = minX, maxX, pixelSize do
+        for py = minY, maxY, pixelSize do
+            -- Calculate center of this pixel
+            local centerX = px + pixelSize / 2
+            local centerY = py + pixelSize / 2
+            
+            -- Calculate distance from circle center to pixel center
+            local distX = centerX - x
+            local distY = centerY - y
+            local distance = math.sqrt(distX * distX + distY * distY)
+            
+            -- For filled circle, draw if inside radius
+            if mode == "fill" and distance <= radius then
+                love.graphics.rectangle("fill", px, py, pixelSize, pixelSize)
+            -- For line circle, draw if close to the radius
+            elseif mode == "line" and math.abs(distance - radius) <= pixelSize then
+                love.graphics.rectangle("fill", px, py, pixelSize, pixelSize)
+            end
+        end
+    end
 end
 
 -- Function to draw a dashed line made of cells (copied from input.lua)

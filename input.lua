@@ -202,26 +202,29 @@ function Input:draw(ball, attempts)
         local cellSize = 8  -- Size of each cell in pixels
         local cellSpacing = 6  -- Space between cells
         
-        -- Draw original aim line (dashed cells)
+        -- Get ball position for drawing the aim lines
+        local ballX, ballY = ball:getPosition()
+        
+        -- Draw original aim line (dashed cells) from ball position
         love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
-        local endX = self.clickPosition.x + self.aimDirection.x * lineLength
-        local endY = self.clickPosition.y + self.aimDirection.y * lineLength
+        local endX = ballX + self.aimDirection.x * lineLength
+        local endY = ballY + self.aimDirection.y * lineLength
         self:drawDashedCellLine(
-            self.clickPosition.x, 
-            self.clickPosition.y, 
+            ballX, 
+            ballY, 
             endX, 
             endY,
             cellSize,
             cellSpacing
         )
         
-        -- Draw opposite aim line (actual shot direction)
+        -- Draw opposite aim line (actual shot direction) from ball position
         love.graphics.setColor(1, 1, 1, 1) -- White for shot direction
-        local shotEndX = self.clickPosition.x - self.aimDirection.x * lineLength
-        local shotEndY = self.clickPosition.y - self.aimDirection.y * lineLength
+        local shotEndX = ballX - self.aimDirection.x * lineLength
+        local shotEndY = ballY - self.aimDirection.y * lineLength
         self:drawDashedCellLine(
-            self.clickPosition.x, 
-            self.clickPosition.y, 
+            ballX, 
+            ballY, 
             shotEndX, 
             shotEndY,
             8,
@@ -237,14 +240,8 @@ function Input:draw(ball, attempts)
             24 -- Arrow size
         )
         
-        -- Draw a small indicator at the clicked position
-        -- First draw the filled circle with background color
-        love.graphics.setColor(BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3], BACKGROUND_COLOR[4])
-        self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "fill")
-        -- Then draw the white border over it
-        love.graphics.setColor(1, 1, 1, 1) -- White
-        self:drawPixelatedCircle(self.clickPosition.x, self.clickPosition.y, 12, 2, "line")
-        love.graphics.setColor(1, 1, 1, 1) -- Reset to white
+        -- Reset color to white
+        love.graphics.setColor(1, 1, 1, 1)
         
         -- Draw power indicator
         local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
@@ -261,10 +258,9 @@ function Input:handleMousePressed(button, ball, gameX, gameY)
         -- Start aiming
         self.isAiming = true
         
-        -- Store the clicked position (this should be the ball's position)
-        local ballX, ballY = ball:getPosition()
-        self.clickPosition.x = ballX
-        self.clickPosition.y = ballY
+        -- Store the actual clicked position instead of the ball's position
+        self.clickPosition.x = clickX
+        self.clickPosition.y = clickY
         
         -- Update mouse position to match game coordinates
         if gameX and gameY then
