@@ -485,12 +485,7 @@ function EditorUI.drawCursorPreview()
     -- Apply camera transformation
     love.graphics.translate(-EditorUI.editor.cameraX, -EditorUI.editor.cameraY)
     
-    -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > width - 140 then
-        -- Mouse is in UI area, don't draw cursor preview
-        love.graphics.pop() -- Restore previous transformation
-        return
-    end
+    -- No need to check if mouse is in UI area anymore
     
     -- Only draw cursor/preview if mouse is in the level area
     if gridX >= 0 and gridX < EditorUI.editor.level.width and gridY >= 0 and gridY < EditorUI.editor.level.height then
@@ -669,11 +664,7 @@ function EditorUI.handleMousePressed(x, y, button)
         return true
     end
     
-    -- Check if clicking in UI area
-    if screenX < 140 or screenX > width - 140 then
-        -- Clicking in UI area
-        return true
-    end
+    -- No need to check if clicking in UI area anymore
     
     return false
 end

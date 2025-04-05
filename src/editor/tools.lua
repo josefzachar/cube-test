@@ -70,17 +70,8 @@ function EditorTools.handleMouseDrag(gridX, gridY)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Get game coordinates and check if mouse is in UI area
+    -- Get game coordinates
     local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    
-    -- Get screen dimensions
-    local width = love.graphics.getWidth()
-    
-    -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > width - 140 then
-        -- Mouse is in UI area, don't draw
-        return
-    end
     
     -- Use the current tool
     local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
@@ -367,15 +358,6 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
     
     -- Get game coordinates directly from the editor's camera
     local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    
-    -- Get screen dimensions
-    local width = love.graphics.getWidth()
-    
-    -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > width - 140 then
-        -- Mouse is in UI area, don't use tool
-        return false
-    end
     
     if button == 1 then -- Left mouse button
         -- Start using the current tool

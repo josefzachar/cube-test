@@ -227,15 +227,8 @@ function EditorCore.draw()
             gameX, gameY = EditorCamera.screenToGameCoords(mouseX, mouseY)
         end
         
-        -- Get screen dimensions
-        local width = love.graphics.getWidth()
-        
-        -- Check if mouse is in UI area (left or right panel)
-        if not (gameX < 140 or gameX > width - 140) then
-            -- Mouse is not in UI area, draw cursor preview
-            -- Draw cursor preview
-            EditorUI.drawCursorPreview()
-        end
+        -- Draw cursor preview
+        EditorUI.drawCursorPreview()
     end
     
     -- Draw panning indicator
