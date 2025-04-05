@@ -21,10 +21,6 @@ Menu.buttonWidth = 300
 Menu.buttonHeight = 60
 Menu.buttonSpacing = 20
 
--- Original design dimensions
-Menu.ORIGINAL_WIDTH = 1600
-Menu.ORIGINAL_HEIGHT = 1000
-
 -- Initialize the menu
 function Menu.init()
     -- Load the menu font if not already loaded
@@ -50,8 +46,7 @@ end
 -- Calculate button positions
 function Menu.calculateButtonPositions()
     -- Get screen dimensions
-    local gameWidth = Menu.ORIGINAL_WIDTH
-    local gameHeight = Menu.ORIGINAL_HEIGHT
+    local width, height = love.graphics.getDimensions()
     
     -- Calculate button positions
     for i, option in ipairs(Menu.options) do
@@ -71,7 +66,7 @@ function Menu.calculateButtonPositions()
             y = y + (i - 1) * (Menu.buttonHeight + Menu.buttonSpacing)
         end
         
-        option.x = (gameWidth - Menu.buttonWidth) / 2
+        option.x = (width - Menu.buttonWidth) / 2
         option.y = y
         option.width = Menu.buttonWidth
         option.height = Menu.buttonHeight
@@ -106,19 +101,18 @@ end
 -- Draw the menu
 function Menu.draw()
     -- Get screen dimensions
-    local gameWidth = Menu.ORIGINAL_WIDTH
-    local gameHeight = Menu.ORIGINAL_HEIGHT
+    local width, height = love.graphics.getDimensions()
     
     -- Draw background
     love.graphics.setColor(0.1, 0.1, 0.2, 1)
-    love.graphics.rectangle("fill", 0, 0, gameWidth, gameHeight)
+    love.graphics.rectangle("fill", 0, 0, width, height)
     
     -- Draw title
     love.graphics.setFont(Menu.titleFont)
     love.graphics.setColor(0, 0.8, 0.8, 1)
     local title = "SQUARE GOLF"
     local titleWidth = Menu.titleFont:getWidth(title)
-    love.graphics.print(title, (gameWidth - titleWidth) / 2, 100)
+    love.graphics.print(title, (width - titleWidth) / 2, 100)
     
     -- Draw options
     love.graphics.setFont(Menu.optionFont)
@@ -154,25 +148,25 @@ function Menu.draw()
         love.graphics.setColor(0.8, 0.8, 0.8, 1)
         local levelInfo = "Level " .. Menu.currentLevel .. " / " .. Menu.totalLevels
         local levelInfoWidth = Menu.descriptionFont:getWidth(levelInfo)
-        love.graphics.print(levelInfo, (gameWidth - levelInfoWidth) / 2, Menu.options[1].y + Menu.buttonHeight + 25)
+        love.graphics.print(levelInfo, (width - levelInfoWidth) / 2, Menu.options[1].y + Menu.buttonHeight + 25)
         
         -- Draw level navigation buttons
         if Menu.totalLevels > 1 then
             -- Left arrow
             love.graphics.setColor(0.2, 0.2, 0.4, 1)
-            love.graphics.rectangle("fill", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
+            love.graphics.rectangle("fill", (width - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(0, 0.8, 0.8, 1)
-            love.graphics.rectangle("line", (gameWidth - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
+            love.graphics.rectangle("line", (width - levelInfoWidth) / 2 - 40, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print("<", (gameWidth - levelInfoWidth) / 2 - 35, Menu.options[1].y + Menu.buttonHeight + 20)
+            love.graphics.print("<", (width - levelInfoWidth) / 2 - 35, Menu.options[1].y + Menu.buttonHeight + 20)
             
             -- Right arrow
             love.graphics.setColor(0.2, 0.2, 0.4, 1)
-            love.graphics.rectangle("fill", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
+            love.graphics.rectangle("fill", (width + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(0, 0.8, 0.8, 1)
-            love.graphics.rectangle("line", (gameWidth + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
+            love.graphics.rectangle("line", (width + levelInfoWidth) / 2 + 10, Menu.options[1].y + Menu.buttonHeight + 20, 30, 30)
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print(">", (gameWidth + levelInfoWidth) / 2 + 15, Menu.options[1].y + Menu.buttonHeight + 20)
+            love.graphics.print(">", (width + levelInfoWidth) / 2 + 15, Menu.options[1].y + Menu.buttonHeight + 20)
         end
     end
     
@@ -181,7 +175,7 @@ function Menu.draw()
     love.graphics.setColor(0.7, 0.7, 0.7, 1)
     local controls = "Use UP/DOWN to navigate, ENTER to select, or click with mouse"
     local controlsWidth = Menu.descriptionFont:getWidth(controls)
-    love.graphics.print(controls, (gameWidth - controlsWidth) / 2, gameHeight - 100)
+    love.graphics.print(controls, (width - controlsWidth) / 2, height - 100)
 end
 
 -- Update the menu
@@ -228,7 +222,7 @@ function Menu.handleMousePressed(x, y, button)
     if button ~= 1 then return false end -- Only handle left mouse button
     
     -- Convert screen coordinates to game coordinates
-    local gameX, gameY = Menu.screenToGameCoords(x, y)
+    local gameX, gameY = x, y
     
     -- Check if clicking on a menu option
     for i, option in ipairs(Menu.options) do
@@ -242,14 +236,14 @@ function Menu.handleMousePressed(x, y, button)
     -- Check if clicking on level navigation buttons
     if Menu.selectedOption == 1 and Menu.totalLevels > 1 then
         -- Get screen dimensions
-        local gameWidth = Menu.ORIGINAL_WIDTH
+        local width = love.graphics.getWidth()
         
         -- Calculate level info position
         local levelInfo = "Level " .. Menu.currentLevel .. " / " .. Menu.totalLevels
         local levelInfoWidth = Menu.descriptionFont:getWidth(levelInfo)
         
         -- Left arrow button
-        local leftArrowX = (gameWidth - levelInfoWidth) / 2 - 40
+        local leftArrowX = (width - levelInfoWidth) / 2 - 40
         local leftArrowY = Menu.options[1].y + Menu.buttonHeight + 40
         if gameX >= leftArrowX and gameX <= leftArrowX + 30 and
            gameY >= leftArrowY and gameY <= leftArrowY + 30 then
@@ -259,7 +253,7 @@ function Menu.handleMousePressed(x, y, button)
         end
         
         -- Right arrow button
-        local rightArrowX = (gameWidth + levelInfoWidth) / 2 + 10
+        local rightArrowX = (width + levelInfoWidth) / 2 + 10
         local rightArrowY = Menu.options[1].y + Menu.buttonHeight + 40
         if gameX >= rightArrowX and gameX <= rightArrowX + 30 and
            gameY >= rightArrowY and gameY <= rightArrowY + 30 then
@@ -270,32 +264,6 @@ function Menu.handleMousePressed(x, y, button)
     end
     
     return false
-end
-
--- Function to convert screen coordinates to game coordinates
-function Menu.screenToGameCoords(screenX, screenY)
-    -- Get screen dimensions
-    local width, height = love.graphics.getDimensions()
-    
-    -- Calculate scale factors
-    local scaleX = width / Menu.ORIGINAL_WIDTH
-    local scaleY = height / Menu.ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - Menu.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Menu.ORIGINAL_HEIGHT) / 2
-    
-    -- Convert screen coordinates to game coordinates
-    local gameX = (screenX / scale) - offsetX
-    local gameY = (screenY / scale) - offsetY
-    
-    return gameX, gameY
 end
 
 -- Execute the selected option

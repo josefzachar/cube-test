@@ -21,6 +21,18 @@ local Editor = {
     showUI = true,
     showHelp = false, -- Help panel visibility
     
+    -- Camera panning
+    cameraX = 0,
+    cameraY = 0,
+    isPanning = false,
+    lastMouseX = 0,
+    lastMouseY = 0,
+    
+    -- Level size editing
+    editingLevelSize = false,
+    newWidth = nil,
+    newHeight = nil,
+    
     -- Start position for the ball
     startX = 20,
     startY = 20,
@@ -42,7 +54,8 @@ local Editor = {
         text = "",
         cursor = 0,
         cursorVisible = true,
-        cursorBlinkTimer = 0
+        cursorBlinkTimer = 0,
+        mode = "levelName" -- Can be "levelName", "levelWidth", or "levelHeight"
     },
     
     -- File selector state
@@ -101,6 +114,35 @@ function Editor.update(dt)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
+    -- Handle camera panning with SPACE key
+    if love.keyboard.isDown("space") then
+        if not Editor.isPanning then
+            -- Start panning
+            Editor.isPanning = true
+            Editor.lastMouseX = mouseX
+            Editor.lastMouseY = mouseY
+        else
+            -- Continue panning
+            local dx = mouseX - Editor.lastMouseX
+            local dy = mouseY - Editor.lastMouseY
+            
+            -- Apply scale factor to make panning speed appropriate
+            local width, height = love.graphics.getDimensions()
+            local scaleX = width / 1600  -- Original design width
+            local scaleY = height / 1000  -- Original design height
+            local scale = math.min(scaleX, scaleY)
+            
+            Editor.cameraX = Editor.cameraX + dx / scale
+            Editor.cameraY = Editor.cameraY + dy / scale
+            
+            Editor.lastMouseX = mouseX
+            Editor.lastMouseY = mouseY
+        end
+    else
+        -- Stop panning
+        Editor.isPanning = false
+    end
+    
     -- Get grid coordinates
     local gridX, gridY
     local gameX, gameY
@@ -115,7 +157,7 @@ function Editor.update(dt)
         -- Process mobile input
     else
         -- Desktop approach
-        gameX, gameY = Editor.screenToGameCoords(mouseX, mouseY)
+        gameX, gameY = Editor.screenToGameCoords(x, y)
         gridX, gridY = Editor.level:getGridCoordinates(gameX, gameY)
     end
     
@@ -124,8 +166,8 @@ function Editor.update(dt)
         EditorTools.update(dt, gridX, gridY)
     end
     
-    -- Handle mouse drag for drawing (only if file selector is not active)
-    if love.mouse.isDown(1) and Editor.currentTool and not Editor.fileSelector.active then
+    -- Handle mouse drag for drawing (only if file selector is not active and not panning)
+    if love.mouse.isDown(1) and Editor.currentTool and not Editor.fileSelector.active and not Editor.isPanning then
         EditorTools.handleMouseDrag(gridX, gridY)
     end
     
@@ -141,6 +183,10 @@ end
 
 -- Draw the editor
 function Editor.draw()
+    -- Apply camera transformation
+    love.graphics.push()
+    love.graphics.translate(Editor.cameraX, Editor.cameraY)
+    
     -- Draw the editor tools
     EditorTools.draw()
     
@@ -163,26 +209,23 @@ function Editor.draw()
         love.graphics.circle("fill", x, y, 3)
     end
     
+    -- Reset transformation before drawing UI
+    love.graphics.pop()
+    
     -- Draw the editor UI if enabled
     if Editor.showUI then
-        -- Reset transformation before drawing UI
-        love.graphics.origin()
-        
         -- Draw the editor UI
         EditorUI.draw()
     end
     
     -- Draw file selector if active
     if Editor.fileSelector.active then
-        -- Reset transformation before drawing file selector
-        love.graphics.origin()
-        
         -- Draw the file selector
         EditorFile.drawFileSelector()
     end
     
     -- Draw cursor preview last, so it's on top of everything
-    if not Editor.fileSelector.active and not Editor.textInput.active then
+    if not Editor.fileSelector.active and not Editor.textInput.active and not Editor.isPanning then
         -- Get mouse position
         local mouseX, mouseY = love.mouse.getPosition()
         
@@ -203,12 +246,15 @@ function Editor.draw()
         -- Check if mouse is in UI area (left or right panel)
         if not (gameX < 140 or gameX > gameWidth - 140) then
             -- Mouse is not in UI area, draw cursor preview
-            -- Reset transformation before drawing cursor preview
-            love.graphics.origin()
-            
             -- Draw cursor preview
             EditorUI.drawCursorPreview()
         end
+    end
+    
+    -- Draw panning indicator when space is held
+    if Editor.isPanning then
+        love.graphics.setColor(1, 1, 1, 0.7)
+        love.graphics.print("PANNING MODE - Hold SPACE and move mouse", 10, 60)
     end
 end
 
@@ -226,9 +272,9 @@ function Editor.handleKeyPressed(key)
         return true
     end
     
-    -- Toggle UI with space
+    -- Handle space key for panning (don't toggle UI anymore)
     if key == "space" then
-        Editor.showUI = not Editor.showUI
+        -- Space is now used for panning, not toggling UI
         return true
     end
     
@@ -244,6 +290,16 @@ function Editor.handleKeyPressed(key)
     
     -- Handle input
     if EditorInput.handleKeyPressed(key) then
+        return true
+    end
+    
+    return false
+end
+
+-- Handle key release in editor
+function Editor.handleKeyReleased(key)
+    if key == "space" then
+        Editor.isPanning = false
         return true
     end
     
@@ -279,6 +335,11 @@ end
 
 -- Handle mouse press in editor
 function Editor.handleMousePressed(x, y, button)
+    -- If panning, don't handle other mouse presses
+    if Editor.isPanning then
+        return true
+    end
+    
     -- If file selector is active, handle file selector mouse press and prevent any other handlers
     if Editor.fileSelector.active then
         -- Always return true to prevent any other mouse handlers from processing this event
@@ -317,6 +378,11 @@ end
 
 -- Handle mouse release in editor
 function Editor.handleMouseReleased(x, y, button)
+    -- If panning, don't handle other mouse releases
+    if Editor.isPanning then
+        return true
+    end
+    
     -- If file selector is active, don't handle mouse release for tools
     if Editor.fileSelector.active then
         return false
@@ -380,11 +446,53 @@ function Editor.screenToGameCoords(screenX, screenY)
         local offsetY = (scaledHeight - 1000) / 2  -- Original design height
         
         -- Convert screen coordinates to game coordinates
-        local gameX = (screenX - offsetX) / scale
-        local gameY = (screenY - offsetY) / scale
+        -- Subtract camera offset to account for panning
+        local gameX = (screenX - offsetX) / scale - Editor.cameraX
+        local gameY = (screenY - offsetY) / scale - Editor.cameraY
         
         return gameX, gameY
     end
+end
+
+-- Resize the level
+function Editor.resizeLevel(newWidth, newHeight)
+    -- Validate new dimensions
+    newWidth = math.max(20, math.min(500, newWidth))
+    newHeight = math.max(20, math.min(500, newHeight))
+    
+    -- Create a new level with the new dimensions
+    local newLevel = require("level").new(Editor.world, newWidth, newHeight)
+    
+    -- Copy cells from the old level to the new level
+    for y = 0, math.min(Editor.level.height - 1, newHeight - 1) do
+        for x = 0, math.min(Editor.level.width - 1, newWidth - 1) do
+            local cellType = Editor.level:getCellType(x, y)
+            if cellType then
+                newLevel:setCellType(x, y, cellType)
+            end
+        end
+    end
+    
+    -- Ensure start position is within the new level bounds
+    Editor.startX = math.min(Editor.startX, newWidth - 1)
+    Editor.startY = math.min(Editor.startY, newHeight - 1)
+    
+    -- Ensure win hole position is within the new level bounds
+    if Editor.winHoleX and Editor.winHoleY then
+        Editor.winHoleX = math.min(Editor.winHoleX, newWidth - 1)
+        Editor.winHoleY = math.min(Editor.winHoleY, newHeight - 1)
+    end
+    
+    -- Destroy the old level
+    Editor.level:destroy()
+    
+    -- Set the new level
+    Editor.level = newLevel
+    
+    -- Initialize grass on top of dirt cells
+    Editor.level:initializeGrass()
+    
+    print("Level resized to " .. newWidth .. "x" .. newHeight)
 end
 
 -- Save the current level

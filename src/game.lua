@@ -47,11 +47,7 @@ local Game = {
     -- Background colors for gradient
     BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0}, -- Dark blue (base color)
     BACKGROUND_COLOR_TOP = {0.1, 0.2, 0.4, 1.0}, -- Darker blue for top
-    BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0}, -- Lighter blue for bottom
-    
-    -- Original design dimensions
-    ORIGINAL_WIDTH = 1600,
-    ORIGINAL_HEIGHT = 1000
+    BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
 }
 
 -- Global difficulty level (1-5)
@@ -273,7 +269,7 @@ function Game.update(dt)
     -- Win message timer is no longer decremented automatically
     -- It will only be reset when the user clicks the continue button or presses R
     
-    -- Update the level (pass the ball for cluster activation)
+    -- Update the level (always update all clusters)
     Game.level:update(dt, Game.ball)
     
     -- Update fire and smoke
@@ -593,6 +589,22 @@ function Game.handleMouseReleased(x, y, button)
     end
 end
 
+-- Handle key releases
+function Game.handleKeyReleased(key)
+    -- If menu is active, don't handle game key releases
+    if Game.currentMode == Game.MODES.MENU then
+        return
+    end
+    
+    -- If editor is active, handle editor key releases
+    if Editor.active then
+        Editor.handleKeyReleased(key)
+        return
+    end
+    
+    -- In the future, we could add key release handling for the game itself
+end
+
 -- Handle mouse wheel
 function Game.handleMouseWheel(x, y)
     -- If menu is active, don't handle game mouse wheel
@@ -612,30 +624,9 @@ end
 
 -- Function to convert screen coordinates to game coordinates
 function screenToGameCoords(screenX, screenY)
-    -- Get screen dimensions
-    local width, height = love.graphics.getDimensions()
-    
-    -- Calculate scale factors for fullscreen stretching
-    local scaleX = width / Game.ORIGINAL_WIDTH
-    local scaleY = height / Game.ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
-    
-    -- Get camera position
-    local Camera = require("src.camera")
-    local cameraOffsetX = Game.ORIGINAL_WIDTH / 2 - Camera.x
-    local cameraOffsetY = Game.ORIGINAL_HEIGHT / 2 - Camera.y
-    
-    -- Convert screen coordinates to game coordinates with camera offset
-    local gameX = (screenX / scale) - offsetX - cameraOffsetX
-    local gameY = (screenY / scale) - offsetY - cameraOffsetY
-    
-    return gameX, gameY
+    -- Use our InputUtils module
+    local InputUtils = require("src.input_utils")
+    return InputUtils.screenToGameCoords(screenX, screenY)
 end
 
 return Game

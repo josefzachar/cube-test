@@ -3,10 +3,6 @@
 local Cell = require("cell")
 local CellTypes = require("src.cell_types")
 
--- Original design dimensions (must match the values in game.lua)
-local ORIGINAL_WIDTH = 1600
-local ORIGINAL_HEIGHT = 1000
-
 local TouchInput = {}
 TouchInput.__index = TouchInput
 
@@ -171,30 +167,9 @@ function TouchInput:handleTouchReleased(id, x, y, ball)
 end
 
 function TouchInput:screenToGameCoords(screenX, screenY)
-    -- Get screen dimensions
-    local width, height = love.graphics.getDimensions()
-    
-    -- Calculate scale factors for fullscreen stretching
-    local scaleX = width / ORIGINAL_WIDTH
-    local scaleY = height / ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY)
-    
-    -- Calculate offsets for centering
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
-    
-    -- Get camera position
-    local Camera = require("src.camera")
-    local cameraOffsetX = ORIGINAL_WIDTH / 2 - Camera.x
-    local cameraOffsetY = ORIGINAL_HEIGHT / 2 - Camera.y
-    
-    -- Convert screen coordinates to game coordinates with camera offset
-    local gameX = (screenX / scale) - offsetX - cameraOffsetX
-    local gameY = (screenY / scale) - offsetY - cameraOffsetY
-    
-    return gameX, gameY
+    -- Use our InputUtils module for coordinate conversion
+    local InputUtils = require("src.input_utils")
+    return InputUtils.screenToGameCoords(screenX, screenY)
 end
 
 function TouchInput:draw(ball, attempts)

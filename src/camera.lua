@@ -66,9 +66,14 @@ function Camera.apply(Game)
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
+    -- Get level dimensions
+    local Cell = require("cell")
+    local levelWidth = Game.level.width * Cell.SIZE
+    local levelHeight = Game.level.height * Cell.SIZE
+    
     -- Calculate scale factors
-    local scaleX = width / Game.ORIGINAL_WIDTH
-    local scaleY = height / Game.ORIGINAL_HEIGHT
+    local scaleX = width / levelWidth
+    local scaleY = height / levelHeight
     local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
     
     -- Ensure minimum scale to prevent rendering issues
@@ -86,16 +91,16 @@ function Camera.apply(Game)
     local scaledHeight = height / scale
     
     -- Center the game in the window
-    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
+    local offsetX = (scaledWidth - levelWidth) / 2
+    local offsetY = (scaledHeight - levelHeight) / 2
     
     -- Store the offsets for other modules to use
     GAME_OFFSET_X = offsetX
     GAME_OFFSET_Y = offsetY
     
     -- Calculate camera offset to center the ball
-    local cameraOffsetX = Game.ORIGINAL_WIDTH / 2 - Camera.x
-    local cameraOffsetY = Game.ORIGINAL_HEIGHT / 2 - Camera.y
+    local cameraOffsetX = levelWidth / 2 - Camera.x
+    local cameraOffsetY = levelHeight / 2 - Camera.y
     
     -- Apply camera transformation with offsets
     love.graphics.translate(offsetX + cameraOffsetX, offsetY + cameraOffsetY)

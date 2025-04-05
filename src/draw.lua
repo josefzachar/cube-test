@@ -6,6 +6,7 @@ local Editor = require("src.editor")
 local Menu = require("src.menu")
 local UI = require("src.ui")
 local Camera = require("src.camera")
+local Cell = require("cell")
 
 local Draw = {}
 
@@ -19,10 +20,12 @@ function Draw.draw(Game)
         -- Get screen dimensions
         local width, height = love.graphics.getDimensions()
         
-        -- Calculate scale factors
-        local scaleX = width / Game.ORIGINAL_WIDTH
-        local scaleY = height / Game.ORIGINAL_HEIGHT
-        local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+        -- Calculate scale based on screen dimensions
+        -- No reference size needed - just use the screen dimensions
+        local scale = 1.0 -- Default scale
+        
+        -- Store the scale for other modules to use
+        GAME_SCALE = scale
         
         -- Ensure minimum scale to prevent rendering issues
         scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
@@ -39,8 +42,9 @@ function Draw.draw(Game)
         local scaledHeight = height / scale
         
         -- Center the game in the window
-        local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-        local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
+        -- No need for offsets since we're using the actual level dimensions
+        local offsetX = 0
+        local offsetY = 0
         
         -- Store the offsets for other modules to use
         GAME_OFFSET_X = offsetX
@@ -63,23 +67,27 @@ function Draw.draw(Game)
     -- Apply camera transformation (includes scaling, centering, and camera position)
     Camera.apply(Game)
     
+    -- Get screen dimensions
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Get level dimensions
+    local levelWidth = Game.level.width * Cell.SIZE
+    local levelHeight = Game.level.height * Cell.SIZE
+    
     -- Draw gradient rectangle covering the entire screen
     love.graphics.setColor(Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4])
-    love.graphics.rectangle("fill", 0, 0, Game.ORIGINAL_WIDTH, Game.ORIGINAL_HEIGHT)
+    love.graphics.rectangle("fill", 0, 0, levelWidth, levelHeight)
     
     -- Create a subtle gradient mesh
     local gradient = love.graphics.newMesh({
         {0, 0, 0, 0, Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4]}, -- top-left
-        {Game.ORIGINAL_WIDTH, 0, 1, 0, Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4]}, -- top-right
-        {Game.ORIGINAL_WIDTH, Game.ORIGINAL_HEIGHT, 1, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
-        {0, Game.ORIGINAL_HEIGHT, 0, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
+        {levelWidth, 0, 1, 0, Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4]}, -- top-right
+        {levelWidth, levelHeight, 1, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
+        {0, levelHeight, 0, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
     }, "fan", "static")
     
     love.graphics.draw(gradient)
     
-    
-    -- Draw the level
-    Game.level:draw(Game.debug) -- Pass debug flag to level:draw
     
     -- If editor is active, draw editor
     if Editor.active then
@@ -88,6 +96,9 @@ function Draw.draw(Game)
         love.graphics.pop()
         return
     end
+    
+    -- Draw the level (only if editor is not active)
+    Game.level:draw(Game.debug) -- Pass debug flag to level:draw
     
     -- Draw the ball
     Game.ball:draw(Game.debug) -- Pass debug flag to ball:draw

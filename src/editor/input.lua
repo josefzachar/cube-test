@@ -17,14 +17,14 @@ end
 
 -- Handle mouse press in editor
 function EditorInput.handleMousePressed(x, y, button)
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = EditorInput.editor.screenToGameCoords(x, y)
+    -- Use raw screen coordinates for UI elements
+    local screenX, screenY = x, y
     
     -- Check if we're clicking on a button
     for _, buttonGroup in ipairs({EditorInput.editor.toolButtons, EditorInput.editor.brushButtons, EditorInput.editor.ballButtons, EditorInput.editor.buttons}) do
         for _, button in ipairs(buttonGroup) do
-            if gameX >= button.x and gameX <= button.x + button.width and
-               gameY >= button.y and gameY <= button.y + button.height then
+            if screenX >= button.x and screenX <= button.x + button.width and
+               screenY >= button.y and screenY <= button.y + button.height then
                 button.action()
                 return true
             end
@@ -32,12 +32,26 @@ function EditorInput.handleMousePressed(x, y, button)
     end
     
     -- If text input is active, clicking outside closes it
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local width, height = love.graphics.getDimensions()
     if EditorInput.editor.textInput.active and 
-       (gameX < gameWidth/2 - 200 or gameX > gameWidth/2 + 200 or
-        gameY < gameHeight/2 - 50 or gameY > gameHeight/2 + 50) then
-        EditorInput.editor.levelName = EditorInput.editor.textInput.text
+       (screenX < width/2 - 200 or screenX > width/2 + 200 or
+        screenY < height/2 - 50 or screenY > height/2 + 50) then
+        
+        -- Handle different text input modes
+        if EditorInput.editor.textInput.mode == "levelName" then
+            EditorInput.editor.levelName = EditorInput.editor.textInput.text
+        elseif EditorInput.editor.textInput.mode == "levelWidth" then
+            local newWidth = tonumber(EditorInput.editor.textInput.text)
+            if newWidth and newWidth >= 20 and newWidth <= 500 then
+                EditorInput.editor.resizeLevel(newWidth, EditorInput.editor.level.height)
+            end
+        elseif EditorInput.editor.textInput.mode == "levelHeight" then
+            local newHeight = tonumber(EditorInput.editor.textInput.text)
+            if newHeight and newHeight >= 20 and newHeight <= 500 then
+                EditorInput.editor.resizeLevel(EditorInput.editor.level.width, newHeight)
+            end
+        end
+        
         EditorInput.editor.textInput.active = false
         return true
     end
@@ -47,18 +61,17 @@ end
 
 -- Handle mouse press in file selector
 function EditorInput.handleFileSelectorMousePressed(x, y, button)
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY = EditorInput.editor.screenToGameCoords(x, y)
+    -- Use raw screen coordinates for UI elements
+    local screenX, screenY = x, y
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
-    local gameHeight = 1000 -- Same as ORIGINAL_HEIGHT in main.lua
+    local width, height = love.graphics.getDimensions()
     
     -- Dialog dimensions
     local dialogWidth = 500
     local dialogHeight = 400
-    local dialogX = (gameWidth - dialogWidth) / 2
-    local dialogY = (gameHeight - dialogHeight) / 2
+    local dialogX = (width - dialogWidth) / 2
+    local dialogY = (height - dialogHeight) / 2
     
     -- File list dimensions
     local fileListY = dialogY + 60
@@ -66,14 +79,14 @@ function EditorInput.handleFileSelectorMousePressed(x, y, button)
     local fileItemHeight = 30
     
     -- Check if clicking in file list
-    if gameX >= dialogX + 20 and gameX <= dialogX + dialogWidth - 20 and
-       gameY >= fileListY and gameY <= fileListY + fileListHeight then
+    if screenX >= dialogX + 20 and screenX <= dialogX + dialogWidth - 20 and
+       screenY >= fileListY and screenY <= fileListY + fileListHeight then
         -- Calculate which file was clicked
         local visibleFiles = math.floor(fileListHeight / fileItemHeight)
         local startIndex = math.max(1, EditorInput.editor.fileSelector.selectedIndex - math.floor(visibleFiles / 2))
         startIndex = math.min(startIndex, math.max(1, #EditorInput.editor.fileSelector.files - visibleFiles + 1))
         
-        local clickedIndex = startIndex + math.floor((gameY - fileListY) / fileItemHeight)
+        local clickedIndex = startIndex + math.floor((screenY - fileListY) / fileItemHeight)
         if clickedIndex >= 1 and clickedIndex <= #EditorInput.editor.fileSelector.files then
             EditorInput.editor.fileSelector.selectedIndex = clickedIndex
             
@@ -97,9 +110,9 @@ function EditorInput.handleFileSelectorMousePressed(x, y, button)
     end
     
     -- Check if clicking OK button
-    if gameX >= dialogX + dialogWidth - buttonWidth - buttonSpacing - buttonWidth - buttonSpacing and
-       gameX <= dialogX + dialogWidth - buttonWidth - buttonSpacing - buttonSpacing and
-       gameY >= buttonsY and gameY <= buttonsY + buttonHeight then
+    if screenX >= dialogX + dialogWidth - buttonWidth - buttonSpacing - buttonWidth - buttonSpacing and
+       screenX <= dialogX + dialogWidth - buttonWidth - buttonSpacing - buttonSpacing and
+       screenY >= buttonsY and screenY <= buttonsY + buttonHeight then
         -- OK button clicked
         if EditorInput.editor.fileSelector.mode == "save" then
             EditorInput.editor.saveLevel()
@@ -110,17 +123,17 @@ function EditorInput.handleFileSelectorMousePressed(x, y, button)
     end
     
     -- Check if clicking Cancel button
-    if gameX >= dialogX + dialogWidth - buttonWidth - buttonSpacing and
-       gameX <= dialogX + dialogWidth - buttonSpacing and
-       gameY >= buttonsY and gameY <= buttonsY + buttonHeight then
+    if screenX >= dialogX + dialogWidth - buttonWidth - buttonSpacing and
+       screenX <= dialogX + dialogWidth - buttonSpacing and
+       screenY >= buttonsY and screenY <= buttonsY + buttonHeight then
         -- Cancel button clicked
         EditorInput.editor.fileSelector.active = false
         return true
     end
     
     -- If clicking outside the dialog, close it
-    if gameX < dialogX or gameX > dialogX + dialogWidth or
-       gameY < dialogY or gameY > dialogY + dialogHeight then
+    if screenX < dialogX or screenX > dialogX + dialogWidth or
+       screenY < dialogY or screenY > dialogY + dialogHeight then
         EditorInput.editor.fileSelector.active = false
         return true
     end
@@ -140,9 +153,9 @@ function EditorInput.handleMouseDrag(dt)
     local gridX, gridY = EditorInput.editor.level:getGridCoordinates(gameX, gameY)
     
     -- Check if mouse is in the level area and not over UI
-    local gameWidth = 1600  -- Same as ORIGINAL_WIDTH in main.lua
+    local width = love.graphics.getWidth()
     if gridX < 0 or gridX >= EditorInput.editor.level.width or gridY < 0 or gridY >= EditorInput.editor.level.height or
-       gameX <= 140 or gameX >= gameWidth - 140 then
+       gameX <= 140 or gameX >= width - 140 then
         return
     end
     
@@ -255,8 +268,32 @@ end
 
 -- Handle key press in text input
 function EditorInput.handleTextInputKeyPressed(key)
-    if key == "return" or key == "escape" then
-        EditorInput.editor.levelName = EditorInput.editor.textInput.text
+    if key == "return" then
+        -- Handle different text input modes
+        if EditorInput.editor.textInput.mode == "levelName" then
+            EditorInput.editor.levelName = EditorInput.editor.textInput.text
+        elseif EditorInput.editor.textInput.mode == "levelWidth" then
+            local newWidth = tonumber(EditorInput.editor.textInput.text)
+            if newWidth and newWidth >= 20 and newWidth <= 500 then
+                EditorInput.editor.resizeLevel(newWidth, EditorInput.editor.level.height)
+            end
+        elseif EditorInput.editor.textInput.mode == "levelHeight" then
+            local newHeight = tonumber(EditorInput.editor.textInput.text)
+            if newHeight and newHeight >= 20 and newHeight <= 500 then
+                EditorInput.editor.resizeLevel(EditorInput.editor.level.width, newHeight)
+            end
+        elseif EditorInput.editor.textInput.mode == "levelSize" then
+            -- Parse width and height from format "width,height"
+            local width, height = EditorInput.editor.textInput.text:match("(%d+),(%d+)")
+            width = tonumber(width)
+            height = tonumber(height)
+            
+            if width and height and width >= 20 and width <= 500 and height >= 20 and height <= 500 then
+                EditorInput.editor.resizeLevel(width, height)
+            end
+        end
+        EditorInput.editor.textInput.active = false
+    elseif key == "escape" then
         EditorInput.editor.textInput.active = false
     elseif key == "backspace" then
         if EditorInput.editor.textInput.cursor > 0 then

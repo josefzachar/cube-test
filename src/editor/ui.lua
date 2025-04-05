@@ -102,12 +102,11 @@ function EditorUI.createUI()
     }
     
     -- Get screen dimensions
-    local gameWidth = 1600  -- Original design width
-    local gameHeight = 1000  -- Original design height
+    local width, height = love.graphics.getDimensions()
     
     for i, ball in ipairs(ballTypes) do
         local button = {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 50 + (i-1) * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -128,7 +127,7 @@ function EditorUI.createUI()
     -- Create main editor buttons
     local mainButtons = {
         {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 200,
             width = buttonWidth,
             height = buttonHeight,
@@ -138,7 +137,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 200 + buttonHeight + buttonMargin,
             width = buttonWidth,
             height = buttonHeight,
@@ -148,7 +147,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 200 + 2 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -158,7 +157,7 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 200 + 3 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
@@ -167,11 +166,52 @@ function EditorUI.createUI()
                 EditorUI.editor.textInput.active = true
                 EditorUI.editor.textInput.text = EditorUI.editor.levelName
                 EditorUI.editor.textInput.cursor = #EditorUI.editor.levelName
+                EditorUI.editor.textInput.mode = "levelName"
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
+            x = width - panelWidth + 20,
             y = 200 + 4 * (buttonHeight + buttonMargin),
+            width = buttonWidth,
+            height = buttonHeight,
+            text = "SET WIDTH",
+            action = function()
+                EditorUI.editor.textInput.active = true
+                EditorUI.editor.textInput.text = tostring(EditorUI.editor.level.width)
+                EditorUI.editor.textInput.cursor = #EditorUI.editor.textInput.text
+                EditorUI.editor.textInput.mode = "levelWidth"
+            end
+        },
+        {
+            x = width - panelWidth + 20,
+            y = 200 + 5 * (buttonHeight + buttonMargin),
+            width = buttonWidth,
+            height = buttonHeight,
+            text = "SET HEIGHT",
+            action = function()
+                EditorUI.editor.textInput.active = true
+                EditorUI.editor.textInput.text = tostring(EditorUI.editor.level.height)
+                EditorUI.editor.textInput.cursor = #EditorUI.editor.textInput.text
+                EditorUI.editor.textInput.mode = "levelHeight"
+            end
+        },
+        {
+            x = width - panelWidth + 20,
+            y = 200 + 6 * (buttonHeight + buttonMargin),
+            width = buttonWidth,
+            height = buttonHeight,
+            text = "RESIZE LEVEL",
+            action = function()
+                -- Open a dialog to resize the level
+                EditorUI.editor.textInput.active = true
+                EditorUI.editor.textInput.text = tostring(EditorUI.editor.level.width) .. "," .. tostring(EditorUI.editor.level.height)
+                EditorUI.editor.textInput.cursor = #EditorUI.editor.textInput.text
+                EditorUI.editor.textInput.mode = "levelSize"
+            end
+        },
+        {
+            x = width - panelWidth + 20,
+            y = 200 + 7 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "TEST PLAY",
@@ -190,8 +230,8 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
-            y = 200 + 5 * (buttonHeight + buttonMargin),
+            x = width - panelWidth + 20,
+            y = 200 + 8 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "EXIT EDITOR",
@@ -200,8 +240,8 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
-            y = 200 + 6 * (buttonHeight + buttonMargin),
+            x = width - panelWidth + 20,
+            y = 200 + 9 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "BOUNDARIES",
@@ -210,8 +250,8 @@ function EditorUI.createUI()
             end
         },
         {
-            x = gameWidth - panelWidth + 20,
-            y = 200 + 7 * (buttonHeight + buttonMargin),
+            x = width - panelWidth + 20,
+            y = 200 + 10 * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "?",
@@ -228,16 +268,8 @@ end
 
 -- Draw the editor UI
 function EditorUI.draw()
-    -- Get game dimensions
-    local gameWidth = 1600  -- Original design width
-    local gameHeight = 1000  -- Original design height
-    
     -- Get actual screen dimensions
-    local screenWidth, screenHeight = love.graphics.getDimensions()
-    
-    -- Calculate scale factors for fullscreen stretching
-    local scaleX = screenWidth / gameWidth
-    local scaleY = screenHeight / gameHeight
+    local width, height = love.graphics.getDimensions()
     
     -- Save current transformation
     love.graphics.push()
@@ -245,16 +277,13 @@ function EditorUI.draw()
     -- Reset transformation to draw UI in screen coordinates
     love.graphics.origin()
     
-    -- Apply scaling to fill the entire screen
-    love.graphics.scale(scaleX, scaleY)
-    
     -- Draw left panel background
     love.graphics.setColor(0.1, 0.1, 0.2, 0.9)
-    love.graphics.rectangle("fill", 0, 0, 140, gameHeight)
+    love.graphics.rectangle("fill", 0, 0, 140, height)
     
     -- Draw right panel background
     love.graphics.setColor(0.1, 0.1, 0.2, 0.9)
-    love.graphics.rectangle("fill", gameWidth - 140, 0, 140, gameHeight)
+    love.graphics.rectangle("fill", width - 140, 0, 140, height)
     
     -- Draw tool buttons
     love.graphics.setFont(EditorUI.editor.buttonFont)
@@ -358,60 +387,72 @@ function EditorUI.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, 700)
     
+    -- Draw level size
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.print("SIZE: " .. EditorUI.editor.level.width .. "x" .. EditorUI.editor.level.height, 10, 730)
+    
     -- Draw help panel if enabled
     if EditorUI.editor.showHelp then
         -- Draw semi-transparent background for help panel
         love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle("fill", gameWidth/2 - 200, 100, 400, 400)
+        love.graphics.rectangle("fill", width/2 - 200, 100, 400, 400)
         
         -- Draw help panel border
         love.graphics.setColor(0, 0.8, 0.8, 1)
-        love.graphics.rectangle("line", gameWidth/2 - 200, 100, 400, 400)
+        love.graphics.rectangle("line", width/2 - 200, 100, 400, 400)
         
         -- Draw help panel title
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.print("EDITOR SHORTCUTS", gameWidth/2 - 180, 110)
+        love.graphics.print("EDITOR SHORTCUTS", width/2 - 180, 110)
         
         -- Draw help panel content
         local y = 140
         local lineHeight = 20
-        love.graphics.print("A/D: Previous/Next Material", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("W/S: Increase/Decrease Brush Size", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("Mouse Wheel: Change Brush Size", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("Left Click: Draw with Selected Material", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("Right Click: Erase", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("T: Draw Tool", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("F: Fill Tool", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("X: Erase Tool", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("P: Start Position Tool", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("H: Win Hole Tool", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("Space: Toggle UI", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("1-6: Quick Select Materials", gameWidth/2 - 180, y); y = y + lineHeight
-        love.graphics.print("?: Toggle Help Panel", gameWidth/2 - 180, y); y = y + lineHeight
+        love.graphics.print("A/D: Previous/Next Material", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("W/S: Increase/Decrease Brush Size", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Mouse Wheel: Change Brush Size", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Left Click: Draw with Selected Material", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Right Click: Erase", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("T: Draw Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("F: Fill Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("X: Erase Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("P: Start Position Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("H: Win Hole Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("Space: Toggle UI", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("1-6: Quick Select Materials", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("?: Toggle Help Panel", width/2 - 180, y); y = y + lineHeight
     end
     
     -- Draw text input if active
     if EditorUI.editor.textInput.active then
         -- Draw input background
         love.graphics.setColor(0, 0, 0, 0.8)
-        love.graphics.rectangle("fill", gameWidth/2 - 200, gameHeight/2 - 50, 400, 100)
+        love.graphics.rectangle("fill", width/2 - 200, height/2 - 50, 400, 100)
         
         -- Draw input border
         love.graphics.setColor(0, 0.8, 0.8, 1)
-        love.graphics.rectangle("line", gameWidth/2 - 200, gameHeight/2 - 50, 400, 100)
+        love.graphics.rectangle("line", width/2 - 200, height/2 - 50, 400, 100)
         
-        -- Draw input title
+        -- Draw input title based on mode
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.print("Enter Level Name:", gameWidth/2 - 180, gameHeight/2 - 40)
+        local titleText = "Enter Level Name:"
+        if EditorUI.editor.textInput.mode == "levelWidth" then
+            titleText = "Enter Level Width (20-500):"
+        elseif EditorUI.editor.textInput.mode == "levelHeight" then
+            titleText = "Enter Level Height (20-500):"
+        elseif EditorUI.editor.textInput.mode == "levelSize" then
+            titleText = "Enter Level Size (width,height):"
+        end
+        love.graphics.print(titleText, width/2 - 180, height/2 - 40)
         
         -- Draw input text
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.print(EditorUI.editor.textInput.text, gameWidth/2 - 180, gameHeight/2)
+        love.graphics.print(EditorUI.editor.textInput.text, width/2 - 180, height/2)
         
         -- Draw cursor
         if EditorUI.editor.textInput.cursorVisible then
-            local cursorX = gameWidth/2 - 180 + EditorUI.editor.buttonFont:getWidth(string.sub(EditorUI.editor.textInput.text, 1, EditorUI.editor.textInput.cursor))
-            love.graphics.rectangle("fill", cursorX, gameHeight/2, 2, 20)
+            local cursorX = width/2 - 180 + EditorUI.editor.buttonFont:getWidth(string.sub(EditorUI.editor.textInput.text, 1, EditorUI.editor.textInput.cursor))
+            love.graphics.rectangle("fill", cursorX, height/2, 2, 20)
         end
     end
     
@@ -424,34 +465,28 @@ function EditorUI.drawCursorPreview()
     -- Get mouse position first
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Get grid coordinates
-    local gridX, gridY
-    local gameX, gameY
+    -- Get game coordinates using editor's camera
+    local gameX, gameY = EditorUI.editor.screenToGameCoords(mouseX, mouseY)
     
-    -- Always use the MobileInput module for conversion
-    local MobileInput = require("src.mobile_input")
+    -- Get grid coordinates
     local Cell = require("cell")
-    gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-    gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
+    local InputUtils = require("src.input_utils")
+    local gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
     
     -- Get cell size
     local cellSize = Cell.SIZE
     
-    -- Get game dimensions for drawing
-    
-    -- Get game dimensions
-    local gameWidth = 1600  -- Original design width
-    local gameHeight = 1000  -- Original design height
+    -- Get screen dimensions
+    local width = love.graphics.getWidth()
     
     -- Save current transformation
     love.graphics.push()
     
-    -- Always use the MobileInput module for transformation
-    local MobileInput = require("src.mobile_input")
-    MobileInput.applyDrawTransform()
+    -- Apply camera transformation
+    love.graphics.translate(-EditorUI.editor.cameraX, -EditorUI.editor.cameraY)
     
     -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > gameWidth - 140 then
+    if gameX < 140 or gameX > width - 140 then
         -- Mouse is in UI area, don't draw cursor preview
         love.graphics.pop() -- Restore previous transformation
         return
@@ -477,11 +512,25 @@ function EditorUI.drawCursorPreview()
         -- Calculate brush position for drawing
         
         if EditorUI.editor.currentTool == "start" then
-            -- Draw start position cursor (green square)
-            love.graphics.setColor(0, 1, 0, 0.7)
-            love.graphics.rectangle("fill", brushX, brushY, cellSize, cellSize)
-            love.graphics.setColor(0, 1, 0, 1)
-            love.graphics.rectangle("line", brushX, brushY, cellSize, cellSize)
+            -- Draw start position cursor
+            love.graphics.setColor(0.2, 0.8, 0.2, 0.5) -- Light green with transparency
+            
+            -- Draw brush with proper size (single cell for start position)
+            local cellX = gridX
+            local cellY = gridY
+            if cellX >= 0 and cellX < EditorUI.editor.level.width and cellY >= 0 and cellY < EditorUI.editor.level.height then
+                -- Fill the cell with a semi-transparent color
+                love.graphics.rectangle("fill", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
+                -- Draw cell outline
+                love.graphics.setColor(0.2, 0.8, 0.2, 1) -- Solid green for outline
+                love.graphics.rectangle("line", cellX * cellSize, cellY * cellSize, cellSize, cellSize)
+            end
+            
+            -- Display position text above the brush
+            love.graphics.setColor(1, 1, 1, 1)
+            local text = "START"
+            local textWidth = EditorUI.editor.buttonFont:getWidth(text)
+            love.graphics.print(text, (cellX * cellSize) + (cellSize - textWidth) / 2, (cellY * cellSize) - 25)
         elseif EditorUI.editor.currentTool == "winhole" then
             -- Draw win hole cursor (diamond shape)
             love.graphics.setColor(1, 1, 0, 0.7)
@@ -581,18 +630,14 @@ end
 
 -- Handle mouse press in UI
 function EditorUI.handleMousePressed(x, y, button)
-    -- Convert screen coordinates to game coordinates
-    local gameX, gameY
-    
-    -- Always use MobileInput for coordinate conversion
-    local MobileInput = require("src.mobile_input")
-    gameX, gameY = MobileInput.screenToGameCoords(x, y)
+    -- Use raw screen coordinates for UI elements
+    local screenX, screenY = x, y
     
     -- Check if clicking on a button
     for _, buttonGroup in ipairs({EditorUI.editor.toolButtons, EditorUI.editor.brushButtons, EditorUI.editor.ballButtons, EditorUI.editor.buttons}) do
         for _, button in ipairs(buttonGroup) do
-            if gameX >= button.x and gameX <= button.x + button.width and
-               gameY >= button.y and gameY <= button.y + button.height then
+            if screenX >= button.x and screenX <= button.x + button.width and
+               screenY >= button.y and screenY <= button.y + button.height then
                 button.action()
                 return true
             end
@@ -600,18 +645,32 @@ function EditorUI.handleMousePressed(x, y, button)
     end
     
     -- If text input is active, clicking outside closes it
-    local gameWidth = 1600  -- Original design width
-    local gameHeight = 1000  -- Original design height
+    local width, height = love.graphics.getDimensions()
     if EditorUI.editor.textInput.active and 
-       (gameX < gameWidth/2 - 200 or gameX > gameWidth/2 + 200 or
-        gameY < gameHeight/2 - 50 or gameY > gameHeight/2 + 50) then
-        EditorUI.editor.levelName = EditorUI.editor.textInput.text
+       (screenX < width/2 - 200 or screenX > width/2 + 200 or
+        screenY < height/2 - 50 or screenY > height/2 + 50) then
+        
+        -- Handle different text input modes
+        if EditorUI.editor.textInput.mode == "levelName" then
+            EditorUI.editor.levelName = EditorUI.editor.textInput.text
+        elseif EditorUI.editor.textInput.mode == "levelWidth" then
+            local newWidth = tonumber(EditorUI.editor.textInput.text)
+            if newWidth and newWidth >= 20 and newWidth <= 500 then
+                EditorUI.editor.resizeLevel(newWidth, EditorUI.editor.level.height)
+            end
+        elseif EditorUI.editor.textInput.mode == "levelHeight" then
+            local newHeight = tonumber(EditorUI.editor.textInput.text)
+            if newHeight and newHeight >= 20 and newHeight <= 500 then
+                EditorUI.editor.resizeLevel(EditorUI.editor.level.width, newHeight)
+            end
+        end
+        
         EditorUI.editor.textInput.active = false
         return true
     end
     
     -- Check if clicking in UI area
-    if gameX < 140 or gameX > gameWidth - 140 then
+    if screenX < 140 or screenX > width - 140 then
         -- Clicking in UI area
         return true
     end

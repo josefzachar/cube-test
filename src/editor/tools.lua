@@ -3,8 +3,6 @@
 local CellTypes = require("src.cell_types")
 local Cell = require("cell")
 local WinHole = require("src.win_hole")
--- Use a constant for the original width to avoid circular dependency
-local ORIGINAL_WIDTH = 1600
 
 local EditorTools = {
     editor = nil,
@@ -73,23 +71,13 @@ function EditorTools.handleMouseDrag(gridX, gridY)
     local mouseX, mouseY = love.mouse.getPosition()
     
     -- Get game coordinates and check if mouse is in UI area
-    local gameX, gameY
-    
-    -- For mobile devices, use the MobileInput module for direct conversion
-    if _G.isMobile then
-        local MobileInput = require("src.mobile_input")
-        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-        
-        -- Process drag event
-    else
-        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    end
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
     
     -- Get screen dimensions
-    local gameWidth = ORIGINAL_WIDTH
+    local width = love.graphics.getWidth()
     
     -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > gameWidth - 140 then
+    if gameX < 140 or gameX > width - 140 then
         -- Mouse is in UI area, don't draw
         return
     end
@@ -116,17 +104,13 @@ function EditorTools.draw()
         local gridX, gridY
         local gameX, gameY
         
-        -- For mobile devices, use the MobileInput module for direct conversion
-        if _G.isMobile then
-            local MobileInput = require("src.mobile_input")
-            local Cell = require("cell")
-            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
-        else
-            -- Desktop approach
-            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
-        end
+        -- Use editor's camera for coordinate conversion
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get grid coordinates
+        local InputUtils = require("src.input_utils")
+        local Cell = require("cell")
+        gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
         
         -- Calculate position
         local cellSize = Cell.SIZE
@@ -147,17 +131,13 @@ function EditorTools.draw()
         local gridX, gridY
         local gameX, gameY
         
-        -- For mobile devices, use the MobileInput module for direct conversion
-        if _G.isMobile then
-            local MobileInput = require("src.mobile_input")
-            local Cell = require("cell")
-            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
-        else
-            -- Desktop approach
-            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
-        end
+        -- Use editor's camera for coordinate conversion
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get grid coordinates
+        local InputUtils = require("src.input_utils")
+        local Cell = require("cell")
+        gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
         
         -- Calculate position
         local cellSize = Cell.SIZE
@@ -178,17 +158,13 @@ function EditorTools.draw()
         local gridX, gridY
         local gameX, gameY
         
-        -- For mobile devices, use the MobileInput module for direct conversion
-        if _G.isMobile then
-            local MobileInput = require("src.mobile_input")
-            local Cell = require("cell")
-            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
-        else
-            -- Desktop approach
-            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
-        end
+        -- Use editor's camera for coordinate conversion
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get grid coordinates
+        local InputUtils = require("src.input_utils")
+        local Cell = require("cell")
+        gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
         
         -- Calculate position
         local cellSize = Cell.SIZE
@@ -209,19 +185,13 @@ function EditorTools.draw()
         local gridX, gridY
         local gameX, gameY
         
-        -- For mobile devices, use the MobileInput module for direct conversion
-        if _G.isMobile then
-            local MobileInput = require("src.mobile_input")
-            local Cell = require("cell")
-            gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = MobileInput.gameToGridCoords(gameX, gameY, Cell.SIZE)
-            
-            -- Process mobile input
-        else
-            -- Desktop approach
-            gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-            gridX, gridY = EditorTools.editor.level:getGridCoordinates(gameX, gameY)
-        end
+        -- Use editor's camera for coordinate conversion
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get grid coordinates
+        local InputUtils = require("src.input_utils")
+        local Cell = require("cell")
+        gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
         
         -- Get brush size and cell size
         local brushSize = EditorTools.editor.brushSize
@@ -231,13 +201,7 @@ function EditorTools.draw()
         local cursorX = gridX * cellSize
         local cursorY = gridY * cellSize
         
-        -- Draw cursor indicator (green square)
-        love.graphics.setColor(0, 1, 0, 0.7)
-        love.graphics.rectangle("fill", cursorX, cursorY, cellSize, cellSize)
-        love.graphics.setColor(0, 1, 0, 1)
-        love.graphics.rectangle("line", cursorX, cursorY, cellSize, cellSize)
-        
-        -- No need to display debug information
+        -- No need to display debug information or draw cursor indicator
         
         -- Display position text next to cursor
         love.graphics.setColor(1, 1, 1, 1)
@@ -401,24 +365,14 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
-    -- Get game coordinates and check if mouse is in UI area
-    local gameX, gameY
-    
-    -- For mobile devices, use the MobileInput module for direct conversion
-    if _G.isMobile then
-        local MobileInput = require("src.mobile_input")
-        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-        
-        -- Process mobile input for mouse press
-    else
-        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    end
+    -- Get game coordinates directly from the editor's camera
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
     
     -- Get screen dimensions
-    local gameWidth = ORIGINAL_WIDTH
+    local width = love.graphics.getWidth()
     
     -- Check if mouse is in UI area (left or right panel)
-    if gameX < 140 or gameX > gameWidth - 140 then
+    if gameX < 140 or gameX > width - 140 then
         -- Mouse is in UI area, don't use tool
         return false
     end
@@ -479,15 +433,7 @@ function EditorTools.drawTool(gridX, gridY)
     local mouseX, mouseY = love.mouse.getPosition()
     
     -- Get game coordinates
-    local gameX, gameY
-    
-    -- For mobile devices, use the MobileInput module for direct conversion
-    if _G.isMobile then
-        local MobileInput = require("src.mobile_input")
-        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-    else
-        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    end
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
     
     -- Get cell type
     local cellType = EditorTools.editor.CELL_TYPE_TO_TYPE[EditorTools.editor.currentCellType]
@@ -536,15 +482,7 @@ function EditorTools.eraseTool(gridX, gridY)
     local mouseX, mouseY = love.mouse.getPosition()
     
     -- Get game coordinates
-    local gameX, gameY
-    
-    -- For mobile devices, use the MobileInput module for direct conversion
-    if _G.isMobile then
-        local MobileInput = require("src.mobile_input")
-        gameX, gameY = MobileInput.screenToGameCoords(mouseX, mouseY)
-    else
-        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    end
+    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
     
     -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
