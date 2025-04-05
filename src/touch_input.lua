@@ -105,8 +105,12 @@ function TouchInput:handleTouchPressed(id, x, y, ball, level)
     
     -- Store the touch ID and position
     self.touchId = id
-    self.touchStartX = gameX
-    self.touchStartY = gameY
+    
+    -- Use the ball's position as the start position for aiming
+    local ballX, ballY = ball:getPosition()
+    self.touchStartX = ballX
+    self.touchStartY = ballY
+    
     self.touchCurrentX = gameX
     self.touchCurrentY = gameY
     
@@ -173,11 +177,22 @@ function TouchInput:screenToGameCoords(screenX, screenY)
     -- Calculate scale factors for fullscreen stretching
     local scaleX = width / ORIGINAL_WIDTH
     local scaleY = height / ORIGINAL_HEIGHT
+    local scale = math.min(scaleX, scaleY)
     
-    -- Convert screen coordinates to game coordinates
-    -- Since we're stretching to fill the screen, we simply divide by the scale factors
-    local gameX = screenX / scaleX
-    local gameY = screenY / scaleY
+    -- Calculate offsets for centering
+    local scaledWidth = width / scale
+    local scaledHeight = height / scale
+    local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
+    local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
+    
+    -- Get camera position
+    local Camera = require("src.camera")
+    local cameraOffsetX = ORIGINAL_WIDTH / 2 - Camera.x
+    local cameraOffsetY = ORIGINAL_HEIGHT / 2 - Camera.y
+    
+    -- Convert screen coordinates to game coordinates with camera offset
+    local gameX = (screenX / scale) - offsetX - cameraOffsetX
+    local gameY = (screenY / scale) - offsetY - cameraOffsetY
     
     return gameX, gameY
 end

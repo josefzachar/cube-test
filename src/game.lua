@@ -15,6 +15,7 @@ local Sound = require("src.sound")
 local Editor = require("src.editor")
 local Menu = require("src.menu")
 local WinHoleGenerator = require("src.win_hole_generator")
+local Camera = require("src.camera")
 
 -- Game state
 local Game = {
@@ -65,6 +66,9 @@ GAME_OFFSET_Y = 0
 function Game.init(mode, levelNumber)
     -- Initialize sound system
     Sound.load()
+    
+    -- Reset camera
+    Camera.reset()
     
     -- Set up the physics world with gravity
     Game.world = love.physics.newWorld(0, 9.81 * 64, true)
@@ -126,7 +130,6 @@ function Game.init(mode, levelNumber)
         
         -- Create the win hole using the exact position from the level data
         local WinHoleGenerator = require("src.win_hole_generator")
-        print("Creating win hole at exact position from level file: (" .. levelData.winHoleX .. "," .. levelData.winHoleY .. ")")
         WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY, levelData.startX, levelData.startY)
         
         -- Only allow balls specified in the level
@@ -167,6 +170,10 @@ function Game.init(mode, levelNumber)
     
     -- Set the ball as the user data for the ball body
     Game.ball.body:setUserData(Game.ball)
+    
+    -- Initialize camera with ball position
+    local ballX, ballY = Game.ball:getPosition()
+    Camera.init(ballX, ballY)
     
     -- Create input handler
     Game.input = Input.new()
@@ -423,6 +430,10 @@ function Game.handleKeyPressed(key)
         -- Reset game state on reset
         Game.gameWon = false
         Game.winMessageTimer = 0
+        
+        -- Reset camera to follow the ball at its new position
+        local ballX, ballY = Game.ball:getPosition()
+        Camera.init(ballX, ballY)
     else
         local result = Debug.handleKeyPressed(key, Game.level)
         if result == true then
@@ -607,11 +618,22 @@ function screenToGameCoords(screenX, screenY)
     -- Calculate scale factors for fullscreen stretching
     local scaleX = width / Game.ORIGINAL_WIDTH
     local scaleY = height / Game.ORIGINAL_HEIGHT
+    local scale = math.min(scaleX, scaleY)
     
-    -- Convert screen coordinates to game coordinates
-    -- Since we're stretching to fill the screen, we simply divide by the scale factors
-    local gameX = screenX / scaleX
-    local gameY = screenY / scaleY
+    -- Calculate offsets for centering
+    local scaledWidth = width / scale
+    local scaledHeight = height / scale
+    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
+    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
+    
+    -- Get camera position
+    local Camera = require("src.camera")
+    local cameraOffsetX = Game.ORIGINAL_WIDTH / 2 - Camera.x
+    local cameraOffsetY = Game.ORIGINAL_HEIGHT / 2 - Camera.y
+    
+    -- Convert screen coordinates to game coordinates with camera offset
+    local gameX = (screenX / scale) - offsetX - cameraOffsetX
+    local gameY = (screenY / scale) - offsetY - cameraOffsetY
     
     return gameX, gameY
 end

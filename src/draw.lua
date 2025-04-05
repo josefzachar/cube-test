@@ -5,6 +5,7 @@ local Sound = require("src.sound")
 local Editor = require("src.editor")
 local Menu = require("src.menu")
 local UI = require("src.ui")
+local Camera = require("src.camera")
 
 local Draw = {}
 
@@ -13,46 +14,54 @@ function Draw.draw(Game)
     -- Draw gradient background
     love.graphics.clear(0, 0, 0, 1) -- Clear with black first
     
-    -- Get screen dimensions
-    local width, height = love.graphics.getDimensions()
-    
-    -- Calculate scale factors
-    local scaleX = width / Game.ORIGINAL_WIDTH
-    local scaleY = height / Game.ORIGINAL_HEIGHT
-    local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
-    
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    
-    -- Store the scale for other modules to use
-    GAME_SCALE = scale
-    
-    -- Apply scaling transformation
-    love.graphics.push()
-    love.graphics.scale(scale, scale)
-    
-    -- Adjust width and height for scaled coordinates
-    local scaledWidth = width / scale
-    local scaledHeight = height / scale
-    
-    -- Center the game in the window
-    local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
-    local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
-    
-    -- Store the offsets for other modules to use
-    GAME_OFFSET_X = offsetX
-    GAME_OFFSET_Y = offsetY
-    
-    love.graphics.translate(offsetX, offsetY)
-    
-    -- Apply camera shake offset
-    local shakeX, shakeY = 0, 0
-    local cameraShakeActive = false
-    if Sound.cameraShake and Sound.cameraShake.active then
-        shakeX, shakeY = Sound.cameraShake.offsetX, Sound.cameraShake.offsetY
-        love.graphics.translate(shakeX, shakeY)
-        cameraShakeActive = true
+    -- If menu is active, draw menu with standard transformation
+    if Game.currentMode == Game.MODES.MENU then
+        -- Get screen dimensions
+        local width, height = love.graphics.getDimensions()
+        
+        -- Calculate scale factors
+        local scaleX = width / Game.ORIGINAL_WIDTH
+        local scaleY = height / Game.ORIGINAL_HEIGHT
+        local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+        
+        -- Ensure minimum scale to prevent rendering issues
+        scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+        
+        -- Store the scale for other modules to use
+        GAME_SCALE = scale
+        
+        -- Apply scaling transformation
+        love.graphics.push()
+        love.graphics.scale(scale, scale)
+        
+        -- Adjust width and height for scaled coordinates
+        local scaledWidth = width / scale
+        local scaledHeight = height / scale
+        
+        -- Center the game in the window
+        local offsetX = (scaledWidth - Game.ORIGINAL_WIDTH) / 2
+        local offsetY = (scaledHeight - Game.ORIGINAL_HEIGHT) / 2
+        
+        -- Store the offsets for other modules to use
+        GAME_OFFSET_X = offsetX
+        GAME_OFFSET_Y = offsetY
+        
+        love.graphics.translate(offsetX, offsetY)
+        
+        Menu.draw()
+        -- Pop the transformation stack before returning
+        love.graphics.pop()
+        return
     end
+    
+    -- Update camera position if we have a ball
+    if Game.ball then
+        local ballX, ballY = Game.ball:getPosition()
+        Camera.update(ballX, ballY, love.timer.getDelta())
+    end
+    
+    -- Apply camera transformation (includes scaling, centering, and camera position)
+    Camera.apply(Game)
     
     -- Draw gradient rectangle covering the entire screen
     love.graphics.setColor(Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4])
@@ -68,13 +77,6 @@ function Draw.draw(Game)
     
     love.graphics.draw(gradient)
     
-    -- If menu is active, draw menu
-    if Game.currentMode == Game.MODES.MENU then
-        Menu.draw()
-        -- Pop the transformation stack before returning
-        love.graphics.pop()
-        return
-    end
     
     -- Draw the level
     Game.level:draw(Game.debug) -- Pass debug flag to level:draw
@@ -92,6 +94,20 @@ function Draw.draw(Game)
     
     -- Draw input (aim line, power indicator)
     Game.input:draw(Game.ball, Game.attempts)
+    
+    -- Debug info
+    Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)
+    
+    -- Draw active cells for debugging
+    Debug.drawActiveCells(Game.level)
+    
+    -- Reset camera transformation before drawing UI
+    love.graphics.pop()
+    
+    -- Apply scaling transformation for UI elements (without camera offset)
+    love.graphics.push()
+    love.graphics.scale(GAME_SCALE, GAME_SCALE)
+    love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
     
     -- Display FPS counter
     love.graphics.setColor(Game.WHITE)
@@ -114,15 +130,9 @@ function Draw.draw(Game)
     
     love.graphics.print(modeText, 10, 50)
     
-    -- Debug info
-    Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)
-    
-    -- Draw active cells for debugging
-    Debug.drawActiveCells(Game.level)
-    
-    -- Reset scaling transformation before drawing UI
-    -- We only pushed once at the beginning, so we only need to pop once
+    -- Reset transformation
     love.graphics.pop()
+    
     
     -- Draw UI (UI is drawn at screen coordinates, not scaled)
     if not Editor.active then

@@ -56,9 +56,14 @@ function Input:update(ball, level)
         local offsetX = (scaledWidth - ORIGINAL_WIDTH) / 2
         local offsetY = (scaledHeight - ORIGINAL_HEIGHT) / 2
         
-        -- Convert screen coordinates to game coordinates
-        gameX = (screenX / scale) - offsetX
-        gameY = (screenY / scale) - offsetY
+        -- Get camera position
+        local Camera = require("src.camera")
+        local cameraOffsetX = ORIGINAL_WIDTH / 2 - Camera.x
+        local cameraOffsetY = ORIGINAL_HEIGHT / 2 - Camera.y
+        
+        -- Convert screen coordinates to game coordinates with camera offset
+        gameX = (screenX / scale) - offsetX - cameraOffsetX
+        gameY = (screenY / scale) - offsetY - cameraOffsetY
         
         -- Update mouse position with game coordinates
         self.mouseX = gameX
@@ -256,9 +261,10 @@ function Input:handleMousePressed(button, ball, gameX, gameY)
         -- Start aiming
         self.isAiming = true
         
-        -- Store the clicked position
-        self.clickPosition.x = clickX
-        self.clickPosition.y = clickY
+        -- Store the clicked position (this should be the ball's position)
+        local ballX, ballY = ball:getPosition()
+        self.clickPosition.x = ballX
+        self.clickPosition.y = ballY
         
         -- Update mouse position to match game coordinates
         if gameX and gameY then

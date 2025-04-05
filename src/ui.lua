@@ -281,10 +281,29 @@ end
 
 -- Draw the UI
 function UI.draw()
-    -- Apply scaling transformation for UI elements
+    -- Get screen dimensions for positioning
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    
+    -- Calculate scale factors
+    local scaleX = screenWidth / GAME_WIDTH
+    local scaleY = screenHeight / GAME_HEIGHT
+    local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+    
+    -- Ensure minimum scale to prevent rendering issues
+    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    
+    -- Apply scaling transformation for UI elements (without camera offset)
     love.graphics.push()
-    love.graphics.scale(GAME_SCALE, GAME_SCALE)
-    love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
+    love.graphics.scale(scale, scale)
+    
+    -- Center the game in the window
+    local scaledWidth = screenWidth / scale
+    local scaledHeight = screenHeight / scale
+    local offsetX = (scaledWidth - GAME_WIDTH) / 2
+    local offsetY = (scaledHeight - GAME_HEIGHT) / 2
+    
+    -- Apply translation for UI elements (without camera offset)
+    love.graphics.translate(offsetX, offsetY)
     
     -- Button dimensions for calculating panel size
     local buttonWidth = 160
@@ -353,10 +372,18 @@ end
 
 -- Convert screen coordinates to game coordinates
 function UI.convertCoordinates(screenX, screenY)
-    -- Use the global scale and offset variables from main.lua
-    local scale = GAME_SCALE or 1
-    local offsetX = GAME_OFFSET_X or 0
-    local offsetY = GAME_OFFSET_Y or 0
+    -- Calculate scale factors
+    local screenWidth, screenHeight = love.graphics.getDimensions()
+    local scaleX = screenWidth / GAME_WIDTH
+    local scaleY = screenHeight / GAME_HEIGHT
+    local scale = math.min(scaleX, scaleY)
+    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    
+    -- Calculate offsets for centering
+    local scaledWidth = screenWidth / scale
+    local scaledHeight = screenHeight / scale
+    local offsetX = (scaledWidth - GAME_WIDTH) / 2
+    local offsetY = (scaledHeight - GAME_HEIGHT) / 2
     
     -- Convert screen coordinates to game coordinates
     local gameX = (screenX / scale) - offsetX
