@@ -58,7 +58,7 @@ GAME_SCALE = 1
 GAME_OFFSET_X = 0
 GAME_OFFSET_Y = 0
 
--- Initialize the game
+    -- Initialize the game
 function Game.init(mode, levelNumber)
     -- Initialize sound system
     Sound.load()
@@ -77,20 +77,106 @@ function Game.init(mode, levelNumber)
         Collision.postSolve
     )
     
-    -- Create the level (80x60 cells, each 10x10 pixels)
-    Game.level = Level.new(Game.world, 160, 100)
+    -- If we're in test play mode, we should already have a level set by the editor
+    -- So we don't need to create a new one or modify the existing one
+    if Game.testPlayMode then
+        print("Test play mode - using editor level with dimensions: " .. Game.level.width .. "x" .. Game.level.height)
+        
+        -- Create the square ball at the starting position
+        local Editor = require("src.editor")
+        Game.ball = Balls.createBall(Game.world, Editor.startX * Cell.SIZE, Editor.startY * Cell.SIZE, Game.currentBallType)
+        
+        -- Set the ball as the user data for the ball body
+        Game.ball.body:setUserData(Game.ball)
+        
+        -- In test play mode, all balls are available
+        UI.availableBalls = {
+            [Balls.TYPES.STANDARD] = true,
+            [Balls.TYPES.HEAVY] = true,
+            [Balls.TYPES.EXPLODING] = true,
+            [Balls.TYPES.STICKY] = true,
+            [Balls.TYPES.SPRAYING] = true
+        }
+        
+        -- Initialize camera with ball position
+        local ballX, ballY = Game.ball:getPosition()
+        Camera.init(ballX, ballY)
+        
+        -- Note: Camera scaling is now completely disabled in camera.lua
+        -- to ensure cells are always displayed at their original size (10px)
+        
+        -- Create input handler
+        Game.input = Input.new()
+        
+        -- Reset game state
+        Game.gameWon = false
+        Game.winMessageTimer = 0
+        Game.attempts = 0
+        
+        -- Initialize editor
+        Editor.init(Game.level, Game.world)
+        
+        -- Initialize UI
+        if not UI.initialized then
+            -- Set up UI callbacks
+            UI.onBallTypeChange = function(ballTypeIndex)
+                local ballTypes = {
+                    Balls.TYPES.STANDARD,
+                    Balls.TYPES.HEAVY,
+                    Balls.TYPES.EXPLODING,
+                    Balls.TYPES.STICKY,
+                    Balls.TYPES.SPRAYING
+                }
+                
+                Game.currentBallType = ballTypes[ballTypeIndex]
+                local newBall = Balls.changeBallType(Game.ball, Game.world, Game.currentBallType)
+                Game.ball.body:destroy() -- Destroy old ball's body
+                Game.ball = newBall
+                Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
+                
+                local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying"}
+                print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
+            end
+            
+            UI.onAddWinHole = function()
+                local x, y = Game.ball.body:getPosition()
+                local gridX, gridY = Game.level:getGridCoordinates(x, y)
+                WinHole.createWinHoleArea(Game.level, gridX, gridY, 3, 3)
+                print("Added a win hole at ball position")
+            end
+            
+            UI.init()
+            UI.initialized = true
+        end
+        
+        return
+    end
     
     if mode == Game.MODES.PLAY then
         -- Load the specified level
         local levelData = Menu.loadLevel(levelNumber)
         if levelData then
-            -- Clear the level
-            Game.level:clearAllCells()
+            -- Always use the dimensions from the level file, no fallbacks
+            local levelWidth = tonumber(levelData.width)
+            local levelHeight = tonumber(levelData.height)
+            
+            if not levelWidth or not levelHeight then
+                print("ERROR: Invalid level dimensions in level file: width=" .. tostring(levelData.width) .. ", height=" .. tostring(levelData.height))
+                -- Use reasonable defaults if dimensions are invalid
+                levelWidth = 160
+                levelHeight = 100
+            end
+            
+            print("Using level file dimensions: " .. levelWidth .. "x" .. levelHeight)
+            Game.level = Level.new(Game.world, levelWidth, levelHeight)
             
             -- Set level properties
             local cellCount = 0
-            for y = 0, levelData.height - 1 do
-                for x = 0, levelData.width - 1 do
+            local height = tonumber(levelData.height) or 100
+            local width = tonumber(levelData.width) or 160
+            
+            for y = 0, height - 1 do
+                for x = 0, width - 1 do
                     local cellType = 0
                     
                     -- Check if cells is an array or an object
@@ -143,13 +229,36 @@ function Game.init(mode, levelNumber)
             }
         end
     else
-        -- Create a procedural level with the current difficulty
-        local LevelGenerator = require("src.level_generator")
-        print("Creating level with difficulty:", currentDifficulty)
-        Game.level:createProceduralLevel(currentDifficulty)
-        
-        -- Create a diamond-shaped win hole at a random position
-        WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
+        -- Check if we're in test play mode
+        if Game.testPlayMode then
+            -- In test play mode, the level is already created by the editor
+            -- We don't need to create a new level here
+            print("Test play mode - using editor level with dimensions: " .. Game.level.width .. "x" .. Game.level.height)
+            
+            -- Don't create a new win hole in test play mode, as the editor level already has one
+            -- or the user will place one manually during testing
+        else
+            -- Always use the editor's level dimensions
+            local Editor = require("src.editor")
+            
+            -- If editor has a level, use its dimensions
+            if Editor.level and Editor.level.width and Editor.level.height then
+                print("Using editor's level dimensions: " .. Editor.level.width .. "x" .. Editor.level.height)
+                Game.level = Level.new(Game.world, Editor.level.width, Editor.level.height)
+            else
+                -- This should never happen in normal operation, but just in case
+                print("WARNING: No editor level dimensions available, using minimal dimensions")
+                Game.level = Level.new(Game.world, 20, 20) -- Minimum allowed dimensions
+            end
+            
+            -- Create a procedural level with the current difficulty
+            local LevelGenerator = require("src.level_generator")
+            print("Creating level with difficulty:", currentDifficulty)
+            Game.level:createProceduralLevel(currentDifficulty)
+            
+            -- Create a diamond-shaped win hole at a random position
+            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
+        end
         
         -- Create the square ball at the starting position (matching the level generator)
         Game.ball = Balls.createBall(Game.world, 20 * Cell.SIZE, 20 * Cell.SIZE, Game.currentBallType)
@@ -171,9 +280,8 @@ function Game.init(mode, levelNumber)
     local ballX, ballY = Game.ball:getPosition()
     Camera.init(ballX, ballY)
     
-    -- Uncomment the line below to disable automatic cell scaling when window is resized
-    -- When disabled, cells will maintain their original size (10 pixels) regardless of window size
-    -- Camera.enableScaling = false
+    -- Note: Camera scaling is now completely disabled in camera.lua
+    -- to ensure cells are always displayed at their original size (10px)
     
     -- Create input handler
     Game.input = Input.new()

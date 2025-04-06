@@ -164,8 +164,33 @@ function FileOperations.loadLevel(editor)
     -- Debug output
     print("Loaded level data: " .. contents)
     
-    -- Clear current level
-    editor.level:clearAllCells()
+    -- Check if level dimensions need to be updated
+    if levelData.width and levelData.height and 
+       (editor.level.width ~= levelData.width or editor.level.height ~= levelData.height) then
+        print("Resizing level to match file dimensions: " .. levelData.width .. "x" .. levelData.height)
+        
+        -- Get EditorLevel module to resize the level
+        local EditorLevel = require("src.editor.level")
+        -- Initialize the EditorLevel module with the editor
+        EditorLevel.init(editor)
+        
+        -- Make sure width and height are numbers
+        local width = tonumber(levelData.width)
+        local height = tonumber(levelData.height)
+        
+        if width and height then
+            -- Now resize the level
+            print("Resizing level to: " .. width .. "x" .. height)
+            EditorLevel.resizeLevel(width, height)
+        else
+            print("ERROR: Invalid level dimensions: width=" .. tostring(levelData.width) .. ", height=" .. tostring(levelData.height))
+            -- Just clear the current level if dimensions are invalid
+            editor.level:clearAllCells()
+        end
+    else
+        -- Just clear the current level if dimensions match
+        editor.level:clearAllCells()
+    end
     
     -- Set level properties
     editor.levelName = levelData.name

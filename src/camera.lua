@@ -74,17 +74,11 @@ function Camera.apply(Game)
     local levelWidth = Game.level.width * Cell.SIZE
     local levelHeight = Game.level.height * Cell.SIZE
     
-    local scale = 1.0 -- Default scale if scaling is disabled
+    -- Force cell size to be exactly 10px for all levels
+    local scale = 1.0 -- This will make each cell exactly 10px (Cell.SIZE)
     
-    if Camera.enableScaling then
-        -- Calculate scale factors
-        local scaleX = width / levelWidth
-        local scaleY = height / levelHeight
-        scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
-        
-        -- Ensure minimum scale to prevent rendering issues
-        scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-    end
+    -- We're completely disabling automatic scaling
+    Camera.enableScaling = false
     
     -- Store the scale for other modules to use
     GAME_SCALE = scale

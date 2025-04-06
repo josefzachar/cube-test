@@ -149,8 +149,11 @@ function EditorLevel.loadLevel(filename)
     end
     
     -- Set cell data
-    for y = 0, levelData.height - 1 do
-        for x = 0, levelData.width - 1 do
+    local height = tonumber(levelData.height) or EditorLevel.editor.level.height
+    local width = tonumber(levelData.width) or EditorLevel.editor.level.width
+    
+    for y = 0, height - 1 do
+        for x = 0, width - 1 do
             if levelData.cells[y] and levelData.cells[y][x] then
                 EditorLevel.editor.level:setCellType(x, y, levelData.cells[y][x])
             end
@@ -273,6 +276,9 @@ function EditorLevel.testPlay()
     
     -- Disable editor temporarily
     EditorLevel.editor.active = false
+    
+    -- Note: Camera scaling is now completely disabled in camera.lua
+    -- to ensure cells are always displayed at their original size (10px)
     
     -- Return the ball for the game to use
     return ball

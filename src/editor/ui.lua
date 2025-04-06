@@ -219,14 +219,21 @@ function EditorUI.createUI()
                 -- Get Game module
                 local Game = require("src.game")
                 
+                -- Set test play mode first, so Game.init knows not to create a new level
+                Game.testPlayMode = true
+                
                 -- Test play the level
                 local ball = EditorUI.editor.testPlay()
                 
                 -- Set the ball in the game
                 Game.ball = ball
                 
-                -- Set test play mode
-                Game.testPlayMode = true
+                -- IMPORTANT: Explicitly set the game level to the editor's level
+                -- This ensures the game uses the level with its actual dimensions
+                Game.level = EditorUI.editor.level
+                
+                -- Print level dimensions for debugging
+                print("Test playing level with dimensions: " .. EditorUI.editor.level.width .. "x" .. EditorUI.editor.level.height)
             end
         },
         {
