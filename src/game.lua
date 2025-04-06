@@ -207,6 +207,20 @@ function Game.init(mode, levelNumber)
             -- Initialize grass on top of dirt cells
             Game.level:initializeGrass()
             
+            -- Load boulders if they exist in the level data
+            if levelData.boulders and type(levelData.boulders) == "table" then
+                Game.level.boulders = {}
+                for i, boulderData in ipairs(levelData.boulders) do
+                    if boulderData.x and boulderData.y then
+                        local Boulder = require("src.boulder")
+                        local boulder = Boulder.new(Game.world, boulderData.x, boulderData.y, boulderData.size or 60)
+                        table.insert(Game.level.boulders, boulder)
+                        print("Loaded boulder at", boulderData.x, boulderData.y)
+                    end
+                end
+                print("Loaded", #Game.level.boulders, "boulders from level file")
+            end
+            
         -- Create the ball at the specified starting position
         Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
         

@@ -53,8 +53,22 @@ function FileOperations.saveLevel(editor)
         winHoleX = editor.winHoleX,
         winHoleY = editor.winHoleY,
         availableBalls = editor.availableBalls,
-        cells = {}
+        cells = {},
+        boulders = {}
     }
+    
+    -- Save boulder data if there are any boulders
+    if editor.level.boulders and #editor.level.boulders > 0 then
+        for i, boulder in ipairs(editor.level.boulders) do
+            local boulderX, boulderY = boulder:getPosition()
+            table.insert(levelData.boulders, {
+                x = boulderX,
+                y = boulderY,
+                size = boulder.size or 60
+            })
+        end
+        print("Saving " .. #editor.level.boulders .. " boulders to level file")
+    end
     
     -- Initialize grass on top of dirt cells
     editor.level:initializeGrass()
@@ -243,6 +257,32 @@ function FileOperations.loadLevel(editor)
         print("Loaded " .. cellCount .. " cells")
     else
         print("Warning: No cells data found in level file")
+    end
+    
+    -- Load boulders if they exist in the level data
+    if levelData.boulders and type(levelData.boulders) == "table" then
+        -- Clear existing boulders
+        if editor.level.boulders then
+            for _, boulder in ipairs(editor.level.boulders) do
+                if boulder.body then
+                    boulder.body:destroy()
+                end
+            end
+        end
+        
+        -- Initialize boulders array
+        editor.level.boulders = {}
+        
+        -- Load boulders from level data
+        for i, boulderData in ipairs(levelData.boulders) do
+            if boulderData.x and boulderData.y then
+                local Boulder = require("src.boulder")
+                local boulder = Boulder.new(editor.world, boulderData.x, boulderData.y, boulderData.size or 60)
+                table.insert(editor.level.boulders, boulder)
+                print("Loaded boulder at", boulderData.x, boulderData.y)
+            end
+        end
+        print("Loaded", #editor.level.boulders, "boulders from level file")
     end
     
     print("Level loaded successfully")
