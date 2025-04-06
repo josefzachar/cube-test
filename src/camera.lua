@@ -20,7 +20,10 @@ local Camera = {
     lastBallY = 0,
     
     -- Flag to track if camera has been initialized
-    initialized = false
+    initialized = false,
+    
+    -- Flag to enable/disable automatic scaling
+    enableScaling = true
 }
 
 -- Initialize the camera with the ball's position
@@ -71,13 +74,17 @@ function Camera.apply(Game)
     local levelWidth = Game.level.width * Cell.SIZE
     local levelHeight = Game.level.height * Cell.SIZE
     
-    -- Calculate scale factors
-    local scaleX = width / levelWidth
-    local scaleY = height / levelHeight
-    local scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+    local scale = 1.0 -- Default scale if scaling is disabled
     
-    -- Ensure minimum scale to prevent rendering issues
-    scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    if Camera.enableScaling then
+        -- Calculate scale factors
+        local scaleX = width / levelWidth
+        local scaleY = height / levelHeight
+        scale = math.min(scaleX, scaleY) -- Use the smaller scale to ensure everything fits
+        
+        -- Ensure minimum scale to prevent rendering issues
+        scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
+    end
     
     -- Store the scale for other modules to use
     GAME_SCALE = scale

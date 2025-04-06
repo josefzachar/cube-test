@@ -482,7 +482,11 @@ function EditorUI.drawCursorPreview()
     -- Save current transformation
     love.graphics.push()
     
-    -- Apply camera transformation
+    -- Get camera module
+    local EditorCamera = require("src.editor.camera")
+    
+    -- Apply camera transformation with zoom
+    love.graphics.scale(EditorCamera.zoom, EditorCamera.zoom)
     love.graphics.translate(-EditorUI.editor.cameraX, -EditorUI.editor.cameraY)
     
     -- No need to check if mouse is in UI area anymore

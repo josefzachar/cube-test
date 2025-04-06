@@ -411,30 +411,22 @@ function EditorTools.drawTool(gridX, gridY)
         return
     end
     
-    -- Get mouse position
-    local mouseX, mouseY = love.mouse.getPosition()
-    
-    -- Get game coordinates
-    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    
     -- Get cell type
     local cellType = EditorTools.editor.CELL_TYPE_TO_TYPE[EditorTools.editor.currentCellType]
     
     -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
-    local cellSize = Cell.SIZE
     
-    -- Calculate brush position (using direct game coordinates)
-    local brushX = gameX - (brushSize * cellSize) / 2
-    local brushY = gameY - (brushSize * cellSize) / 2
+    -- Calculate brush center
+    local centerX = gridX
+    local centerY = gridY
     
-    -- Convert brush position to grid coordinates
-    local startGridX = math.floor(brushX / cellSize)
-    local startGridY = math.floor(brushY / cellSize)
+    -- Calculate brush radius (half the brush size)
+    local radius = math.floor(brushSize / 2)
     
-    print("EditorTools.drawTool - Drawing at game: " .. math.floor(gameX) .. "," .. math.floor(gameY) .. " with brush size: " .. brushSize)
-    print("EditorTools.drawTool - Brush at: " .. math.floor(brushX) .. "," .. math.floor(brushY))
-    print("EditorTools.drawTool - Grid start: " .. startGridX .. "," .. startGridY)
+    -- Calculate brush start position (top-left corner)
+    local startGridX = centerX - radius
+    local startGridY = centerY - radius
     
     -- Draw with brush size
     for y = 0, brushSize - 1 do
@@ -460,27 +452,19 @@ function EditorTools.eraseTool(gridX, gridY)
         return
     end
     
-    -- Get mouse position
-    local mouseX, mouseY = love.mouse.getPosition()
-    
-    -- Get game coordinates
-    local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
-    
     -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
-    local cellSize = Cell.SIZE
     
-    -- Calculate brush position (using direct game coordinates)
-    local brushX = gameX - (brushSize * cellSize) / 2
-    local brushY = gameY - (brushSize * cellSize) / 2
+    -- Calculate brush center
+    local centerX = gridX
+    local centerY = gridY
     
-    -- Convert brush position to grid coordinates
-    local startGridX = math.floor(brushX / cellSize)
-    local startGridY = math.floor(brushY / cellSize)
+    -- Calculate brush radius (half the brush size)
+    local radius = math.floor(brushSize / 2)
     
-    print("EditorTools.eraseTool - Erasing at game: " .. math.floor(gameX) .. "," .. math.floor(gameY) .. " with brush size: " .. brushSize)
-    print("EditorTools.eraseTool - Brush at: " .. math.floor(brushX) .. "," .. math.floor(brushY))
-    print("EditorTools.eraseTool - Grid start: " .. startGridX .. "," .. startGridY)
+    -- Calculate brush start position (top-left corner)
+    local startGridX = centerX - radius
+    local startGridY = centerY - radius
     
     -- Erase with brush size
     for y = 0, brushSize - 1 do

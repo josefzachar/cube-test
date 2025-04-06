@@ -30,9 +30,6 @@ function Draw.draw(Game)
         -- Ensure minimum scale to prevent rendering issues
         scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
         
-        -- Store the scale for other modules to use
-        GAME_SCALE = scale
-        
         -- Apply scaling transformation
         love.graphics.push()
         love.graphics.scale(scale, scale)

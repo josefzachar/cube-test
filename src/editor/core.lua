@@ -233,6 +233,9 @@ function EditorCore.draw()
     
     -- Draw panning indicator
     EditorCamera.drawPanningIndicator()
+    
+    -- Draw zoom indicator
+    EditorCamera.drawZoomIndicator()
 end
 
 -- Handle key press in editor

@@ -171,6 +171,10 @@ function Game.init(mode, levelNumber)
     local ballX, ballY = Game.ball:getPosition()
     Camera.init(ballX, ballY)
     
+    -- Uncomment the line below to disable automatic cell scaling when window is resized
+    -- When disabled, cells will maintain their original size (10 pixels) regardless of window size
+    -- Camera.enableScaling = false
+    
     -- Create input handler
     Game.input = Input.new()
     

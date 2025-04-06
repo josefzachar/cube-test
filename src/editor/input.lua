@@ -374,7 +374,27 @@ function EditorInput.handleMouseWheel(x, y)
         return false
     end
     
-    -- Change brush size with mouse wheel
+    -- Get camera module
+    local EditorCamera = require("src.editor.camera")
+    
+    -- Check if Ctrl key is pressed for zooming
+    if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
+        -- Zoom with mouse wheel
+        if y > 0 then
+            -- Wheel up - zoom in
+            EditorCamera.zoom = math.min(EditorCamera.zoom * 1.1, 5.0) -- Max zoom 5x
+        elseif y < 0 then
+            -- Wheel down - zoom out
+            EditorCamera.zoom = math.max(EditorCamera.zoom * 0.9, 0.2) -- Min zoom 0.2x
+        end
+        
+        -- Draw zoom indicator
+        print("Zoom level: " .. string.format("%.2f", EditorCamera.zoom) .. "x")
+        
+        return true
+    end
+    
+    -- Change brush size with mouse wheel (when Ctrl is not pressed)
     local sizes = {1, 2, 3, 5, 7}
     local currentSize = EditorInput.editor.brushSize
     local currentIndex = 1
