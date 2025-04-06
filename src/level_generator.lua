@@ -498,7 +498,6 @@ function createGoalArea(level, goalX, goalY)
                 
                 -- Only create win holes within the level bounds
                 if cellX >= 0 and cellX < level.width and cellY >= 0 and cellY < level.height then
-                    print("Creating win hole at", cellX, cellY)
                     WinHole.createWinHole(level, cellX, cellY)
                     table.insert(createdHoles, {x = cellX, y = cellY})
                 end
