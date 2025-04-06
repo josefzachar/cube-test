@@ -231,9 +231,6 @@ function EditorCore.draw()
         EditorUI.drawCursorPreview()
     end
     
-    -- Draw panning indicator
-    EditorCamera.drawPanningIndicator()
-    
     -- Draw zoom indicator
     EditorCamera.drawZoomIndicator()
 end

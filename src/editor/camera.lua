@@ -54,8 +54,9 @@ function EditorCamera.handlePanning(dt)
         -- Adjust panning speed based on zoom level
         -- When zoomed in, panning should be slower
         -- When zoomed out, panning should be faster
-        EditorCamera.editor.cameraX = EditorCamera.editor.cameraX + (dx / scale) / EditorCamera.zoom
-        EditorCamera.editor.cameraY = EditorCamera.editor.cameraY + (dy / scale) / EditorCamera.zoom
+        -- Negate dx and dy to invert the panning direction
+        EditorCamera.editor.cameraX = EditorCamera.editor.cameraX - (dx / scale) / EditorCamera.zoom
+        EditorCamera.editor.cameraY = EditorCamera.editor.cameraY - (dy / scale) / EditorCamera.zoom
         
         EditorCamera.editor.lastMouseX = mouseX
         EditorCamera.editor.lastMouseY = mouseY
@@ -77,14 +78,6 @@ end
 -- Reset camera transformation
 function EditorCamera.resetTransform()
     love.graphics.pop()
-end
-
--- Draw panning indicator
-function EditorCamera.drawPanningIndicator()
-    if EditorCamera.editor.isPanning then
-        love.graphics.setColor(1, 1, 1, 0.7)
-        love.graphics.print("PANNING MODE - Hold middle mouse button and drag", 10, 60)
-    end
 end
 
 -- Draw zoom indicator

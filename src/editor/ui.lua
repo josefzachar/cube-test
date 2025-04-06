@@ -500,13 +500,20 @@ function EditorUI.drawCursorPreview()
         local brushWidth = cellSize * brushSize
         local brushHeight = cellSize * brushSize
         
-        -- Calculate brush position (centered on cursor)
-        local brushX = gameX - (brushSize * cellSize) / 2
-        local brushY = gameY - (brushSize * cellSize) / 2
+        -- Calculate brush center at the grid position
+        local centerX = gridX
+        local centerY = gridY
         
-        -- Convert brush position to grid coordinates
-        local startGridX = math.floor(brushX / cellSize)
-        local startGridY = math.floor(brushY / cellSize)
+        -- Calculate brush radius (half the brush size)
+        local radius = math.floor(brushSize / 2)
+        
+        -- Calculate brush start position (top-left corner)
+        local startGridX = centerX - radius
+        local startGridY = centerY - radius
+        
+        -- Calculate brush position in game coordinates
+        local brushX = startGridX * cellSize
+        local brushY = startGridY * cellSize
         
         -- Calculate brush position for drawing
         
