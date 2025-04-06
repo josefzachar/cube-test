@@ -36,6 +36,9 @@ function Ball.new(world, x, y, ballType)
     self.body = love.physics.newBody(world, x, y, "dynamic")
     self.shape = love.physics.newRectangleShape(20, 20) -- 20x20 square
     
+    -- Ensure the ball doesn't float by setting a higher density
+    self.body:setMassData(0, 0, 2, 0) -- Increase the mass to prevent floating
+    
     -- Default physics properties (will be overridden by specific ball types)
     self.fixture = love.physics.newFixture(self.body, self.shape, 2)
     self.fixture:setRestitution(0.3)

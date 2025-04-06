@@ -219,12 +219,8 @@ function Boulder:draw(debug)
         love.graphics.setColor(1, 0, 0, 1)
         love.graphics.circle("line", 0, 0, self.shape:getRadius())
         
-        -- Draw a yellow outline for the visual area
-        love.graphics.setColor(1, 1, 0, 1)
-        -- Calculate the approximate bounding box of the visual boulder
-        local visualWidth = 80 * self.size / 100
-        local visualHeight = 110 * self.size / 100
-        love.graphics.rectangle("line", -visualWidth/2, -visualHeight/2, visualWidth, visualHeight)
+        -- We no longer need to draw the yellow outline for the visual area
+        -- as it's confusing and not necessary for debugging
         
         -- Draw axes to show rotation
         love.graphics.setColor(1, 0, 0, 1) -- Red for X axis
