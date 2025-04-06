@@ -158,40 +158,58 @@ function EditorTools.draw()
         local posText = "Boulder: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
         love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
         
-        -- Draw boulder cursor outline to match the new boulder appearance
-        love.graphics.setColor(1, 1, 0, 0.7) -- Yellow with transparency
-        
-        -- Draw a simplified version of the boulder shape
+        -- Draw boulder cursor preview that matches the actual boulder appearance
         local scale = EditorTools.boulderSize / 100
         local centerX = cursorX + cellSize/2
         local centerY = cursorY + cellSize/2
         
-        -- Draw the main outline (middle section)
-        love.graphics.rectangle(
-            "line",
-            centerX - 40 * scale,
-            centerY - 5 * scale,
-            80 * scale,
-            30 * scale
-        )
+        -- Define the boulder layers (from top to bottom) - simplified version
+        local layers = {
+            {width = 20, height = 10, y = -50, color = {0.53, 0.53, 0.53, 0.7}}, -- #888888
+            {width = 40, height = 10, y = -40, color = {0.47, 0.47, 0.47, 0.7}}, -- #777777
+            {width = 60, height = 10, y = -30, color = {0.40, 0.40, 0.40, 0.7}}, -- #666666
+            {width = 60, height = 10, y = -20, color = {0.36, 0.36, 0.36, 0.7}}, -- #5c5c5c
+            {width = 80, height = 10, y = -10, color = {0.30, 0.30, 0.30, 0.7}}, -- #4c4c4c
+            {width = 80, height = 10, y = 0,   color = {0.27, 0.27, 0.27, 0.7}}, -- #444444
+            {width = 80, height = 10, y = 10,  color = {0.23, 0.23, 0.23, 0.7}}, -- #3a3a3a
+            {width = 60, height = 10, y = 20,  color = {0.20, 0.20, 0.20, 0.7}}, -- #333333
+            {width = 40, height = 10, y = 30,  color = {0.16, 0.16, 0.16, 0.7}}  -- #2a2a2a
+        }
         
-        -- Draw the top section
-        love.graphics.rectangle(
-            "line",
-            centerX - 30 * scale,
-            centerY - 35 * scale,
-            60 * scale,
-            30 * scale
-        )
+        -- Add highlights
+        local highlights = {
+            {width = 20, height = 10, y = -20, color = {0.56, 0.56, 0.56, 0.7}}, -- #909090
+            {width = 20, height = 10, y = -10, color = {0.48, 0.48, 0.48, 0.7}}  -- #7a7a7a
+        }
         
-        -- Draw the bottom section
-        love.graphics.rectangle(
-            "line",
-            centerX - 30 * scale,
-            centerY + 25 * scale,
-            60 * scale,
-            20 * scale
-        )
+        -- Draw the main layers
+        for _, layer in ipairs(layers) do
+            love.graphics.setColor(layer.color)
+            love.graphics.rectangle(
+                "fill",
+                centerX - layer.width * scale / 2,
+                centerY + layer.y * scale + 5 * scale, -- Adjust vertical position to center
+                layer.width * scale,
+                layer.height * scale
+            )
+        end
+        
+        -- Draw the highlights
+        for _, highlight in ipairs(highlights) do
+            love.graphics.setColor(highlight.color)
+            love.graphics.rectangle(
+                "fill",
+                centerX - highlight.width * scale / 2,
+                centerY + highlight.y * scale + 5 * scale, -- Adjust vertical position to center
+                highlight.width * scale,
+                highlight.height * scale
+            )
+        end
+        
+        -- Draw the collision circle outline
+        love.graphics.setColor(1, 0, 0, 0.5) -- Semi-transparent red
+        local collisionRadius = EditorTools.boulderSize * 0.45 -- 45% of the visual size
+        love.graphics.circle("line", centerX, centerY, collisionRadius)
         
         -- Show right-click hint
         local hintText = "Right-click to delete"
