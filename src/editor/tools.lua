@@ -3,6 +3,7 @@
 local CellTypes = require("src.cell_types")
 local Cell = require("cell")
 local WinHole = require("src.win_hole")
+local Boulder = require("src.boulder")
 
 local EditorTools = {
     editor = nil,
@@ -13,7 +14,10 @@ local EditorTools = {
     lastGridY = -1,
     
     -- Tool functions
-    tools = {}
+    tools = {},
+    
+    -- Boulder properties
+    boulderSize = 30, -- Default boulder size
 }
 
 -- Calculate brush position based on grid coordinates and brush size
@@ -43,7 +47,8 @@ function EditorTools.init(editor)
         erase = EditorTools.eraseTool,
         fill = EditorTools.fillTool,
         start = EditorTools.startTool,
-        winhole = EditorTools.winholeTool
+        winhole = EditorTools.winholeTool,
+        boulder = EditorTools.boulderTool
     }
 end
 
@@ -63,11 +68,23 @@ function EditorTools.update(dt, gridX, gridY)
             -- Use the current tool
             local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
             if toolFunc then
-                toolFunc(gridX, gridY)
+                if EditorTools.editor.currentTool == "boulder" then
+                    toolFunc(gridX, gridY, false) -- false for left click
+                else
+                    toolFunc(gridX, gridY)
+                end
             end
         elseif love.mouse.isDown(2) then -- Right mouse button
-            -- Use the erase tool
-            EditorTools.eraseTool(gridX, gridY)
+            -- If boulder tool is selected, use it with right-click parameter
+            if EditorTools.editor.currentTool == "boulder" then
+                local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
+                if toolFunc then
+                    toolFunc(gridX, gridY, true) -- true for right click
+                end
+            else
+                -- Otherwise use the erase tool
+                EditorTools.eraseTool(gridX, gridY)
+            end
         end
         
         -- Update last grid position
@@ -84,6 +101,11 @@ function EditorTools.handleMouseDrag(gridX, gridY)
         return
     end
     
+    -- Only update if the grid position has changed
+    if gridX == EditorTools.lastGridX and gridY == EditorTools.lastGridY then
+        return
+    end
+    
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
@@ -93,7 +115,13 @@ function EditorTools.handleMouseDrag(gridX, gridY)
     -- Use the current tool
     local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
     if toolFunc then
-        toolFunc(gridX, gridY)
+        -- Check if it's the boulder tool and which mouse button is down
+        if EditorTools.editor.currentTool == "boulder" then
+            local isRightClick = love.mouse.isDown(2)
+            toolFunc(gridX, gridY, isRightClick)
+        else
+            toolFunc(gridX, gridY)
+        end
     end
     
     -- Update last grid position
@@ -104,7 +132,44 @@ end
 -- Draw the tools
 function EditorTools.draw()
     -- Draw the current tool cursor
-    if EditorTools.editor.currentTool == "start" then
+    if EditorTools.editor.currentTool == "boulder" then
+        -- Get mouse position
+        local mouseX, mouseY = love.mouse.getPosition()
+        
+        -- Get grid coordinates
+        local gridX, gridY
+        local gameX, gameY
+        
+        -- Use editor's camera for coordinate conversion
+        gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
+        
+        -- Get grid coordinates
+        local InputUtils = require("src.input_utils")
+        local Cell = require("cell")
+        gridX, gridY = InputUtils.gameToGridCoords(gameX, gameY, Cell.SIZE)
+        
+        -- Calculate position
+        local cellSize = Cell.SIZE
+        local cursorX = gridX * cellSize
+        local cursorY = gridY * cellSize
+        
+        -- Display position text next to cursor
+        love.graphics.setColor(1, 1, 1, 1)
+        local posText = "Boulder: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
+        love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
+        
+        -- Draw boulder cursor outline
+        love.graphics.setColor(1, 1, 0, 0.7) -- Yellow with transparency
+        love.graphics.circle("line", cursorX + cellSize/2, cursorY + cellSize/2, EditorTools.boulderSize/2)
+        
+        -- Show right-click hint
+        local hintText = "Right-click to delete"
+        local index, _ = EditorTools.findBoulderAtPosition(gridX, gridY)
+        if index then
+            love.graphics.setColor(1, 0.3, 0.3, 1) -- Red for delete hint
+            love.graphics.print(hintText, cursorX + cellSize + 5, cursorY + 20)
+        end
+    elseif EditorTools.editor.currentTool == "start" then
         -- Get mouse position
         local mouseX, mouseY = love.mouse.getPosition()
         
@@ -240,6 +305,9 @@ function EditorTools.handleKeyPressed(key)
     elseif key == "h" then
         EditorTools.editor.currentTool = "winhole"
         return true
+    elseif key == "b" then
+        EditorTools.editor.currentTool = "boulder"
+        return true
     end
     
     -- Brush size
@@ -342,12 +410,12 @@ function EditorTools.handleKeyPressed(key)
     end
     
     -- Ball type selection
-    if key == "b" then
-        -- Toggle standard ball
+    if key == "v" then
+        -- Toggle standard ball (changed from 'b' to 'v' to avoid conflict with boulder tool)
         EditorTools.editor.availableBalls.standard = not EditorTools.editor.availableBalls.standard
         return true
-    elseif key == "v" then
-        -- Toggle heavy ball
+    elseif key == "g" then
+        -- Toggle heavy ball (changed from 'v' to 'g' to avoid conflict)
         EditorTools.editor.availableBalls.heavy = not EditorTools.editor.availableBalls.heavy
         return true
     elseif key == "n" then
@@ -377,26 +445,52 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
     local gameX, gameY = EditorTools.editor.screenToGameCoords(mouseX, mouseY)
     
     if button == 1 then -- Left mouse button
+        -- Initialize last grid position to prevent multiple calls for the same position
+        local lastX = EditorTools.lastGridX
+        local lastY = EditorTools.lastGridY
+        
         -- Start using the current tool
         EditorTools.mouseDown = true
         EditorTools.lastGridX = gridX
         EditorTools.lastGridY = gridY
         
-        -- Use the current tool
-        local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
-        if toolFunc then
-            toolFunc(gridX, gridY)
+        -- Only use the tool if the position has changed or it's the first click
+        if gridX ~= lastX or gridY ~= lastY or lastX == -1 or lastY == -1 then
+            -- Use the current tool
+            local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
+            if toolFunc then
+                if EditorTools.editor.currentTool == "boulder" then
+                    toolFunc(gridX, gridY, false) -- false for left click
+                else
+                    toolFunc(gridX, gridY)
+                end
+            end
         end
         
         return true
     elseif button == 2 then -- Right mouse button
-        -- Use the erase tool
+        -- Initialize last grid position to prevent multiple calls for the same position
+        local lastX = EditorTools.lastGridX
+        local lastY = EditorTools.lastGridY
+        
+        -- Start using the current tool
         EditorTools.mouseDown = true
         EditorTools.lastGridX = gridX
         EditorTools.lastGridY = gridY
         
-        -- Erase at the current position
-        EditorTools.eraseTool(gridX, gridY)
+        -- Only use the tool if the position has changed or it's the first click
+        if gridX ~= lastX or gridY ~= lastY or lastX == -1 or lastY == -1 then
+            -- If boulder tool is selected, use it with right-click parameter
+            if EditorTools.editor.currentTool == "boulder" then
+                local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
+                if toolFunc then
+                    toolFunc(gridX, gridY, true) -- true for right click
+                end
+            else
+                -- Otherwise use the erase tool
+                EditorTools.eraseTool(gridX, gridY)
+            end
+        end
         
         return true
     end
@@ -593,6 +687,74 @@ function EditorTools.winholeTool(gridX, gridY)
     EditorTools.editor.winHoleY = gridY
     
     print("Win hole created at: " .. gridX .. ", " .. gridY)
+end
+
+-- Find boulder at grid position
+function EditorTools.findBoulderAtPosition(gridX, gridY)
+    -- Check if there are any boulders
+    if not EditorTools.editor.level.boulders then
+        return nil
+    end
+    
+    -- Calculate the position in game coordinates
+    local cellSize = Cell.SIZE
+    local targetX = (gridX + 0.5) * cellSize -- Center of the cell
+    local targetY = (gridY + 0.5) * cellSize -- Center of the cell
+    
+    -- Check each boulder
+    for i, boulder in ipairs(EditorTools.editor.level.boulders) do
+        local boulderX, boulderY = boulder:getPosition()
+        local distance = math.sqrt((boulderX - targetX)^2 + (boulderY - targetY)^2)
+        
+        -- If the boulder is close enough to the target position, return it
+        if distance < boulder.size / 2 + cellSize / 2 then
+            return i, boulder
+        end
+    end
+    
+    return nil
+end
+
+-- Boulder tool
+function EditorTools.boulderTool(gridX, gridY, isRightClick)
+    -- Check if grid coordinates are valid
+    if gridX < 0 or gridX >= EditorTools.editor.level.width or
+       gridY < 0 or gridY >= EditorTools.editor.level.height then
+        return
+    end
+    
+    -- If right-clicking, try to delete a boulder at this position
+    if isRightClick then
+        local index, boulder = EditorTools.findBoulderAtPosition(gridX, gridY)
+        if index then
+            -- Destroy the boulder's physics body
+            boulder.body:destroy()
+            
+            -- Remove the boulder from the level's boulders table
+            table.remove(EditorTools.editor.level.boulders, index)
+            
+            print("Boulder deleted at: " .. gridX .. ", " .. gridY)
+            return
+        end
+        return
+    end
+    
+    -- Calculate the position in game coordinates
+    local cellSize = Cell.SIZE
+    local x = (gridX + 0.5) * cellSize -- Center of the cell
+    local y = (gridY + 0.5) * cellSize -- Center of the cell
+    
+    -- Create a boulder at the position
+    local boulder = Boulder.new(EditorTools.editor.world, x, y, EditorTools.boulderSize)
+    
+    -- Add the boulder to the level's boulders table
+    if not EditorTools.editor.level.boulders then
+        EditorTools.editor.level.boulders = {}
+    end
+    
+    table.insert(EditorTools.editor.level.boulders, boulder)
+    
+    print("Boulder created at: " .. gridX .. ", " .. gridY)
 end
 
 return EditorTools

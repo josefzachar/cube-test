@@ -71,7 +71,8 @@ function EditorLevel.saveLevel(filename)
             exploding = EditorLevel.editor.availableBalls.exploding,
             sticky = EditorLevel.editor.availableBalls.sticky
         },
-        cells = {}
+        cells = {},
+        boulders = {}
     }
     
     -- Save cell data
@@ -79,6 +80,18 @@ function EditorLevel.saveLevel(filename)
         levelData.cells[y] = {}
         for x = 0, EditorLevel.editor.level.width - 1 do
             levelData.cells[y][x] = EditorLevel.editor.level:getCellType(x, y)
+        end
+    end
+    
+    -- Save boulder data
+    if EditorLevel.editor.level.boulders then
+        for i, boulder in ipairs(EditorLevel.editor.level.boulders) do
+            local x, y = boulder:getPosition()
+            table.insert(levelData.boulders, {
+                x = x,
+                y = y,
+                size = boulder.size
+            })
         end
     end
     
@@ -141,6 +154,26 @@ function EditorLevel.loadLevel(filename)
             if levelData.cells[y] and levelData.cells[y][x] then
                 EditorLevel.editor.level:setCellType(x, y, levelData.cells[y][x])
             end
+        end
+    end
+    
+    -- Load boulder data
+    if levelData.boulders then
+        -- Clear existing boulders
+        if EditorLevel.editor.level.boulders then
+            for _, boulder in ipairs(EditorLevel.editor.level.boulders) do
+                if boulder.body then
+                    boulder.body:destroy()
+                end
+            end
+            EditorLevel.editor.level.boulders = {}
+        end
+        
+        -- Create new boulders
+        local Boulder = require("src.boulder")
+        for _, boulderData in ipairs(levelData.boulders) do
+            local boulder = Boulder.new(EditorLevel.editor.world, boulderData.x, boulderData.y, boulderData.size)
+            table.insert(EditorLevel.editor.level.boulders, boulder)
         end
     end
     
@@ -207,8 +240,28 @@ function EditorLevel.testPlay()
     -- Store the current editor state
     EditorLevel.editor.testPlayState = {
         active = EditorLevel.editor.active,
-        level = EditorLevel.editor.level
+        level = EditorLevel.editor.level,
+        boulders = EditorLevel.editor.level.boulders
     }
+    
+    -- Create a copy of the boulders array to avoid duplication
+    if EditorLevel.editor.level.boulders then
+        -- Clear the existing boulders array to avoid duplication
+        EditorLevel.editor.level.boulders = {}
+        
+        -- Recreate boulders from the stored data
+        for _, boulder in ipairs(EditorLevel.editor.testPlayState.boulders) do
+            local x, y = boulder:getPosition()
+            local size = boulder.size
+            
+            -- Create a new boulder at the same position
+            local Boulder = require("src.boulder")
+            local newBoulder = Boulder.new(EditorLevel.editor.world, x, y, size)
+            
+            -- Add it to the level's boulders array
+            table.insert(EditorLevel.editor.level.boulders, newBoulder)
+        end
+    end
     
     -- Disable editor temporarily
     EditorLevel.editor.active = false
@@ -222,6 +275,20 @@ function EditorLevel.returnFromTestPlay()
     -- Restore editor state
     if EditorLevel.editor.testPlayState then
         EditorLevel.editor.active = EditorLevel.editor.testPlayState.active
+        
+        -- Restore boulders
+        if EditorLevel.editor.level.boulders then
+            -- Destroy current boulders
+            for _, boulder in ipairs(EditorLevel.editor.level.boulders) do
+                if boulder.body then
+                    boulder.body:destroy()
+                end
+            end
+            
+            -- Restore original boulders
+            EditorLevel.editor.level.boulders = EditorLevel.editor.testPlayState.boulders
+        end
+        
         EditorLevel.editor.testPlayState = nil
     else
         EditorLevel.editor.active = true

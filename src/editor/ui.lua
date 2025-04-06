@@ -36,8 +36,8 @@ function EditorUI.createUI()
     local panelWidth = 150
     
     -- Create tool buttons
-    local tools = {"draw", "erase", "fill", "start", "winhole"}
-    local toolNames = {"DRAW", "ERASE", "FILL", "SET START", "SET HOLE"}
+    local tools = {"draw", "erase", "fill", "start", "winhole", "boulder"}
+    local toolNames = {"DRAW", "ERASE", "FILL", "SET START", "SET HOLE", "BOULDER"}
     
     for i, tool in ipairs(tools) do
         local button = {
@@ -418,6 +418,7 @@ function EditorUI.draw()
         love.graphics.print("X: Erase Tool", width/2 - 180, y); y = y + lineHeight
         love.graphics.print("P: Start Position Tool", width/2 - 180, y); y = y + lineHeight
         love.graphics.print("H: Win Hole Tool", width/2 - 180, y); y = y + lineHeight
+        love.graphics.print("B: Boulder Tool", width/2 - 180, y); y = y + lineHeight
         love.graphics.print("Space: Toggle UI", width/2 - 180, y); y = y + lineHeight
         love.graphics.print("1-6: Quick Select Materials", width/2 - 180, y); y = y + lineHeight
         love.graphics.print("?: Toggle Help Panel", width/2 - 180, y); y = y + lineHeight
@@ -620,6 +621,83 @@ function EditorUI.drawCursorPreview()
                     end
                 end
             end
+        elseif EditorUI.editor.currentTool == "boulder" then
+            -- Get boulder size from EditorTools if available
+            local EditorTools = require("src.editor.tools")
+            local boulderSize = EditorTools.boulderSize or 30
+            
+            -- Calculate position (center of the cell)
+            local x = (gridX + 0.5) * cellSize
+            local y = (gridY + 0.5) * cellSize
+            
+            -- Draw a pixelated boulder preview
+            local pixelSize = 2 -- Size of each "pixel"
+            
+            -- Define the boulder shape as a 2D grid
+            -- 0 = empty, 1 = edge, 2 = fill, 3 = highlight
+            local boulderGrid = {
+                {0,0,0,0,1,1,1,1,1,0,0,0,0},
+                {0,0,1,1,2,2,2,2,2,1,1,0,0},
+                {0,1,2,2,2,2,2,2,2,2,2,1,0},
+                {0,1,2,2,2,2,2,2,2,2,2,1,0},
+                {1,2,2,2,2,2,2,2,2,2,2,2,1},
+                {1,2,2,2,2,2,2,2,2,2,2,2,1},
+                {1,2,2,2,2,2,2,2,2,2,2,2,1},
+                {1,2,2,2,2,2,2,2,2,2,2,2,1},
+                {1,2,2,2,2,2,2,2,2,2,2,2,1},
+                {0,1,2,2,2,2,2,2,2,2,2,1,0},
+                {0,1,2,2,2,2,2,2,2,2,2,1,0},
+                {0,0,1,1,2,2,2,2,2,1,1,0,0},
+                {0,0,0,0,1,1,1,1,1,0,0,0,0}
+            }
+            
+            -- Add highlight to top-left quadrant
+            for y_idx = 1, 6 do
+                for x_idx = 1, 6 do
+                    if boulderGrid[y_idx] and boulderGrid[y_idx][x_idx] == 2 then
+                        boulderGrid[y_idx][x_idx] = 3
+                    end
+                end
+            end
+            
+            -- Calculate the offset to center the grid
+            local gridSize = #boulderGrid
+            local offset = (gridSize * pixelSize) / 2
+            
+            -- Draw the boulder pixels with semi-transparency
+            for y_idx = 1, gridSize do
+                for x_idx = 1, gridSize do
+                    local value = boulderGrid[y_idx][x_idx]
+                    if value > 0 then
+                        -- Set color based on pixel type
+                        if value == 1 then
+                            -- Edge color (darker)
+                            love.graphics.setColor(0.35, 0.35, 0.35, 0.7)
+                        elseif value == 2 then
+                            -- Fill color
+                            love.graphics.setColor(0.5, 0.5, 0.5, 0.7)
+                        elseif value == 3 then
+                            -- Highlight color
+                            love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
+                        end
+                        
+                        -- Draw the pixel
+                        love.graphics.rectangle(
+                            "fill",
+                            x + (x_idx - 1) * pixelSize - offset,
+                            y + (y_idx - 1) * pixelSize - offset,
+                            pixelSize,
+                            pixelSize
+                        )
+                    end
+                end
+            end
+            
+            -- Display text above the boulder
+            love.graphics.setColor(1, 1, 1, 1)
+            local text = "BOULDER"
+            local textWidth = EditorUI.editor.buttonFont:getWidth(text)
+            love.graphics.print(text, x - textWidth / 2, y - boulderSize / 2 - 25)
         end
     end
     

@@ -248,6 +248,13 @@ function Game.update(dt)
     -- Update the ball
     local ballStopped = Game.ball:update(dt)
     
+    -- Update boulders if they exist
+    if Game.level.boulders then
+        for _, boulder in ipairs(Game.level.boulders) do
+            boulder:update(dt)
+        end
+    end
+    
     -- Check if the exploding ball should switch to standard ball
     if Game.ball.shouldSwitchToStandard then
         Game.currentBallType = Balls.TYPES.STANDARD

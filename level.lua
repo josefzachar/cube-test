@@ -5,6 +5,7 @@ local CellTypes = require("src.cell_types")
 local LevelGenerator = require("src.level_generator")
 local Renderer = require("src.renderer")
 local Updater = require("src.updater")
+local Boulder = require("src.boulder")
 
 local Level = {}
 Level.__index = Level
@@ -17,6 +18,7 @@ function Level.new(world, width, height)
     self.height = height
     self.cells = {}
     self.visualSandCells = {} -- Array to store visual sand cells
+    self.boulders = {} -- Array to store boulders
     
     -- Performance optimization variables
     self.activeCells = {} -- Table to track cells that need updating
@@ -86,11 +88,54 @@ function Level:update(dt, ball)
     
     -- Update cells in active clusters
     Updater.updateCells(self, dt)
+    
+    -- Update boulders
+    if self.boulders then
+        for _, boulder in ipairs(self.boulders) do
+            boulder:update(dt)
+            
+            -- Check for boulder interaction with cells
+            local boulderX, boulderY = boulder:getPosition()
+            local gridX, gridY = self:getGridCoordinates(boulderX, boulderY)
+            
+            -- Check surrounding cells for water and sand
+            for y = gridY - 2, gridY + 2 do
+                for x = gridX - 2, gridX + 2 do
+                    if x >= 0 and x < self.width and y >= 0 and y < self.height then
+                        local cellType = self:getCellType(x, y)
+                        
+                        -- Check if boulder is colliding with this cell
+                        if boulder:isCollidingWithCell(x, y, Cell.SIZE) then
+                            if cellType == CellTypes.TYPES.WATER then
+                                boulder:enterWater(x, y)
+                            elseif cellType == CellTypes.TYPES.SAND then
+                                boulder:enterSand(x, y)
+                            end
+                        else
+                            -- If not colliding, check if we need to exit water/sand
+                            if cellType == CellTypes.TYPES.WATER then
+                                boulder:exitWater(x, y)
+                            elseif cellType == CellTypes.TYPES.SAND then
+                                boulder:exitSand(x, y)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
 end
 
 function Level:draw(debug)
     -- Delegate to the Renderer module
     Renderer.drawLevel(self, debug)
+    
+    -- Draw boulders
+    if self.boulders then
+        for _, boulder in ipairs(self.boulders) do
+            boulder:draw(debug)
+        end
+    end
 end
 
 function Level:setCellType(x, y, type)
@@ -199,6 +244,16 @@ function Level:clearAllCells()
     -- Clear visual sand cells
     self.visualSandCells = {}
     
+    -- Clear boulders
+    if self.boulders then
+        for _, boulder in ipairs(self.boulders) do
+            if boulder.body then
+                boulder.body:destroy()
+            end
+        end
+        self.boulders = {}
+    end
+    
     -- Reset active cells
     self.activeCells = {}
     
@@ -245,6 +300,16 @@ function Level:destroy()
                 self.cells[y][x]:destroy(self.world)
             end
         end
+    end
+    
+    -- Destroy all boulders
+    if self.boulders then
+        for _, boulder in ipairs(self.boulders) do
+            if boulder.body then
+                boulder.body:destroy()
+            end
+        end
+        self.boulders = {}
     end
 end
 

@@ -76,7 +76,8 @@ local EditorCore = {
         "erase",
         "fill",
         "start",
-        "winhole"
+        "winhole",
+        "boulder"
     },
     
     -- Cell types

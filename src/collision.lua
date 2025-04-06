@@ -17,13 +17,15 @@ function Collision.beginContact(a, b, coll, level, ball)
     local bData = b:getUserData()
     
     -- Check if the ball is involved in the collision
-    local isBallCollision = (aData == "ball" or bData == "ball")
+    local isBallCollision = (aData == "ball" or bData == "ball" or 
+                            (type(aData) == "table" and aData.ballType) or 
+                            (type(bData) == "table" and bData.ballType))
     
     -- Handle collisions between ball and any cells
     if isBallCollision then
         -- Get the ball fixture and the other fixture
         local ballFixture, otherFixture
-        if aData == "ball" then
+        if aData == "ball" or (type(aData) == "table" and aData.ballType) then
             ballFixture = a
             otherFixture = b
         else
@@ -394,13 +396,15 @@ function Collision.endContact(a, b, coll, level)
     local bData = b:getUserData()
     
     -- Check if the ball is involved in the collision
-    local isBallCollision = (aData == "ball" or bData == "ball")
+    local isBallCollision = (aData == "ball" or bData == "ball" or 
+                            (type(aData) == "table" and aData.ballType) or 
+                            (type(bData) == "table" and bData.ballType))
     
     -- Handle collisions between ball and any cells
     if isBallCollision then
         -- Get the ball fixture and the other fixture
         local ballFixture, otherFixture
-        if aData == "ball" then
+        if aData == "ball" or (type(aData) == "table" and aData.ballType) then
             ballFixture = a
             otherFixture = b
         else
@@ -443,12 +447,14 @@ function Collision.preSolve(a, b, coll)
     local bData = b:getUserData()
     
     -- Check if the ball is involved in the collision
-    local isBallCollision = (aData == "ball" or bData == "ball")
+    local isBallCollision = (aData == "ball" or bData == "ball" or 
+                            (type(aData) == "table" and aData.ballType) or 
+                            (type(bData) == "table" and bData.ballType))
     
     if isBallCollision then
         -- Get the ball fixture and the other fixture
         local ballFixture, otherFixture
-        if aData == "ball" then
+        if aData == "ball" or (type(aData) == "table" and aData.ballType) then
             ballFixture = a
             otherFixture = b
         else
