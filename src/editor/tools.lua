@@ -16,6 +16,23 @@ local EditorTools = {
     tools = {}
 }
 
+-- Calculate brush position based on grid coordinates and brush size
+-- Returns startGridX, startGridY (top-left corner of the brush)
+function EditorTools.calculateBrushPosition(gridX, gridY, brushSize)
+    -- Calculate brush center at the grid position
+    local centerX = gridX
+    local centerY = gridY
+    
+    -- Calculate brush radius (half the brush size)
+    local radius = math.floor(brushSize / 2)
+    
+    -- Calculate brush start position (top-left corner)
+    local startGridX = centerX - radius
+    local startGridY = centerY - radius
+    
+    return startGridX, startGridY
+end
+
 -- Initialize the tools
 function EditorTools.init(editor)
     EditorTools.editor = editor
@@ -417,16 +434,8 @@ function EditorTools.drawTool(gridX, gridY)
     -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
     
-    -- Calculate brush center
-    local centerX = gridX
-    local centerY = gridY
-    
-    -- Calculate brush radius (half the brush size)
-    local radius = math.floor(brushSize / 2)
-    
-    -- Calculate brush start position (top-left corner)
-    local startGridX = centerX - radius
-    local startGridY = centerY - radius
+    -- Calculate brush position using the universal function
+    local startGridX, startGridY = EditorTools.calculateBrushPosition(gridX, gridY, brushSize)
     
     -- Draw with brush size
     for y = 0, brushSize - 1 do
@@ -455,16 +464,8 @@ function EditorTools.eraseTool(gridX, gridY)
     -- Apply brush with size
     local brushSize = EditorTools.editor.brushSize
     
-    -- Calculate brush center
-    local centerX = gridX
-    local centerY = gridY
-    
-    -- Calculate brush radius (half the brush size)
-    local radius = math.floor(brushSize / 2)
-    
-    -- Calculate brush start position (top-left corner)
-    local startGridX = centerX - radius
-    local startGridY = centerY - radius
+    -- Calculate brush position using the universal function
+    local startGridX, startGridY = EditorTools.calculateBrushPosition(gridX, gridY, brushSize)
     
     -- Erase with brush size
     for y = 0, brushSize - 1 do
