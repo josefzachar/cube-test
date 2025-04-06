@@ -16,17 +16,20 @@ function Boulder.new(world, x, y, size)
     local self = setmetatable({}, Boulder)
     
     -- Default size if not specified
-    size = size or 30
+    size = size or 60 -- Increased from 30 to 60 (2x larger)
     self.size = size
     
     -- Create the boulder physics body
     self.body = love.physics.newBody(world, x, y, "dynamic")
-    self.shape = love.physics.newCircleShape(size / 2) -- Circular shape
+    
+    -- Create a simple circular collision shape for smoother interaction with the ball
+    local collisionRadius = size * 0.45 -- 45% of the visual size
+    self.shape = love.physics.newCircleShape(collisionRadius)
     
     -- Physics properties
-    self.fixture = love.physics.newFixture(self.body, self.shape, 5) -- Higher density than ball
-    self.fixture:setRestitution(0.2) -- Less bouncy than ball
-    self.fixture:setFriction(0.7) -- More friction than ball
+    self.fixture = love.physics.newFixture(self.body, self.shape, 8) -- Higher density than ball
+    self.fixture:setRestitution(0.1) -- Less bouncy than ball
+    self.fixture:setFriction(0.9) -- More friction than ball
     self.fixture:setUserData(self) -- Set the boulder object as user data for collision detection
     
     -- Environment state
@@ -132,80 +135,96 @@ function Boulder:draw(debug)
     love.graphics.translate(x, y)
     love.graphics.rotate(angle)
     
-    -- Draw a pixelated boulder
+    -- Draw a boulder based on the SVG design
     local radius = self.size / 2
-    local pixelSize = 2 -- Size of each "pixel"
+    local scale = self.size / 100 -- Scale factor based on boulder size (SVG is 100x110)
     
-    -- Define the boulder shape as a 2D grid
-    -- 0 = empty, 1 = edge, 2 = fill, 3 = highlight
-    local boulderGrid = {
-        {0,0,0,0,1,1,1,1,1,0,0,0,0},
-        {0,0,1,1,2,2,2,2,2,1,1,0,0},
-        {0,1,2,2,2,2,2,2,2,2,2,1,0},
-        {0,1,2,2,2,2,2,2,2,2,2,1,0},
-        {1,2,2,2,2,2,2,2,2,2,2,2,1},
-        {1,2,2,2,2,2,2,2,2,2,2,2,1},
-        {1,2,2,2,2,2,2,2,2,2,2,2,1},
-        {1,2,2,2,2,2,2,2,2,2,2,2,1},
-        {1,2,2,2,2,2,2,2,2,2,2,2,1},
-        {0,1,2,2,2,2,2,2,2,2,2,1,0},
-        {0,1,2,2,2,2,2,2,2,2,2,1,0},
-        {0,0,1,1,2,2,2,2,2,1,1,0,0},
-        {0,0,0,0,1,1,1,1,1,0,0,0,0}
+    -- Define the boulder layers (from top to bottom)
+    local layers = {
+        {width = 20, height = 10, y = -50, color = {0.53, 0.53, 0.53, 1}}, -- #888888
+        {width = 40, height = 10, y = -40, color = {0.47, 0.47, 0.47, 1}}, -- #777777
+        {width = 60, height = 10, y = -30, color = {0.40, 0.40, 0.40, 1}}, -- #666666
+        {width = 60, height = 10, y = -20, color = {0.36, 0.36, 0.36, 1}}, -- #5c5c5c
+        {width = 80, height = 10, y = -10, color = {0.30, 0.30, 0.30, 1}}, -- #4c4c4c
+        {width = 80, height = 10, y = 0,   color = {0.27, 0.27, 0.27, 1}}, -- #444444
+        {width = 80, height = 10, y = 10,  color = {0.23, 0.23, 0.23, 1}}, -- #3a3a3a
+        {width = 60, height = 10, y = 20,  color = {0.20, 0.20, 0.20, 1}}, -- #333333
+        {width = 40, height = 10, y = 30,  color = {0.16, 0.16, 0.16, 1}}  -- #2a2a2a
     }
     
-    -- Add highlight to top-left quadrant
-    for y = 1, 6 do
-        for x = 1, 6 do
-            if boulderGrid[y] and boulderGrid[y][x] == 2 then
-                boulderGrid[y][x] = 3
-            end
+    -- Add highlights
+    local highlights = {
+        {width = 20, height = 10, y = -20, color = {0.56, 0.56, 0.56, 1}}, -- #909090
+        {width = 20, height = 10, y = -10, color = {0.48, 0.48, 0.48, 1}}  -- #7a7a7a
+    }
+    
+    -- Apply environment tint to all colors
+    if self.inWater then
+        for i, layer in ipairs(layers) do
+            layer.color[1] = layer.color[1] * 0.8
+            layer.color[2] = layer.color[2] * 0.8
+            layer.color[3] = layer.color[3] * 1.2
+        end
+        for i, highlight in ipairs(highlights) do
+            highlight.color[1] = highlight.color[1] * 0.8
+            highlight.color[2] = highlight.color[2] * 0.8
+            highlight.color[3] = highlight.color[3] * 1.2
+        end
+    elseif self.inSand then
+        for i, layer in ipairs(layers) do
+            layer.color[1] = layer.color[1] * 1.1
+            layer.color[2] = layer.color[2] * 0.9
+            layer.color[3] = layer.color[3] * 0.7
+        end
+        for i, highlight in ipairs(highlights) do
+            highlight.color[1] = highlight.color[1] * 1.1
+            highlight.color[2] = highlight.color[2] * 0.9
+            highlight.color[3] = highlight.color[3] * 0.7
         end
     end
     
-    -- Calculate the offset to center the grid
-    local gridSize = #boulderGrid
-    local offset = (gridSize * pixelSize) / 2
+    -- Draw the main layers
+    for _, layer in ipairs(layers) do
+        love.graphics.setColor(layer.color)
+        love.graphics.rectangle(
+            "fill",
+            -layer.width * scale / 2,
+            layer.y * scale + 5 * scale, -- Adjust vertical position to center
+            layer.width * scale,
+            layer.height * scale
+        )
+    end
     
-    -- Draw the boulder pixels
-    for y = 1, gridSize do
-        for x = 1, gridSize do
-            local value = boulderGrid[y][x]
-            if value > 0 then
-                -- Set color based on pixel type
-                if value == 1 then
-                    -- Edge color (darker)
-                    love.graphics.setColor(
-                        baseColor[1] * 0.7,
-                        baseColor[2] * 0.7,
-                        baseColor[3] * 0.7,
-                        baseColor[4]
-                    )
-                elseif value == 2 then
-                    -- Fill color
-                    love.graphics.setColor(baseColor)
-                elseif value == 3 then
-                    -- Highlight color
-                    love.graphics.setColor(highlightColor)
-                end
-                
-                -- Draw the pixel
-                love.graphics.rectangle(
-                    "fill",
-                    (x - 1) * pixelSize - offset,
-                    (y - 1) * pixelSize - offset,
-                    pixelSize,
-                    pixelSize
-                )
-            end
-        end
+    -- Draw the highlights
+    for _, highlight in ipairs(highlights) do
+        love.graphics.setColor(highlight.color)
+        love.graphics.rectangle(
+            "fill",
+            -highlight.width * scale / 2,
+            highlight.y * scale + 5 * scale, -- Adjust vertical position to center
+            highlight.width * scale,
+            highlight.height * scale
+        )
     end
     
     -- Draw debug info
     if debug then
-        -- Draw a red outline
+        -- Draw the collision area in red
+        love.graphics.setColor(1, 0, 0, 0.5) -- Semi-transparent red
+        
+        -- Draw the circular collision shape
+        love.graphics.circle("fill", 0, 0, self.shape:getRadius())
+        
+        -- Draw a red outline for the collision area
         love.graphics.setColor(1, 0, 0, 1)
-        love.graphics.circle("line", 0, 0, self.size / 2)
+        love.graphics.circle("line", 0, 0, self.shape:getRadius())
+        
+        -- Draw a yellow outline for the visual area
+        love.graphics.setColor(1, 1, 0, 1)
+        -- Calculate the approximate bounding box of the visual boulder
+        local visualWidth = 80 * self.size / 100
+        local visualHeight = 110 * self.size / 100
+        love.graphics.rectangle("line", -visualWidth/2, -visualHeight/2, visualWidth, visualHeight)
         
         -- Draw axes to show rotation
         love.graphics.setColor(1, 0, 0, 1) -- Red for X axis
@@ -235,7 +254,9 @@ end
 -- Check if the boulder is colliding with a cell at the given position
 function Boulder:isCollidingWithCell(cellX, cellY, cellSize)
     local boulderX, boulderY = self.body:getPosition()
-    local radius = self.size / 2
+    
+    -- Get the radius of the boulder's collision shape
+    local radius = self.shape:getRadius()
     
     -- Simple circle-rectangle collision check
     local cellLeft = cellX * cellSize

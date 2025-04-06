@@ -17,7 +17,7 @@ local EditorTools = {
     tools = {},
     
     -- Boulder properties
-    boulderSize = 30, -- Default boulder size
+    boulderSize = 60, -- Default boulder size (increased from 30 to 60)
 }
 
 -- Calculate brush position based on grid coordinates and brush size
@@ -158,9 +158,40 @@ function EditorTools.draw()
         local posText = "Boulder: " .. math.floor(cursorX) .. "," .. math.floor(cursorY)
         love.graphics.print(posText, cursorX + cellSize + 5, cursorY)
         
-        -- Draw boulder cursor outline
+        -- Draw boulder cursor outline to match the new boulder appearance
         love.graphics.setColor(1, 1, 0, 0.7) -- Yellow with transparency
-        love.graphics.circle("line", cursorX + cellSize/2, cursorY + cellSize/2, EditorTools.boulderSize/2)
+        
+        -- Draw a simplified version of the boulder shape
+        local scale = EditorTools.boulderSize / 100
+        local centerX = cursorX + cellSize/2
+        local centerY = cursorY + cellSize/2
+        
+        -- Draw the main outline (middle section)
+        love.graphics.rectangle(
+            "line",
+            centerX - 40 * scale,
+            centerY - 5 * scale,
+            80 * scale,
+            30 * scale
+        )
+        
+        -- Draw the top section
+        love.graphics.rectangle(
+            "line",
+            centerX - 30 * scale,
+            centerY - 35 * scale,
+            60 * scale,
+            30 * scale
+        )
+        
+        -- Draw the bottom section
+        love.graphics.rectangle(
+            "line",
+            centerX - 30 * scale,
+            centerY + 25 * scale,
+            60 * scale,
+            20 * scale
+        )
         
         -- Show right-click hint
         local hintText = "Right-click to delete"
@@ -707,7 +738,9 @@ function EditorTools.findBoulderAtPosition(gridX, gridY)
         local distance = math.sqrt((boulderX - targetX)^2 + (boulderY - targetY)^2)
         
         -- If the boulder is close enough to the target position, return it
-        if distance < boulder.size / 2 + cellSize / 2 then
+        -- Use the boulder's collision radius plus a small margin for easier selection
+        local selectionRadius = boulder.shape:getRadius() + cellSize * 0.2
+        if distance < selectionRadius then
             return i, boulder
         end
     end
