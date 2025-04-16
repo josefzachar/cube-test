@@ -252,18 +252,24 @@ function Game.init(mode, levelNumber)
             -- Don't create a new win hole in test play mode, as the editor level already has one
             -- or the user will place one manually during testing
         else
-            -- Always use the editor's level dimensions
-            local Editor = require("src.editor")
-            
-            -- If editor has a level, use its dimensions
-            if Editor.level and Editor.level.width and Editor.level.height then
-                print("Using editor's level dimensions: " .. Editor.level.width .. "x" .. Editor.level.height)
-                Game.level = Level.new(Game.world, Editor.level.width, Editor.level.height)
+        -- Always use the editor's level dimensions
+        local Editor = require("src.editor")
+        
+        -- If editor has a level, use its dimensions
+        if Editor.level and Editor.level.width and Editor.level.height then
+            print("Using editor's level dimensions: " .. Editor.level.width .. "x" .. Editor.level.height)
+            Game.level = Level.new(Game.world, Editor.level.width, Editor.level.height)
+        else
+            -- This should never happen in normal operation, but just in case
+            print("WARNING: No editor level dimensions available, using minimal dimensions")
+            -- For SANDBOX mode, use 10x10 cells instead of 20x20
+            if Game.currentMode == Game.MODES.SANDBOX then
+                print("Using 10x10 cells for SANDBOX mode")
+                Game.level = Level.new(Game.world, 160, 100)
             else
-                -- This should never happen in normal operation, but just in case
-                print("WARNING: No editor level dimensions available, using minimal dimensions")
-                Game.level = Level.new(Game.world, 20, 20) -- Minimum allowed dimensions
+                Game.level = Level.new(Game.world, 160, 100) -- Minimum allowed dimensions for other modes
             end
+        end
             
             -- Create a procedural level with the current difficulty
             local LevelGenerator = require("src.level_generator")
