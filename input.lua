@@ -202,40 +202,41 @@ function Input:draw(ball, attempts)
         local cellSize = 8  -- Size of each cell in pixels
         local cellSpacing = 6  -- Space between cells
         
-        -- Get ball position for drawing the aim lines
-        local ballX, ballY = ball:getPosition()
+        -- Use click position as the origin for drawing
+        local startX = self.clickPosition.x
+        local startY = self.clickPosition.y
         
-        -- Draw original aim line (dashed cells) from ball position
-        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction
-        local endX = ballX + self.aimDirection.x * lineLength
-        local endY = ballY + self.aimDirection.y * lineLength
+        -- Draw original aim line (dashed cells) from click position towards mouse
+        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction (click to mouse)
+        local endX = startX + self.aimDirection.x * lineLength
+        local endY = startY + self.aimDirection.y * lineLength
         self:drawDashedCellLine(
-            ballX, 
-            ballY, 
+            startX, 
+            startY, 
             endX, 
             endY,
             cellSize,
             cellSpacing
         )
         
-        -- Draw opposite aim line (actual shot direction) from ball position
-        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction
-        local shotEndX = ballX - self.aimDirection.x * lineLength
-        local shotEndY = ballY - self.aimDirection.y * lineLength
+        -- Draw opposite aim line (actual shot direction) from click position away from mouse
+        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction (mouse to click)
+        local shotEndX = startX - self.aimDirection.x * lineLength
+        local shotEndY = startY - self.aimDirection.y * lineLength
         self:drawDashedCellLine(
-            ballX, 
-            ballY, 
+            startX, 
+            startY, 
             shotEndX, 
             shotEndY,
-            8,
-            0
+            8, -- Cell size for the white line
+            0  -- No spacing for the white line
         )
         
-        -- Draw pixelated arrow at the end of the white line
+        -- Draw pixelated arrow at the end of the white line (shot direction)
         self:drawPixelatedArrow(
             shotEndX, 
             shotEndY, 
-            -self.aimDirection.x, 
+            -self.aimDirection.x, -- Arrow points in the shot direction
             -self.aimDirection.y, 
             24 -- Arrow size
         )
