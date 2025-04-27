@@ -8,9 +8,9 @@ local Cell = require("cell")
 Menu.active = false
 Menu.selectedOption = 1
 Menu.options = {
-    { text = "PLAY" },
-    { text = "EDITOR" },
-    { text = "SANDBOX" }
+    { text = "Play" },
+    { text = "Editor" },
+    { text = "Sandbox" }
 }
 
 -- Current level in play mode
@@ -19,8 +19,8 @@ Menu.totalLevels = 0
 
 -- Button dimensions
 Menu.buttonWidth = 200
-Menu.buttonHeight = 50
-Menu.buttonSpacing = 20
+Menu.buttonHeight = 40
+Menu.buttonSpacing = 10
 
 -- Background level
 Menu.backgroundLevel = nil
@@ -34,7 +34,7 @@ function Menu.init()
     end
     
     if not Menu.optionFont then
-        Menu.optionFont = love.graphics.newFont("fonts/pixel_font.ttf", 32)
+        Menu.optionFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
     end
     
     if not Menu.descriptionFont then
@@ -119,7 +119,7 @@ function Menu.calculateButtonPositions()
         option.x = 50
         
         -- Set vertical position with proper spacing from bottom
-        option.y = height - ((#Menu.options - i + 1) * (Menu.buttonHeight + Menu.buttonSpacing)) - 50
+        option.y = height - ((#Menu.options - i + 1) * (Menu.buttonHeight + Menu.buttonSpacing)) - 20
     end
 end
 
@@ -212,11 +212,11 @@ function Menu.draw()
         end
         
         -- Draw button background
-        love.graphics.rectangle("fill", option.x, option.y, option.width, option.height)
+        -- love.graphics.rectangle("fill", option.x, option.y, option.width, option.height)
         
         -- Draw button border
-        love.graphics.setColor(0, 0.8, 0.8, 1)
-        love.graphics.rectangle("line", option.x, option.y, option.width, option.height)
+        -- love.graphics.setColor(0, 0.8, 0.8, 1)
+        -- love.graphics.rectangle("line", option.x, option.y, option.width, option.height)
         
         -- Draw button text
         if i == Menu.selectedOption then
@@ -226,7 +226,7 @@ function Menu.draw()
         end
         
         local optionWidth = Menu.optionFont:getWidth(option.text)
-        love.graphics.print(option.text, option.x + (option.width - optionWidth) / 2, option.y + 10)
+        love.graphics.print(option.text, option.x + 30, option.y + 8)
     end
 end
 
