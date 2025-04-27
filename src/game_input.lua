@@ -300,6 +300,11 @@ function GameInput.handleMousePressed(Game, x, y, button)
         return -- Don't process other clicks when win screen is active
     end
 
+    -- Check if mobile UI handled the mouse press
+    if Game.mobileUI and Game.mobileUI.handleMousePressed(x, y, button, Game) then
+        return -- Mobile UI handled the press, don't process further
+    end
+    
     -- Check if UI handled the mouse press
     if UI.handlePress(x, y) then
         return -- UI handled the press, don't process further

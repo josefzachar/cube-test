@@ -146,6 +146,11 @@ function Draw.draw(Game)
     if not Editor.active then
         -- Draw UI based on game mode
         UI.draw()
+        
+        -- Draw mobile UI if available
+        if Game.mobileUI then
+            Game.mobileUI.draw(Game)
+        end
     end
     
     -- Draw win message if the game is won

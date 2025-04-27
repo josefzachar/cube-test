@@ -1,6 +1,7 @@
 -- mobile_ui.lua - Mobile-friendly UI components and scaling
 
 local UI = require("src.ui")
+local Balls = require("src.balls")
 
 local MobileUI = {}
 
@@ -49,7 +50,19 @@ function MobileUI.createMobileButtons()
         action = function(game)
             -- Reset the ball
             if game.ball then
-                game.ball:reset()
+                -- Instead of calling love.load() which goes back to the menu,
+                -- reinitialize the current game mode to reset the level
+                local currentMode = game.currentMode
+                local Menu = require("src.menu")
+                
+                if currentMode == game.MODES.PLAY then
+                    -- In PLAY mode, reinitialize with the current level
+                    game.init(currentMode, Menu.currentLevel)
+                else
+                    -- In SANDBOX or TEST_PLAY mode, just reinitialize the current mode
+                    game.init(currentMode)
+                end
+                
                 game.gameWon = false
                 game.winMessageTimer = 0
                 return true -- Reset was performed
@@ -58,7 +71,50 @@ function MobileUI.createMobileButtons()
         end
     }
     
-    -- Reset button is the only button we need now
+    -- Ball type buttons (vertically stacked on the bottom left)
+    local buttonSize = 80 -- Square buttons for touch
+    local buttonSpacing = 10
+    local leftMargin = 20
+    local bottomMargin = 20
+    
+    -- Ball type names and colors
+    local ballTypes = {
+        { name = "STD", type = Balls.TYPES.STANDARD, color = {1, 1, 1, 1} },
+        { name = "HVY", type = Balls.TYPES.HEAVY, color = {0.6, 0.6, 0.8, 1} },
+        { name = "EXP", type = Balls.TYPES.EXPLODING, color = {1, 0.4, 0.2, 1} },
+        { name = "STK", type = Balls.TYPES.STICKY, color = {0.3, 0.8, 0.3, 1} },
+        { name = "SPR", type = Balls.TYPES.SPRAYING, color = {0.9, 0.8, 0.3, 1} }
+    }
+    
+    MobileUI.ballButtons = {}
+    
+    for i, ballInfo in ipairs(ballTypes) do
+        local button = {
+            x = leftMargin,
+            y = love.graphics.getHeight() - bottomMargin - (buttonSize + buttonSpacing) * i,
+            width = buttonSize,
+            height = buttonSize,
+            text = ballInfo.name,
+            ballType = ballInfo.type,
+            color = ballInfo.color,
+            visible = true,
+            action = function(game)
+                -- Only allow ball switching in SANDBOX mode or when testing in EDITOR
+                if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+                    -- Change the ball type
+                    game.currentBallType = ballInfo.type
+                    local newBall = Balls.changeBallType(game.ball, game.world, game.currentBallType)
+                    if game.ball and game.ball.body then game.ball.body:destroy() end
+                    game.ball = newBall
+                    if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
+                    print("Switched to " .. ballInfo.name .. " Ball")
+                    return true -- Ball type was changed
+                end
+                return false
+            end
+        }
+        table.insert(MobileUI.ballButtons, button)
+    end
 end
 
 -- Update mobile UI
@@ -69,6 +125,20 @@ function MobileUI.update(game, dt)
     
     -- Update button visibility
     MobileUI.resetButton.visible = game.ball and not game.ball:isMoving()
+    
+    -- Update ball button positions
+    local buttonSize = 80
+    local buttonSpacing = 10
+    local leftMargin = 20
+    local bottomMargin = 20
+    
+    for i, button in ipairs(MobileUI.ballButtons) do
+        button.x = leftMargin
+        button.y = love.graphics.getHeight() - bottomMargin - (buttonSize + buttonSpacing) * i
+        
+        -- Only show ball type buttons in SANDBOX mode or when testing in EDITOR
+        button.visible = game.currentMode == game.MODES.SANDBOX or game.testPlayMode
+    end
     
     -- No long press detection needed anymore
 end
@@ -84,8 +154,65 @@ function MobileUI.draw(game)
     -- Draw reset button
     MobileUI.drawButton(MobileUI.resetButton, game.ball and not game.ball:isMoving())
     
+    -- Draw ball type buttons
+    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+        for _, button in ipairs(MobileUI.ballButtons) do
+            -- Highlight the current ball type
+            local isSelected = game.currentBallType == button.ballType
+            MobileUI.drawBallButton(button, button.visible, isSelected, button.color)
+        end
+    end
+    
     -- Restore original font
     love.graphics.setFont(originalFont)
+end
+
+-- Draw a ball button with color
+function MobileUI.drawBallButton(button, visible, isSelected, color)
+    if not visible or not button.visible then
+        return
+    end
+    
+    -- Draw button background
+    if isSelected then
+        -- Selected button has brighter background
+        love.graphics.setColor(0.4, 0.4, 0.4, 0.9)
+    else
+        love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
+    end
+    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height, 10, 10)
+    
+    -- Draw button border (thicker for selected button)
+    if isSelected then
+        love.graphics.setLineWidth(3)
+        love.graphics.setColor(1, 1, 1, 1)
+    else
+        love.graphics.setLineWidth(1)
+        love.graphics.setColor(1, 1, 1, 0.8)
+    end
+    love.graphics.rectangle("line", button.x, button.y, button.width, button.height, 10, 10)
+    love.graphics.setLineWidth(1)
+    
+    -- Draw ball representation (colored square)
+    love.graphics.setColor(color)
+    local ballSize = button.width * 0.4
+    love.graphics.rectangle("fill", 
+        button.x + (button.width - ballSize) / 2, 
+        button.y + (button.height - ballSize) / 2 - 10, 
+        ballSize, ballSize)
+    
+    -- Draw button text below the ball
+    love.graphics.setColor(1, 1, 1, 1)
+    local textWidth = love.graphics.getFont():getWidth(button.text)
+    local textHeight = love.graphics.getFont():getHeight()
+    love.graphics.print(
+        button.text,
+        button.x + (button.width - textWidth) / 2,
+        button.y + button.height - textHeight - 5
+    )
+    
+    -- Reset color
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- Draw a button
@@ -116,11 +243,44 @@ function MobileUI.drawButton(button, visible)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+-- Handle mouse press
+function MobileUI.handleMousePressed(x, y, button, game)
+    -- Only handle left mouse button
+    if button ~= 1 then
+        return false
+    end
+    
+    -- Check if click is on reset button
+    if MobileUI.isPointInButton(x, y, MobileUI.resetButton) and MobileUI.resetButton.visible then
+        return MobileUI.resetButton.action(game)
+    end
+    
+    -- Check if click is on any ball button
+    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+        for _, button in ipairs(MobileUI.ballButtons) do
+            if MobileUI.isPointInButton(x, y, button) and button.visible then
+                return button.action(game)
+            end
+        end
+    end
+    
+    return false
+end
+
 -- Handle touch press
 function MobileUI.handleTouchPressed(id, x, y, game)
     -- Check if touch is on reset button
     if MobileUI.isPointInButton(x, y, MobileUI.resetButton) and MobileUI.resetButton.visible then
         return MobileUI.resetButton.action(game)
+    end
+    
+    -- Check if touch is on any ball button
+    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+        for _, button in ipairs(MobileUI.ballButtons) do
+            if MobileUI.isPointInButton(x, y, button) and button.visible then
+                return button.action(game)
+            end
+        end
     end
     
     -- Check for triple tap (for reset)
@@ -130,7 +290,19 @@ function MobileUI.handleTouchPressed(id, x, y, game)
         if MobileUI.tapCount >= 3 then
             -- Triple tap detected - reset
             if game.ball then
-                game.ball:reset()
+                -- Instead of calling love.load() which goes back to the menu,
+                -- reinitialize the current game mode to reset the level
+                local currentMode = game.currentMode
+                local Menu = require("src.menu")
+                
+                if currentMode == game.MODES.PLAY then
+                    -- In PLAY mode, reinitialize with the current level
+                    game.init(currentMode, Menu.currentLevel)
+                else
+                    -- In SANDBOX or TEST_PLAY mode, just reinitialize the current mode
+                    game.init(currentMode)
+                end
+                
                 game.gameWon = false
                 game.winMessageTimer = 0
                 MobileUI.tapCount = 0

@@ -93,6 +93,11 @@ function GameUpdate.update(Game, dt)
     -- Update UI
     local mouseX, mouseY = love.mouse.getPosition()
     UI.update(mouseX, mouseY)
+    
+    -- Update mobile UI if available
+    if Game.mobileUI then
+        Game.mobileUI.update(Game, dt)
+    end
 end
 
 return GameUpdate

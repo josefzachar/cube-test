@@ -8,6 +8,7 @@ local Draw = require("src.draw")
 local Editor = require("src.editor")
 local TouchInput = require("src.touch_input")
 local InputUtils = require("src.input_utils")
+local MobileUI = require("src.mobile_ui")
 
 -- FPS counter for performance monitoring
 local fpsCounter = {
@@ -27,6 +28,10 @@ function love.load()
     
     -- Initialize touch input
     Game.touchInput = TouchInput.new()
+    
+    -- Initialize mobile UI
+    MobileUI.init()
+    Game.mobileUI = MobileUI
 end
 
 function love.update(dt)
@@ -45,6 +50,11 @@ function love.update(dt)
     -- Update touch input
     if Game.touchInput then
         Game.touchInput:update(Game.ball, Game.level, dt)
+    end
+    
+    -- Update mobile UI
+    if Game.mobileUI then
+        Game.mobileUI.update(Game, dt)
     end
 end
 
@@ -174,6 +184,11 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
         return -- Don't process other touches when win screen is active
     end
     
+    -- Check if mobile UI handled the touch
+    if Game.mobileUI and Game.mobileUI.handleTouchPressed(id, x, y, Game) then
+        return -- Mobile UI handled the press, don't process further
+    end
+    
     -- Get UI module
     local UI = require("src.ui")
     
@@ -195,6 +210,11 @@ function love.touchmoved(id, x, y, dx, dy, pressure)
 end
 
 function love.touchreleased(id, x, y, dx, dy, pressure)
+    -- Check if mobile UI handled the touch release
+    if Game.mobileUI and Game.mobileUI.handleTouchReleased(id, x, y, Game) then
+        return -- Mobile UI handled the release, don't process further
+    end
+    
     -- Let the touch input system handle it
     if Game.touchInput and Game.touchInput:handleTouchReleased(id, x, y, Game.ball) then
         Game.attempts = Game.attempts + 1
