@@ -39,7 +39,7 @@ local GameState = {
     BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0}, -- Lighter blue for bottom
     
     -- Dark navy blue background color for level background in both menu and play mode
-    LEVEL_BACKGROUND_COLOR = {0.05, 0.05, 0.15, 1.0} -- Very dark navy blue
+    LEVEL_BACKGROUND_COLOR = {0.074, 0.039, 0.137, 1.0} -- Very dark navy blue
 }
 
 -- Global difficulty level (1-5) - Keep this global for now as it's used directly elsewhere

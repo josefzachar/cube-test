@@ -103,6 +103,9 @@ function GameInit.init(Game, mode, levelNumber)
             UI.init()
             UI.initialized = true
         end
+        
+        -- We no longer need to set the level as the user data for the world
+        -- The sticky ball has been modified to not rely on this
 
         return
     end
@@ -252,6 +255,8 @@ function GameInit.init(Game, mode, levelNumber)
         print("ERROR: Ball or ball body not created during initialization!")
     end
 
+    -- We no longer need to set the level as the user data for the world
+    -- The sticky ball has been modified to not rely on this
 
     -- Initialize camera with ball position
     if Game.ball then

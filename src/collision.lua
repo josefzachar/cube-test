@@ -155,15 +155,33 @@ function Collision.beginContact(a, b, coll, level, ball)
             end
         end
         
-        -- Handle sticky ball sticking - only stick to material cells
+        -- Handle sticky ball sticking - only stick to material cells if it doesn't have attached sand
         if ballObject and ballObject.ballType == Balls.TYPES.STICKY and 
            (otherData == "sand" or otherData == "dirt" or otherData == "stone") then
-            -- Sticky ball sticks on impact with material cells
-            ballObject.stuck = true
             
-            -- Immediately stop the ball to simulate sticking
-            ballBody:setLinearVelocity(0, 0)
-            ballBody:setAngularVelocity(0)
+            -- Special case for sand cells - attach them to the sticky ball
+            if otherData == "sand" then
+                -- Get the sand cell position
+                local sandBody = otherFixture:getBody()
+                local sandX, sandY = sandBody:getPosition()
+                local gridX, gridY = level:getGridCoordinates(sandX, sandY)
+                
+                -- Attach the sand cell to the sticky ball
+                if ballObject.attachSandCell then
+                    -- Pass the level directly to the attachSandCell method
+                    ballObject:attachSandCell(gridX, gridY, level)
+                end
+            end
+            
+            -- Only stick if the ball doesn't have attached sand cells
+            if #ballObject.attachedSandCells == 0 then
+                -- Sticky ball sticks on impact with material cells
+                ballObject.stuck = true
+                
+                -- Immediately stop the ball to simulate sticking
+                ballBody:setLinearVelocity(0, 0)
+                ballBody:setAngularVelocity(0)
+            end
         end
         
         -- Handle exploding ball explosion
