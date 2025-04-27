@@ -59,6 +59,21 @@ function GameInput.handleKeyPressed(Game, key)
         Editor.active = not Editor.active
         return
     end
+    
+    -- Zoom controls (available in all modes except menu)
+    if key == "=" or key == "+" then
+        -- Increase zoom level
+        Game.increaseZoom()
+        return
+    elseif key == "-" then
+        -- Decrease zoom level
+        Game.decreaseZoom()
+        return
+    elseif key == "0" then
+        -- Reset zoom level to default
+        Game.resetZoom()
+        return
+    end
 
     -- If editor is active, handle editor key presses
     if Editor.active then
@@ -362,8 +377,9 @@ end
 
 -- Handle mouse wheel
 function GameInput.handleMouseWheel(Game, x, y)
-    -- If menu is active, don't handle game mouse wheel
+    -- If menu is active, handle menu mouse wheel
     if Game.currentMode == Game.MODES.MENU then
+        Menu.handleMouseWheel(x, y)
         return
     end
 
@@ -373,7 +389,14 @@ function GameInput.handleMouseWheel(Game, x, y)
         return
     end
 
-    -- In the future, we could add mouse wheel handling for the game itself
+    -- Use mouse wheel for zooming
+    if y > 0 then
+        -- Scroll up - zoom in
+        Game.increaseZoom()
+    elseif y < 0 then
+        -- Scroll down - zoom out
+        Game.decreaseZoom()
+    end
 end
 
 

@@ -153,17 +153,17 @@ function Menu.draw()
     -- Get screen dimensions
     local width, height = love.graphics.getDimensions()
     
-    -- Draw background level if loaded
+    -- Draw background level if loaded (with zoom)
     if Menu.backgroundLevel and Menu.backgroundLevelLoaded then
-        -- Apply camera transformation
+        -- Apply camera transformation with zoom
         love.graphics.push()
         
         -- Get level dimensions
         local levelWidth = Menu.backgroundLevel.width * Cell.SIZE
         local levelHeight = Menu.backgroundLevel.height * Cell.SIZE
         
-        -- Force cell size to be exactly 10px for all levels
-        local scale = 1.0
+        -- Apply zoom level to scale
+        local scale = ZOOM_LEVEL -- Use the global zoom level
         
         -- Apply scaling transformation
         love.graphics.scale(scale, scale)
@@ -198,6 +198,12 @@ function Menu.draw()
         love.graphics.rectangle("fill", 0, 0, width, height)
     end
     
+    -- Draw UI elements without scaling
+    Menu.drawUI(width, height)
+end
+
+-- Draw menu UI elements (without scaling)
+function Menu.drawUI(width, height)
     -- Draw title
     love.graphics.setFont(Menu.titleFont)
     love.graphics.setColor(0, 0.8, 0.8, 1)
@@ -232,6 +238,12 @@ function Menu.draw()
         local optionWidth = Menu.optionFont:getWidth(option.text)
         love.graphics.print(option.text, option.x + 30, option.y + 8)
     end
+    
+    -- Display zoom level
+    love.graphics.setFont(Menu.descriptionFont)
+    love.graphics.setColor(0, 0.8, 0.8, 1)
+    local zoomText = "ZOOM: " .. string.format("%.1f", ZOOM_LEVEL) .. "x (Use +/- keys or mouse wheel)"
+    love.graphics.print(zoomText, 10, 10)
 end
 
 -- Update the menu
@@ -265,6 +277,21 @@ function Menu.handleKeyPressed(key)
         -- Exit menu
         Menu.active = false
         return { action = "sandbox" } -- Default to sandbox mode
+    elseif key == "=" or key == "+" then
+        -- Increase zoom level
+        local GameState = require("src.game_state")
+        GameState.increaseZoom()
+        return true
+    elseif key == "-" then
+        -- Decrease zoom level
+        local GameState = require("src.game_state")
+        GameState.decreaseZoom()
+        return true
+    elseif key == "0" then
+        -- Reset zoom level to default
+        local GameState = require("src.game_state")
+        GameState.resetZoom()
+        return true
     end
     
     return false
@@ -287,6 +314,20 @@ function Menu.handleMousePressed(x, y, button)
     end
     
     return false
+end
+
+-- Handle mouse wheel in menu
+function Menu.handleMouseWheel(x, y)
+    -- Use mouse wheel for zooming
+    local GameState = require("src.game_state")
+    if y > 0 then
+        -- Scroll up - zoom in
+        GameState.increaseZoom()
+    elseif y < 0 then
+        -- Scroll down - zoom out
+        GameState.decreaseZoom()
+    end
+    return true
 end
 
 -- Execute the selected option

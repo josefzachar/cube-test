@@ -14,6 +14,11 @@ local GameState = {
     gameWon = false, -- Flag to track if the player has won
     winMessageTimer = 0, -- Timer for displaying the win message
     testPlayMode = false, -- Flag to track if we're in test play mode
+    
+    -- Zoom control
+    MIN_ZOOM = 0.5,
+    MAX_ZOOM = 2.0,
+    ZOOM_STEP = 0.1,
 
     -- Game modes
     MODES = {
@@ -40,9 +45,30 @@ local GameState = {
 -- Global difficulty level (1-5) - Keep this global for now as it's used directly elsewhere
 currentDifficulty = 1
 
+-- Global zoom level (0.5-2.0) - Controls the game's visual scale
+ZOOM_LEVEL = 1.0
+
 -- Make these global so they can be accessed from other modules - Keep these global
 GAME_SCALE = 1
 GAME_OFFSET_X = 0
 GAME_OFFSET_Y = 0
+
+-- Function to increase zoom level
+function GameState.increaseZoom()
+    ZOOM_LEVEL = math.min(ZOOM_LEVEL + GameState.ZOOM_STEP, GameState.MAX_ZOOM)
+    print("Zoom level increased to: " .. ZOOM_LEVEL)
+end
+
+-- Function to decrease zoom level
+function GameState.decreaseZoom()
+    ZOOM_LEVEL = math.max(ZOOM_LEVEL - GameState.ZOOM_STEP, GameState.MIN_ZOOM)
+    print("Zoom level decreased to: " .. ZOOM_LEVEL)
+end
+
+-- Function to reset zoom level to default
+function GameState.resetZoom()
+    ZOOM_LEVEL = 1.0
+    print("Zoom level reset to: " .. ZOOM_LEVEL)
+end
 
 return GameState

@@ -21,43 +21,20 @@ function Draw.draw(Game)
         love.graphics.clear(0, 0, 0, 1) -- Clear with black first
     end
     
-    -- If menu is active, draw menu with standard transformation
+    -- If menu is active, draw menu (Menu.draw handles its own transformations)
     if Game.currentMode == Game.MODES.MENU then
         -- Get screen dimensions
         local width, height = love.graphics.getDimensions()
         
-        -- Calculate scale based on screen dimensions
-        -- No reference size needed - just use the screen dimensions
-        local scale = 1.0 -- Default scale
-        
         -- Store the scale for other modules to use
-        GAME_SCALE = scale
-        
-        -- Ensure minimum scale to prevent rendering issues
-        scale = math.max(scale, 0.5) -- Minimum scale factor of 0.5
-        
-        -- Apply scaling transformation
-        love.graphics.push()
-        love.graphics.scale(scale, scale)
-        
-        -- Adjust width and height for scaled coordinates
-        local scaledWidth = width / scale
-        local scaledHeight = height / scale
-        
-        -- Center the game in the window
-        -- No need for offsets since we're using the actual level dimensions
-        local offsetX = 0
-        local offsetY = 0
+        GAME_SCALE = ZOOM_LEVEL
         
         -- Store the offsets for other modules to use
-        GAME_OFFSET_X = offsetX
-        GAME_OFFSET_Y = offsetY
+        GAME_OFFSET_X = 0
+        GAME_OFFSET_Y = 0
         
-        love.graphics.translate(offsetX, offsetY)
-        
+        -- Draw menu (handles its own transformations for background and UI)
         Menu.draw()
-        -- Pop the transformation stack before returning
-        love.graphics.pop()
         return
     end
     
@@ -109,9 +86,9 @@ function Draw.draw(Game)
     -- Reset camera transformation before drawing UI
     love.graphics.pop()
     
-    -- Apply scaling transformation for UI elements (without camera offset)
+    -- Apply transformation for UI elements (without scaling or camera offset)
     love.graphics.push()
-    love.graphics.scale(GAME_SCALE, GAME_SCALE)
+    -- No scaling for UI elements
     love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
     
     -- Display FPS counter
@@ -134,6 +111,10 @@ function Draw.draw(Game)
     end
     
     love.graphics.print(modeText, 10, 50)
+    
+    -- Display zoom level
+    local zoomText = "ZOOM: " .. string.format("%.1f", ZOOM_LEVEL) .. "x"
+    love.graphics.print(zoomText, 10, 30)
     
     -- Reset transformation
     love.graphics.pop()

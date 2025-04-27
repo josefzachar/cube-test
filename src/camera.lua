@@ -74,13 +74,13 @@ function Camera.apply(Game)
     local levelWidth = Game.level.width * Cell.SIZE
     local levelHeight = Game.level.height * Cell.SIZE
     
-    -- Force cell size to be exactly 10px for all levels
-    local scale = 1.0 -- This will make each cell exactly 10px (Cell.SIZE)
+    -- Apply zoom level to scale (only for game content, not UI)
+    local scale = ZOOM_LEVEL -- Use the global zoom level
     
     -- We're completely disabling automatic scaling
     Camera.enableScaling = false
     
-    -- Store the scale for other modules to use
+    -- Store the scale for other modules to use (but UI won't use it for scaling)
     GAME_SCALE = scale
     
     -- Apply scaling transformation
