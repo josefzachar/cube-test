@@ -98,7 +98,8 @@ function EditorUI.createUI()
         {type = "standard", name = "STANDARD"},
         {type = "heavy", name = "HEAVY"},
         {type = "exploding", name = "EXPLODING"},
-        {type = "sticky", name = "STICKY"}
+        {type = "sticky", name = "STICKY"},
+        {type = "spraying", name = "SPRAYING"}
     }
     
     -- Get screen dimensions
@@ -128,7 +129,7 @@ function EditorUI.createUI()
     local mainButtons = {
         {
             x = width - panelWidth + 20,
-            y = 200,
+            y = 250, -- Increased from 200 to add more space after ball buttons
             width = buttonWidth,
             height = buttonHeight,
             text = "SAVE",
@@ -138,7 +139,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + buttonHeight + buttonMargin,
+            y = 250 + buttonHeight + buttonMargin, -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "LOAD",
@@ -148,7 +149,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 2 * (buttonHeight + buttonMargin),
+            y = 250 + 2 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "CLEAR",
@@ -158,7 +159,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 3 * (buttonHeight + buttonMargin),
+            y = 250 + 3 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "SET NAME",
@@ -171,7 +172,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 4 * (buttonHeight + buttonMargin),
+            y = 250 + 4 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "SET WIDTH",
@@ -184,7 +185,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 5 * (buttonHeight + buttonMargin),
+            y = 250 + 5 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "SET HEIGHT",
@@ -197,7 +198,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 6 * (buttonHeight + buttonMargin),
+            y = 250 + 6 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "RESIZE LEVEL",
@@ -211,7 +212,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 7 * (buttonHeight + buttonMargin),
+            y = 250 + 7 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "TEST PLAY",
@@ -238,7 +239,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 8 * (buttonHeight + buttonMargin),
+            y = 250 + 8 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "EXIT EDITOR",
@@ -248,7 +249,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 9 * (buttonHeight + buttonMargin),
+            y = 250 + 9 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "BOUNDARIES",
@@ -258,7 +259,7 @@ function EditorUI.createUI()
         },
         {
             x = width - panelWidth + 20,
-            y = 200 + 10 * (buttonHeight + buttonMargin),
+            y = 250 + 10 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
             text = "?",
@@ -339,26 +340,37 @@ function EditorUI.draw()
             button.y + (button.height - textHeight) / 2)
     end
     
-    -- Draw ball selection buttons
+    -- Draw ball selection buttons as checkboxes
     for _, button in ipairs(EditorUI.editor.ballButtons) do
-        -- Button background
-        if button.isSelected() then
-            love.graphics.setColor(0.3, 0.3, 0.6, 1)
-        else
-            love.graphics.setColor(0.2, 0.2, 0.4, 1)
-        end
+        -- Button background (lighter than regular buttons)
+        love.graphics.setColor(0.25, 0.25, 0.45, 1)
         love.graphics.rectangle("fill", button.x, button.y, button.width, button.height)
         
         -- Button border
         love.graphics.setColor(0, 0.8, 0.8, 1)
         love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
         
+        -- Draw checkbox
+        local checkboxSize = 16
+        local checkboxX = button.x + 10
+        local checkboxY = button.y + (button.height - checkboxSize) / 2
+        
+        -- Checkbox border
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle("line", checkboxX, checkboxY, checkboxSize, checkboxSize)
+        
+        -- Checkbox fill if selected
+        if button.isSelected() then
+            love.graphics.setColor(0, 1, 0, 1) -- Green for selected
+            love.graphics.rectangle("fill", checkboxX + 2, checkboxY + 2, checkboxSize - 4, checkboxSize - 4)
+        end
+        
         -- Button text
         love.graphics.setColor(1, 1, 1, 1)
         local textWidth = EditorUI.editor.buttonFont:getWidth(button.text)
         local textHeight = EditorUI.editor.buttonFont:getHeight()
         love.graphics.print(button.text, 
-            button.x + (button.width - textWidth) / 2, 
+            checkboxX + checkboxSize + 10, 
             button.y + (button.height - textHeight) / 2)
     end
     
@@ -390,13 +402,11 @@ function EditorUI.draw()
     love.graphics.print("LEVEL NAME:", 10, 10)
     love.graphics.print(EditorUI.editor.levelName, 10, 30)
     
-    -- Draw start position
+    -- Draw level info at the bottom left corner
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, 700)
-    
-    -- Draw level size
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print("SIZE: " .. EditorUI.editor.level.width .. "x" .. EditorUI.editor.level.height, 10, 730)
+    local infoY = height - 60 -- Position from bottom of screen
+    love.graphics.print("START: " .. EditorUI.editor.startX .. "," .. EditorUI.editor.startY, 10, infoY)
+    love.graphics.print("SIZE: " .. EditorUI.editor.level.width .. "x" .. EditorUI.editor.level.height, 10, infoY + 25)
     
     -- Draw help panel if enabled
     if EditorUI.editor.showHelp then

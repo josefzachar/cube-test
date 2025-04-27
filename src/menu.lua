@@ -28,6 +28,11 @@ Menu.backgroundLevelLoaded = false
 
 -- Initialize the menu
 function Menu.init()
+    -- Load the logo image if not already loaded
+    if not Menu.logoImage then
+        Menu.logoImage = love.graphics.newImage("img/logo.png")
+    end
+    
     -- Load the menu font if not already loaded
     if not Menu.titleFont then
         Menu.titleFont = love.graphics.newFont("fonts/pixel_font.ttf", 48)
@@ -204,12 +209,12 @@ end
 
 -- Draw menu UI elements (without scaling)
 function Menu.drawUI(width, height)
-    -- Draw title
-    love.graphics.setFont(Menu.titleFont)
-    love.graphics.setColor(0, 0.8, 0.8, 1)
-    local title = "SQUARE GOLF"
-    local titleWidth = Menu.titleFont:getWidth(title)
-    love.graphics.print(title, (width - titleWidth) / 2, 100)
+-- Draw logo image as title at half size
+love.graphics.setColor(1, 1, 1, 1) -- Reset color to white for proper image rendering
+local logoWidth = Menu.logoImage:getWidth() * 0.5 -- Half width
+local logoHeight = Menu.logoImage:getHeight() * 0.5 -- Half height
+-- Position centered horizontally and at y=50, with scale factors of 0.5
+love.graphics.draw(Menu.logoImage, (width - logoWidth) / 2, 50, 0, 0.5, 0.5)
     
     -- Draw options
     love.graphics.setFont(Menu.optionFont)

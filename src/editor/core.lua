@@ -48,7 +48,8 @@ local EditorCore = {
         standard = true,
         heavy = false,
         exploding = false,
-        sticky = false
+        sticky = false,
+        spraying = false
     },
     
     -- Text input state
