@@ -262,6 +262,9 @@ function UI.update(mouseX, mouseY)
     toggleUIButton:update(gameX, gameY)
     
     if isUIVisible then
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
         for _, button in ipairs(buttons) do
             -- Skip the "Return to Editor" button if not in test play mode
             if button == UI.returnToEditorButton then
@@ -272,7 +275,26 @@ function UI.update(mouseX, mouseY)
                 end
             end
             
-            button:update(gameX, gameY)
+            -- Check if this is a ball button and if it's available
+            local isBallButton = false
+            for j, ballName in ipairs(ballTypeNames) do
+                if button.text == ballName then
+                    isBallButton = true
+                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+                    
+                    -- Only update the ball button if it's available
+                    if UI.availableBalls and UI.availableBalls[ballType] then
+                        button:update(gameX, gameY)
+                    end
+                    
+                    goto continue
+                end
+            end
+            
+            -- If it's not a ball button, update it normally
+            if not isBallButton then
+                button:update(gameX, gameY)
+            end
             
             ::continue::
         end
@@ -350,7 +372,10 @@ function UI.draw()
         love.graphics.print(headerText, panelX + (panelWidth - headerWidth) / 2, buttonMargin * 3 + 40)
         
         -- Draw all buttons
-        for _, button in ipairs(buttons) do
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
+        for i, button in ipairs(buttons) do
             -- Skip the "Return to Editor" button if not in test play mode
             if button == UI.returnToEditorButton then
                 -- Get Game module
@@ -360,7 +385,26 @@ function UI.draw()
                 end
             end
             
-            button:draw()
+            -- Check if this is a ball button and if it's available
+            local isBallButton = false
+            for j, ballName in ipairs(ballTypeNames) do
+                if button.text == ballName then
+                    isBallButton = true
+                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+                    
+                    -- Only draw the ball button if it's available
+                    if UI.availableBalls and UI.availableBalls[ballType] then
+                        button:draw()
+                    end
+                    
+                    goto continue
+                end
+            end
+            
+            -- If it's not a ball button, draw it normally
+            if not isBallButton then
+                button:draw()
+            end
             
             ::continue::
         end
@@ -404,6 +448,9 @@ function UI.handlePress(x, y)
     
     -- Check other buttons only if UI is visible
     if isUIVisible then
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
         for _, button in ipairs(buttons) do
             -- Skip the "Return to Editor" button if not in test play mode
             if button == UI.returnToEditorButton then
@@ -414,7 +461,24 @@ function UI.handlePress(x, y)
                 end
             end
             
-            if button:handlePress(gameX, gameY) then
+            -- Check if this is a ball button and if it's available
+            local isBallButton = false
+            for j, ballName in ipairs(ballTypeNames) do
+                if button.text == ballName then
+                    isBallButton = true
+                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+                    
+                    -- Only handle press for the ball button if it's available
+                    if UI.availableBalls and UI.availableBalls[ballType] and button:handlePress(gameX, gameY) then
+                        return true
+                    end
+                    
+                    goto continue
+                end
+            end
+            
+            -- If it's not a ball button, handle press normally
+            if not isBallButton and button:handlePress(gameX, gameY) then
                 return true
             end
             

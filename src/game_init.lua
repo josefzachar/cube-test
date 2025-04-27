@@ -187,7 +187,19 @@ function GameInit.init(Game, mode, levelNumber)
         WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY, levelData.startX, levelData.startY)
 
         -- Only allow balls specified in the level
-        UI.availableBalls = levelData.availableBalls
+        UI.availableBalls = levelData.availableBalls or {
+            [Balls.TYPES.STANDARD] = true,
+            [Balls.TYPES.HEAVY] = false,
+            [Balls.TYPES.EXPLODING] = false,
+            [Balls.TYPES.STICKY] = false,
+            [Balls.TYPES.SPRAYING] = false
+        }
+        
+        -- Debug logging for UI.availableBalls
+        print("UI.availableBalls set to:", UI.availableBalls)
+        for ballType, isAvailable in pairs(UI.availableBalls) do
+            print("Ball type", ballType, "is available:", isAvailable)
+        end
         else
             -- Fallback to procedural level if level file not found
             Game.level = Level.new(Game.world, 160, 100) -- Default dimensions
@@ -198,7 +210,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.STANDARD] = true,
                 [Balls.TYPES.HEAVY] = false,
                 [Balls.TYPES.EXPLODING] = false,
-                [Balls.TYPES.STICKY] = false
+                [Balls.TYPES.STICKY] = false,
+                [Balls.TYPES.SPRAYING] = false
             }
         end
     else

@@ -69,7 +69,8 @@ function EditorLevel.saveLevel(filename)
             standard = EditorLevel.editor.availableBalls.standard,
             heavy = EditorLevel.editor.availableBalls.heavy,
             exploding = EditorLevel.editor.availableBalls.exploding,
-            sticky = EditorLevel.editor.availableBalls.sticky
+            sticky = EditorLevel.editor.availableBalls.sticky,
+            spraying = EditorLevel.editor.availableBalls.spraying
         },
         cells = {},
         boulders = {}
@@ -146,6 +147,7 @@ function EditorLevel.loadLevel(filename)
         EditorLevel.editor.availableBalls.heavy = levelData.availableBalls.heavy or false
         EditorLevel.editor.availableBalls.exploding = levelData.availableBalls.exploding or false
         EditorLevel.editor.availableBalls.sticky = levelData.availableBalls.sticky or false
+        EditorLevel.editor.availableBalls.spraying = levelData.availableBalls.spraying or false
     end
     
     -- Set cell data
@@ -202,7 +204,8 @@ function EditorLevel.clearLevel()
         standard = true,
         heavy = false,
         exploding = false,
-        sticky = false
+        sticky = false,
+        spraying = false
     }
     
     -- Initialize grass on top of dirt cells
