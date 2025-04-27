@@ -136,8 +136,14 @@ function MobileUI.update(game, dt)
         button.x = leftMargin
         button.y = love.graphics.getHeight() - bottomMargin - (buttonSize + buttonSpacing) * i
         
-        -- Only show ball type buttons in SANDBOX mode or when testing in EDITOR
-        button.visible = game.currentMode == game.MODES.SANDBOX or game.testPlayMode
+        -- Show ball type buttons in SANDBOX mode, when testing in EDITOR, or in PLAY mode if the ball type is available
+        if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+            button.visible = true
+        elseif game.currentMode == game.MODES.PLAY and UI.availableBalls and UI.availableBalls[button.ballType] then
+            button.visible = true
+        else
+            button.visible = false
+        end
     end
     
     -- No long press detection needed anymore
@@ -155,12 +161,10 @@ function MobileUI.draw(game)
     MobileUI.drawButton(MobileUI.resetButton, game.ball and not game.ball:isMoving())
     
     -- Draw ball type buttons
-    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
-        for _, button in ipairs(MobileUI.ballButtons) do
-            -- Highlight the current ball type
-            local isSelected = game.currentBallType == button.ballType
-            MobileUI.drawBallButton(button, button.visible, isSelected, button.color)
-        end
+    for _, button in ipairs(MobileUI.ballButtons) do
+        -- Highlight the current ball type
+        local isSelected = game.currentBallType == button.ballType
+        MobileUI.drawBallButton(button, button.visible, isSelected, button.color)
     end
     
     -- Draw pinch-to-zoom hint
@@ -262,10 +266,20 @@ function MobileUI.handleMousePressed(x, y, button, game)
     end
     
     -- Check if click is on any ball button
-    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
-        for _, button in ipairs(MobileUI.ballButtons) do
-            if MobileUI.isPointInButton(x, y, button) and button.visible then
-                return button.action(game)
+    for _, btn in ipairs(MobileUI.ballButtons) do
+        if MobileUI.isPointInButton(x, y, btn) and btn.visible then
+            -- Allow ball switching in PLAY mode if the ball type is available
+            if game.currentMode == game.MODES.PLAY and UI.availableBalls and UI.availableBalls[btn.ballType] then
+                -- Change the ball type
+                game.currentBallType = btn.ballType
+                local newBall = Balls.changeBallType(game.ball, game.world, game.currentBallType)
+                if game.ball and game.ball.body then game.ball.body:destroy() end
+                game.ball = newBall
+                if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
+                print("Switched to " .. btn.text .. " Ball in PLAY mode")
+                return true -- Ball type was changed
+            elseif game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+                return btn.action(game)
             end
         end
     end
@@ -281,10 +295,20 @@ function MobileUI.handleTouchPressed(id, x, y, game)
     end
     
     -- Check if touch is on any ball button
-    if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
-        for _, button in ipairs(MobileUI.ballButtons) do
-            if MobileUI.isPointInButton(x, y, button) and button.visible then
-                return button.action(game)
+    for _, btn in ipairs(MobileUI.ballButtons) do
+        if MobileUI.isPointInButton(x, y, btn) and btn.visible then
+            -- Allow ball switching in PLAY mode if the ball type is available
+            if game.currentMode == game.MODES.PLAY and UI.availableBalls and UI.availableBalls[btn.ballType] then
+                -- Change the ball type
+                game.currentBallType = btn.ballType
+                local newBall = Balls.changeBallType(game.ball, game.world, game.currentBallType)
+                if game.ball and game.ball.body then game.ball.body:destroy() end
+                game.ball = newBall
+                if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
+                print("Switched to " .. btn.text .. " Ball in PLAY mode (touch)")
+                return true -- Ball type was changed
+            elseif game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
+                return btn.action(game)
             end
         end
     end

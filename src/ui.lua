@@ -131,8 +131,10 @@ end
 
 -- UI Manager
 local buttons = {}
+local ballButtons = {} -- Separate array for ball buttons
 local isUIVisible = false
 local toggleUIButton = nil
+local isPlayMode = false -- Flag to track if we're in PLAY mode
 
 -- Game dimensions for positioning
 local GAME_WIDTH = 1600
@@ -160,6 +162,11 @@ function UI.init(ballTypes)
     toggleUIButton = Button.new(rightEdge - buttonWidth, buttonMargin, buttonWidth, buttonHeight, "TERMINAL", function()
         isUIVisible = not isUIVisible
     end)
+    
+    -- Check if we're in PLAY mode by looking at the GameState
+    local GameState = require("src.game_state")
+    local Game = require("src.game")
+    isPlayMode = Game.currentMode == GameState.MODES.PLAY
     
     -- Create difficulty buttons
     local difficultyNames = {"EASY", "MEDIUM", "HARD", "EXPERT", "INSANE"}
@@ -202,6 +209,24 @@ function UI.init(ballTypes)
             end
         )
         table.insert(buttons, button)
+        
+        -- Also create separate ball buttons for PLAY mode that will be always visible
+        -- These will be positioned on the left side of the screen
+        if isPlayMode then
+            local playModeBallButton = Button.new(
+                buttonMargin,
+                buttonMargin + (i-1) * (buttonHeight + buttonMargin),
+                buttonWidth,
+                buttonHeight,
+                ballTypeNames[i],
+                function()
+                    if UI.onBallTypeChange then
+                        UI.onBallTypeChange(i)
+                    end
+                end
+            )
+            table.insert(ballButtons, playModeBallButton)
+        end
     end
     
     -- Create regenerate level button
@@ -260,6 +285,22 @@ function UI.update(mouseX, mouseY)
     local gameX, gameY = UI.convertCoordinates(mouseX, mouseY)
     
     toggleUIButton:update(gameX, gameY)
+    
+    -- Update the separate ball buttons in PLAY mode
+    if isPlayMode and #ballButtons > 0 then
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
+        for i, button in ipairs(ballButtons) do
+            local ballName = ballTypeNames[i]
+            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+            
+            -- Only update the ball button if it's available
+            if UI.availableBalls and UI.availableBalls[ballType] then
+                button:update(gameX, gameY)
+            end
+        end
+    end
     
     if isUIVisible then
         local Balls = require("src.balls")
@@ -334,6 +375,63 @@ function UI.draw()
     
     -- Always draw the toggle button
     toggleUIButton:draw()
+    
+    -- Draw the ball buttons in PLAY mode
+    if isPlayMode and #ballButtons > 0 then
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
+        -- Draw a small panel for the ball buttons
+        local panelHeight = (#ballButtons * (buttonHeight + buttonMargin)) + buttonMargin
+        local panelX = buttonMargin
+        local panelY = buttonMargin
+        
+        -- Draw panel background
+        love.graphics.setColor(retroColors.panel)
+        love.graphics.rectangle("fill", panelX - buttonMargin, panelY - buttonMargin, 
+                               panelWidth, panelHeight, 0, 0)
+        
+        -- Draw grid pattern for retro computer look
+        love.graphics.setColor(0, 0, 0, 0.05)
+        for i = 0, panelWidth, 8 do
+            love.graphics.line(panelX - buttonMargin + i, panelY - buttonMargin, 
+                              panelX - buttonMargin + i, panelY - buttonMargin + panelHeight)
+        end
+        for i = 0, panelHeight, 8 do
+            love.graphics.line(panelX - buttonMargin, panelY - buttonMargin + i, 
+                              panelX - buttonMargin + panelWidth, panelY - buttonMargin + i)
+        end
+        
+        -- Draw panel border
+        love.graphics.setColor(retroColors.panelBorder)
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", panelX - buttonMargin, panelY - buttonMargin, 
+                               panelWidth, panelHeight)
+        love.graphics.setLineWidth(1)
+        
+        -- Draw scanlines for CRT effect
+        drawScanlines(panelX - buttonMargin, panelY - buttonMargin, panelWidth, panelHeight, 0.05)
+        
+        -- Draw "BALLS" header
+        love.graphics.setFont(buttonFont)
+        love.graphics.setColor(retroColors.text)
+        local headerText = "BALLS"
+        local headerWidth = buttonFont:getWidth(headerText)
+        love.graphics.print(headerText, 
+                           panelX + (buttonWidth - headerWidth) / 2, 
+                           panelY - buttonMargin * 2)
+        
+        -- Draw the ball buttons
+        for i, button in ipairs(ballButtons) do
+            local ballName = ballTypeNames[i]
+            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+            
+            -- Only draw the ball button if it's available
+            if UI.availableBalls and UI.availableBalls[ballType] then
+                button:draw()
+            end
+        end
+    end
     
     -- Draw other buttons only if UI is visible
     if isUIVisible then
@@ -444,6 +542,22 @@ function UI.handlePress(x, y)
     -- Check toggle button first
     if toggleUIButton:handlePress(gameX, gameY) then
         return true
+    end
+    
+    -- Check the ball buttons in PLAY mode
+    if isPlayMode and #ballButtons > 0 then
+        local Balls = require("src.balls")
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
+        
+        for i, button in ipairs(ballButtons) do
+            local ballName = ballTypeNames[i]
+            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName)]
+            
+            -- Only handle press for the ball button if it's available
+            if UI.availableBalls and UI.availableBalls[ballType] and button:handlePress(gameX, gameY) then
+                return true
+            end
+        end
     end
     
     -- Check other buttons only if UI is visible

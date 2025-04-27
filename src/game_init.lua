@@ -187,13 +187,25 @@ function GameInit.init(Game, mode, levelNumber)
         WinHoleGenerator.createDiamondWinHole(Game.level, levelData.winHoleX, levelData.winHoleY, levelData.startX, levelData.startY)
 
         -- Only allow balls specified in the level
-        UI.availableBalls = levelData.availableBalls or {
-            [Balls.TYPES.STANDARD] = true,
-            [Balls.TYPES.HEAVY] = false,
-            [Balls.TYPES.EXPLODING] = false,
-            [Balls.TYPES.STICKY] = false,
-            [Balls.TYPES.SPRAYING] = false
-        }
+        if levelData.availableBalls then
+            -- Convert string keys to numeric enum values
+            UI.availableBalls = {
+                [Balls.TYPES.STANDARD] = levelData.availableBalls.standard or true,
+                [Balls.TYPES.HEAVY] = levelData.availableBalls.heavy or false,
+                [Balls.TYPES.EXPLODING] = levelData.availableBalls.exploding or false,
+                [Balls.TYPES.STICKY] = levelData.availableBalls.sticky or false,
+                [Balls.TYPES.SPRAYING] = levelData.availableBalls.spraying or false
+            }
+        else
+            -- Default values if not specified
+            UI.availableBalls = {
+                [Balls.TYPES.STANDARD] = true,
+                [Balls.TYPES.HEAVY] = false,
+                [Balls.TYPES.EXPLODING] = false,
+                [Balls.TYPES.STICKY] = false,
+                [Balls.TYPES.SPRAYING] = false
+            }
+        end
         
         -- Debug logging for UI.availableBalls
         print("UI.availableBalls set to:", UI.availableBalls)
