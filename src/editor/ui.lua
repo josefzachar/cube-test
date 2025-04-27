@@ -262,6 +262,16 @@ function EditorUI.createUI()
             y = 250 + 10 * (buttonHeight + buttonMargin), -- Updated to match new save button position
             width = buttonWidth,
             height = buttonHeight,
+            text = "TOGGLE GRASS",
+            action = function()
+                EditorUI.editor.toggleGrass()
+            end
+        },
+        {
+            x = width - panelWidth + 20,
+            y = 250 + 11 * (buttonHeight + buttonMargin), -- Updated to match new save button position
+            width = buttonWidth,
+            height = buttonHeight,
             text = "?",
             action = function()
                 EditorUI.editor.showHelp = not EditorUI.editor.showHelp

@@ -52,6 +52,9 @@ local EditorCore = {
         spraying = false
     },
     
+    -- Grass state
+    grassEnabled = true,
+    
     -- Text input state
     textInput = {
         active = false,
@@ -431,6 +434,13 @@ end
 -- Return to editor after test play (delegate to EditorLevel)
 function EditorCore.returnFromTestPlay()
     return EditorLevel.returnFromTestPlay()
+end
+
+-- Toggle grass on dirt cells (delegate to EditorLevel)
+function EditorCore.toggleGrass()
+    -- Call the EditorLevel function and update the grass state
+    EditorCore.grassEnabled = EditorLevel.toggleGrass()
+    return EditorCore.grassEnabled
 end
 
 -- Screen to game coordinates (delegate to EditorCamera)

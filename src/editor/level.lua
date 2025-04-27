@@ -209,6 +209,46 @@ function EditorLevel.clearLevel()
     EditorLevel.editor.level:initializeGrass()
 end
 
+-- Toggle grass on dirt cells
+function EditorLevel.toggleGrass()
+    -- Check if grass is currently enabled by looking at a dirt cell
+    local hasGrass = false
+    local foundDirt = false
+    
+    -- Find a dirt cell to check its grass state
+    for y = 0, EditorLevel.editor.level.height - 1 do
+        for x = 0, EditorLevel.editor.level.width - 1 do
+            if EditorLevel.editor.level.cells[y][x].type == CellTypes.TYPES.DIRT then
+                foundDirt = true
+                if EditorLevel.editor.level.cells[y][x].hasGrass then
+                    hasGrass = true
+                end
+                break
+            end
+        end
+        if foundDirt then break end
+    end
+    
+    -- Toggle grass state
+    if hasGrass then
+        -- Remove grass from all dirt cells
+        for y = 0, EditorLevel.editor.level.height - 1 do
+            for x = 0, EditorLevel.editor.level.width - 1 do
+                if EditorLevel.editor.level.cells[y][x].type == CellTypes.TYPES.DIRT then
+                    EditorLevel.editor.level.cells[y][x].hasGrass = false
+                end
+            end
+        end
+        print("Grass removed from all dirt cells")
+    else
+        -- Add grass to dirt cells with empty space above
+        EditorLevel.editor.level:initializeGrass()
+        print("Grass added to dirt cells with empty space above")
+    end
+    
+    return not hasGrass -- Return the new grass state
+end
+
 -- Create stone boundaries around the level
 function EditorLevel.createBoundaries()
     -- Add stone cells around the perimeter of the level
