@@ -163,6 +163,12 @@ function MobileUI.draw(game)
         end
     end
     
+    -- Draw pinch-to-zoom hint
+    love.graphics.setColor(1, 1, 1, 0.7)
+    local zoomHint = "Pinch to zoom"
+    local zoomHintWidth = love.graphics.getFont():getWidth(zoomHint)
+    love.graphics.print(zoomHint, love.graphics.getWidth() - zoomHintWidth - 20, 20)
+    
     -- Restore original font
     love.graphics.setFont(originalFont)
 end

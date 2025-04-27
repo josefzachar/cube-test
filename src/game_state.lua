@@ -59,9 +59,21 @@ function GameState.increaseZoom()
     print("Zoom level increased to: " .. ZOOM_LEVEL)
 end
 
+-- Function to increase zoom level by a specific amount
+function GameState.increaseZoomBy(amount)
+    ZOOM_LEVEL = math.min(ZOOM_LEVEL + amount, GameState.MAX_ZOOM)
+    print("Zoom level increased to: " .. ZOOM_LEVEL)
+end
+
 -- Function to decrease zoom level
 function GameState.decreaseZoom()
     ZOOM_LEVEL = math.max(ZOOM_LEVEL - GameState.ZOOM_STEP, GameState.MIN_ZOOM)
+    print("Zoom level decreased to: " .. ZOOM_LEVEL)
+end
+
+-- Function to decrease zoom level by a specific amount
+function GameState.decreaseZoomBy(amount)
+    ZOOM_LEVEL = math.max(ZOOM_LEVEL - amount, GameState.MIN_ZOOM)
     print("Zoom level decreased to: " .. ZOOM_LEVEL)
 end
 

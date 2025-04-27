@@ -9,6 +9,7 @@ local Editor = require("src.editor")
 local TouchInput = require("src.touch_input")
 local InputUtils = require("src.input_utils")
 local MobileUI = require("src.mobile_ui")
+local PinchZoom = require("src.pinch_zoom")
 
 -- FPS counter for performance monitoring
 local fpsCounter = {
@@ -32,6 +33,9 @@ function love.load()
     -- Initialize mobile UI
     MobileUI.init()
     Game.mobileUI = MobileUI
+    
+    -- Initialize pinch zoom
+    PinchZoom.init()
 end
 
 function love.update(dt)
@@ -115,6 +119,9 @@ end
 
 -- Touch event callbacks for touch devices
 function love.touchpressed(id, x, y, dx, dy, pressure)
+    -- Handle pinch zoom (always process this first to track all touches)
+    PinchZoom.touchPressed(id, x, y)
+    
     -- If menu is active, handle menu touch presses
     if Game.currentMode == Game.MODES.MENU then
         local result = Menu.handleMousePressed(x, y, 1) -- Treat as left mouse button
@@ -204,12 +211,20 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
 end
 
 function love.touchmoved(id, x, y, dx, dy, pressure)
+    -- Handle pinch zoom (always process this first)
+    if PinchZoom.touchMoved(id, x, y) then
+        return -- Pinch zoom handled the move, don't process further
+    end
+    
     if Game.touchInput then
         Game.touchInput:handleTouchMoved(id, x, y)
     end
 end
 
 function love.touchreleased(id, x, y, dx, dy, pressure)
+    -- Handle pinch zoom (always process this first)
+    PinchZoom.touchReleased(id)
+    
     -- Check if mobile UI handled the touch release
     if Game.mobileUI and Game.mobileUI.handleTouchReleased(id, x, y, Game) then
         return -- Mobile UI handled the release, don't process further
