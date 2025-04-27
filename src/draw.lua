@@ -12,8 +12,14 @@ local Draw = {}
 
 -- Draw the game
 function Draw.draw(Game)
-    -- Draw gradient background
-    love.graphics.clear(0, 0, 0, 1) -- Clear with black first
+    -- If menu is active, use the level background color for clearing
+    if Game.currentMode == Game.MODES.MENU then
+        love.graphics.clear(Game.LEVEL_BACKGROUND_COLOR[1], Game.LEVEL_BACKGROUND_COLOR[2], 
+                           Game.LEVEL_BACKGROUND_COLOR[3], Game.LEVEL_BACKGROUND_COLOR[4])
+    else
+        -- Draw gradient background
+        love.graphics.clear(0, 0, 0, 1) -- Clear with black first
+    end
     
     -- If menu is active, draw menu with standard transformation
     if Game.currentMode == Game.MODES.MENU then
@@ -71,19 +77,10 @@ function Draw.draw(Game)
     local levelWidth = Game.level.width * Cell.SIZE
     local levelHeight = Game.level.height * Cell.SIZE
     
-    -- Draw gradient rectangle covering the entire screen
-    love.graphics.setColor(Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4])
+    -- Draw solid level background color
+    love.graphics.setColor(Game.LEVEL_BACKGROUND_COLOR[1], Game.LEVEL_BACKGROUND_COLOR[2], 
+                          Game.LEVEL_BACKGROUND_COLOR[3], Game.LEVEL_BACKGROUND_COLOR[4])
     love.graphics.rectangle("fill", 0, 0, levelWidth, levelHeight)
-    
-    -- Create a subtle gradient mesh
-    local gradient = love.graphics.newMesh({
-        {0, 0, 0, 0, Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4]}, -- top-left
-        {levelWidth, 0, 1, 0, Game.BACKGROUND_COLOR_TOP[1], Game.BACKGROUND_COLOR_TOP[2], Game.BACKGROUND_COLOR_TOP[3], Game.BACKGROUND_COLOR_TOP[4]}, -- top-right
-        {levelWidth, levelHeight, 1, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
-        {0, levelHeight, 0, 1, Game.BACKGROUND_COLOR_BOTTOM[1], Game.BACKGROUND_COLOR_BOTTOM[2], Game.BACKGROUND_COLOR_BOTTOM[3], Game.BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
-    }, "fan", "static")
-    
-    love.graphics.draw(gradient)
     
     
     -- If editor is active, draw editor

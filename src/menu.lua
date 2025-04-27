@@ -189,18 +189,13 @@ function Menu.draw()
         -- Reset transformation
         love.graphics.pop()
     else
-        -- Fallback background if level not loaded - use same colors as PLAY mode
+        -- Fallback background if level not loaded - use same dark navy blue as PLAY mode
         local GameState = require("src.game_state")
         
-        -- Create a gradient mesh like in PLAY mode
-        local gradient = love.graphics.newMesh({
-            {0, 0, 0, 0, GameState.BACKGROUND_COLOR_TOP[1], GameState.BACKGROUND_COLOR_TOP[2], GameState.BACKGROUND_COLOR_TOP[3], GameState.BACKGROUND_COLOR_TOP[4]}, -- top-left
-            {width, 0, 1, 0, GameState.BACKGROUND_COLOR_TOP[1], GameState.BACKGROUND_COLOR_TOP[2], GameState.BACKGROUND_COLOR_TOP[3], GameState.BACKGROUND_COLOR_TOP[4]}, -- top-right
-            {width, height, 1, 1, GameState.BACKGROUND_COLOR_BOTTOM[1], GameState.BACKGROUND_COLOR_BOTTOM[2], GameState.BACKGROUND_COLOR_BOTTOM[3], GameState.BACKGROUND_COLOR_BOTTOM[4]}, -- bottom-right
-            {0, height, 0, 1, GameState.BACKGROUND_COLOR_BOTTOM[1], GameState.BACKGROUND_COLOR_BOTTOM[2], GameState.BACKGROUND_COLOR_BOTTOM[3], GameState.BACKGROUND_COLOR_BOTTOM[4]} -- bottom-left
-        }, "fan", "static")
-        
-        love.graphics.draw(gradient)
+        -- Draw solid dark navy blue background to match PLAY mode level background
+        love.graphics.setColor(GameState.LEVEL_BACKGROUND_COLOR[1], GameState.LEVEL_BACKGROUND_COLOR[2], 
+                              GameState.LEVEL_BACKGROUND_COLOR[3], GameState.LEVEL_BACKGROUND_COLOR[4])
+        love.graphics.rectangle("fill", 0, 0, width, height)
     end
     
     -- Draw title

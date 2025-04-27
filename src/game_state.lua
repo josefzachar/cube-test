@@ -31,7 +31,10 @@ local GameState = {
     -- Background colors for gradient
     BACKGROUND_COLOR = {0.2, 0.3, 0.6, 1.0}, -- Dark blue (base color)
     BACKGROUND_COLOR_TOP = {0.1, 0.2, 0.4, 1.0}, -- Darker blue for top
-    BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0} -- Lighter blue for bottom
+    BACKGROUND_COLOR_BOTTOM = {0.3, 0.4, 0.7, 1.0}, -- Lighter blue for bottom
+    
+    -- Dark navy blue background color for level background in both menu and play mode
+    LEVEL_BACKGROUND_COLOR = {0.05, 0.05, 0.15, 1.0} -- Very dark navy blue
 }
 
 -- Global difficulty level (1-5) - Keep this global for now as it's used directly elsewhere
