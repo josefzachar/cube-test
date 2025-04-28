@@ -86,14 +86,17 @@ function Draw.draw(Game)
     -- Reset camera transformation before drawing UI
     love.graphics.pop()
     
+    -- Draw FPS counter in absolute screen coordinates (sticky to top left corner)
+    love.graphics.push()
+    love.graphics.origin() -- Reset all transformations to ensure absolute positioning
+    love.graphics.setColor(Game.WHITE)
+    love.graphics.print("FPS: " .. love.timer.getFPS(), 0, 0)
+    love.graphics.pop()
+    
     -- Apply transformation for UI elements (without scaling or camera offset)
     love.graphics.push()
     -- No scaling for UI elements
     love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
-    
-    -- Display FPS counter
-    love.graphics.setColor(Game.WHITE)
-    love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
     
     -- Display game mode
     local modeText = "MODE: "
