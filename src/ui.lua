@@ -65,9 +65,19 @@ function Button:draw()
     
     -- Main button fill with retro colors
     if self.isHovered then
-        love.graphics.setColor(retroColors.buttonHover)
+        -- For colored buttons (like ball buttons), brighten the custom color
+        if self.color and self.color ~= retroColors.buttonNormal then
+            love.graphics.setColor(self.hoverColor)
+        else
+            love.graphics.setColor(retroColors.buttonHover)
+        end
     else
-        love.graphics.setColor(retroColors.buttonNormal)
+        -- For colored buttons, use the custom color
+        if self.color and self.color ~= retroColors.buttonNormal then
+            love.graphics.setColor(self.color)
+        else
+            love.graphics.setColor(retroColors.buttonNormal)
+        end
     end
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, 0, 0) -- No rounded corners
     
@@ -91,28 +101,55 @@ function Button:draw()
     love.graphics.rectangle("line", self.x, self.y, self.width, self.height)
     love.graphics.setLineWidth(1) -- Reset line width
     
-    -- Set the pixel font for button text
-    love.graphics.setFont(buttonFont)
-    
-    -- Text shadow
-    love.graphics.setColor(retroColors.textShadow)
-    local textWidth = buttonFont:getWidth(self.text)
-    local textHeight = buttonFont:getHeight()
-    love.graphics.print(self.text, 
-        self.x + (self.width - textWidth) / 2 + 1, 
-        self.y + (self.height - textHeight) / 2 + 1)
-    
-    -- Actual text with retro cyan color
-    love.graphics.setColor(retroColors.text)
-    love.graphics.print(self.text, 
-        self.x + (self.width - textWidth) / 2, 
-        self.y + (self.height - textHeight) / 2)
+    -- Check if this is the reset button (no text)
+    if self == UI.resetButton then
+        -- Draw reset icon (circular arrow)
+        love.graphics.setColor(retroColors.text)
+        love.graphics.setLineWidth(2)
+        
+        -- Calculate icon dimensions
+        local iconSize = self.width * 0.6
+        local centerX = self.x + self.width / 2
+        local centerY = self.y + self.height / 2
+        local radius = iconSize / 2
+        
+        -- Draw circular arrow (270 degrees)
+        love.graphics.arc("line", centerX, centerY, radius, math.rad(0), math.rad(270))
+        
+        -- Draw arrowhead
+        local arrowX = centerX
+        local arrowY = centerY - radius
+        local arrowSize = radius / 3
+        love.graphics.line(arrowX, arrowY, arrowX + arrowSize, arrowY + arrowSize)
+        love.graphics.line(arrowX, arrowY, arrowX - arrowSize, arrowY + arrowSize)
+        
+        -- Reset line width
+        love.graphics.setLineWidth(1)
+    -- Only draw text if there is any
+    elseif self.text and self.text ~= "" then
+        -- Set the pixel font for button text
+        love.graphics.setFont(buttonFont)
+        
+        -- Text shadow
+        love.graphics.setColor(retroColors.textShadow)
+        local textWidth = buttonFont:getWidth(self.text)
+        local textHeight = buttonFont:getHeight()
+        love.graphics.print(self.text, 
+            self.x + (self.width - textWidth) / 2 + 1, 
+            self.y + (self.height - textHeight) / 2 + 1)
+        
+        -- Actual text with retro cyan color
+        love.graphics.setColor(retroColors.text)
+        love.graphics.print(self.text, 
+            self.x + (self.width - textWidth) / 2, 
+            self.y + (self.height - textHeight) / 2)
+        
+        -- Reset to default font
+        love.graphics.setFont(love.graphics.getFont())
+    end
     
     -- Add scanlines for CRT effect
     drawScanlines(self.x, self.y, self.width, self.height, 0.05)
-    
-    -- Reset to default font
-    love.graphics.setFont(love.graphics.getFont())
 end
 
 -- Update button state (check for hover)
@@ -211,22 +248,65 @@ function UI.init(ballTypes)
         table.insert(buttons, button)
         
         -- Also create separate ball buttons for PLAY mode that will be always visible
-        -- These will be positioned on the left side of the screen
+        -- These will be positioned in a horizontal row in the bottom left corner
         if isPlayMode then
+            -- Make smaller square buttons without text
+            local buttonSize = 40 -- Square buttons
+            local ballColors = {
+                {1, 1, 1, 1},         -- STANDARD: white
+                {0.6, 0.6, 0.8, 1},   -- HEAVY: blue-gray
+                {1, 0.4, 0.2, 1},     -- EXPLODE: orange-red
+                {0.3, 0.8, 0.3, 1},   -- STICKY: green
+                {0.9, 0.8, 0.3, 1}    -- SPRAY: yellow
+            }
+            
             local playModeBallButton = Button.new(
-                buttonMargin,
-                buttonMargin + (i-1) * (buttonHeight + buttonMargin),
-                buttonWidth,
-                buttonHeight,
-                ballTypeNames[i],
+                buttonMargin + (i-1) * (buttonSize + buttonMargin),
+                GAME_HEIGHT - buttonMargin - buttonSize,
+                buttonSize,
+                buttonSize,
+                "", -- No text
                 function()
                     if UI.onBallTypeChange then
                         UI.onBallTypeChange(i)
                     end
-                end
+                end,
+                ballColors[i] -- Use the appropriate color for this ball type
             )
             table.insert(ballButtons, playModeBallButton)
         end
+    end
+    
+    -- Create reset button for PLAY mode (same size as ball buttons)
+    if isPlayMode then
+        local buttonSize = 40 -- Square buttons
+        local buttonMargin = 10
+        
+        -- Create reset button in the bottom right corner
+        UI.resetButton = Button.new(
+            GAME_WIDTH - buttonMargin - buttonSize,
+            GAME_HEIGHT - buttonMargin - buttonSize,
+            buttonSize,
+            buttonSize,
+            "", -- No text, will draw an icon instead
+            function()
+                -- Reset the current level
+                local Game = require("src.game")
+                local Menu = require("src.menu")
+                
+                if Game.currentMode == Game.MODES.PLAY then
+                    -- In PLAY mode, reinitialize with the current level
+                    Game.init(Game.currentMode, Menu.currentLevel)
+                else
+                    -- In SANDBOX or TEST_PLAY mode, just reinitialize the current mode
+                    Game.init(Game.currentMode)
+                end
+                
+                Game.gameWon = false
+                Game.winMessageTimer = 0
+            end
+        )
+        table.insert(ballButtons, UI.resetButton)
     end
     
     -- Create regenerate level button
@@ -381,12 +461,14 @@ function UI.draw()
         local Balls = require("src.balls")
         local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY"}
         
-        -- Draw a small panel for the ball buttons
-        local panelHeight = (#ballButtons * (buttonHeight + buttonMargin)) + buttonMargin
+        -- Use smaller dimensions for the ball buttons panel
+        local buttonSize = 40 -- Square buttons
+        local panelWidth = (#ballButtons * (buttonSize + buttonMargin)) + buttonMargin
+        local panelHeight = buttonSize + buttonMargin * 2
         local panelX = buttonMargin
-        local panelY = buttonMargin
+        local panelY = GAME_HEIGHT - buttonMargin - buttonSize - buttonMargin * 2
         
-        -- Draw panel background
+        -- Draw a small panel for the ball buttons
         love.graphics.setColor(retroColors.panel)
         love.graphics.rectangle("fill", panelX - buttonMargin, panelY - buttonMargin, 
                                panelWidth, panelHeight, 0, 0)
@@ -411,15 +493,6 @@ function UI.draw()
         
         -- Draw scanlines for CRT effect
         drawScanlines(panelX - buttonMargin, panelY - buttonMargin, panelWidth, panelHeight, 0.05)
-        
-        -- Draw "BALLS" header
-        love.graphics.setFont(buttonFont)
-        love.graphics.setColor(retroColors.text)
-        local headerText = "BALLS"
-        local headerWidth = buttonFont:getWidth(headerText)
-        love.graphics.print(headerText, 
-                           panelX + (buttonWidth - headerWidth) / 2, 
-                           panelY - buttonMargin * 2)
         
         -- Draw the ball buttons
         for i, button in ipairs(ballButtons) do

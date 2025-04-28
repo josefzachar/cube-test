@@ -6,9 +6,12 @@ local Balls = require("src.balls")
 local MobileUI = {}
 
 -- UI scaling factors
-MobileUI.buttonScale = 1.5 -- Make buttons larger for touch
-MobileUI.fontScale = 1.2   -- Make text larger for readability
-MobileUI.spacing = 20      -- Spacing between UI elements
+MobileUI.buttonScale = 2 -- Make buttons larger for touch
+MobileUI.fontScale = 1   -- Make text larger for readability
+MobileUI.spacing = 0      -- Spacing between UI elements
+
+-- Images
+MobileUI.resetIcon = nil -- Will be loaded in init
 
 -- Initialize mobile UI
 function MobileUI.init()
@@ -17,6 +20,9 @@ function MobileUI.init()
         UI.init()
         UI.initialized = true
     end
+    
+    -- Load images
+    MobileUI.resetIcon = love.graphics.newImage("img/reset.png")
     
     -- Apply mobile-specific UI adjustments
     MobileUI.createMobileButtons()
@@ -39,13 +45,25 @@ function MobileUI.createMobileButtons()
     -- We'll create larger, touch-friendly buttons
     -- These will be used in addition to the gesture controls
     
+    -- Ball type buttons (horizontally aligned on the bottom left)
+    local buttonSize = 50 -- Square buttons for touch
+    local buttonSpacing = 10
+    local leftMargin = 20
+    local bottomMargin = 20
+    
+    -- Ball type buttons (horizontally aligned on the bottom left)
+    local buttonSize = 50 -- Square buttons for touch
+    local buttonSpacing = 10
+    local leftMargin = 20
+    local bottomMargin = 20
+    
     -- Reset button (visible when ball is not moving)
     MobileUI.resetButton = {
-        x = love.graphics.getWidth() - 120,
-        y = love.graphics.getHeight() - 120,
-        width = 100,
-        height = 100,
-        text = "RESET",
+        x = love.graphics.getWidth() - leftMargin - buttonSize,
+        y = love.graphics.getHeight() - bottomMargin - buttonSize,
+        width = buttonSize,
+        height = buttonSize,
+        text = "", -- No text, will draw an icon instead
         visible = true,
         action = function(game)
             -- Reset the ball
@@ -72,26 +90,26 @@ function MobileUI.createMobileButtons()
     }
     
     -- Ball type buttons (vertically stacked on the bottom left)
-    local buttonSize = 80 -- Square buttons for touch
-    local buttonSpacing = 10
+    local buttonSize = 50 -- Square buttons for touch
+    local buttonSpacing = 0
     local leftMargin = 20
     local bottomMargin = 20
     
-    -- Ball type names and colors
+    -- Ball types and colors (no text labels)
     local ballTypes = {
-        { name = "STD", type = Balls.TYPES.STANDARD, color = {1, 1, 1, 1} },
-        { name = "HVY", type = Balls.TYPES.HEAVY, color = {0.6, 0.6, 0.8, 1} },
-        { name = "EXP", type = Balls.TYPES.EXPLODING, color = {1, 0.4, 0.2, 1} },
-        { name = "STK", type = Balls.TYPES.STICKY, color = {0.3, 0.8, 0.3, 1} },
-        { name = "SPR", type = Balls.TYPES.SPRAYING, color = {0.9, 0.8, 0.3, 1} }
+        { name = "", type = Balls.TYPES.STANDARD, color = {1, 1, 1, 1} },
+        { name = "", type = Balls.TYPES.HEAVY, color = {0.6, 0.6, 0.8, 1} },
+        { name = "", type = Balls.TYPES.EXPLODING, color = {1, 0.4, 0.2, 1} },
+        { name = "", type = Balls.TYPES.STICKY, color = {0.3, 0.8, 0.3, 1} },
+        { name = "", type = Balls.TYPES.SPRAYING, color = {0.9, 0.8, 0.3, 1} }
     }
     
     MobileUI.ballButtons = {}
     
     for i, ballInfo in ipairs(ballTypes) do
         local button = {
-            x = leftMargin,
-            y = love.graphics.getHeight() - bottomMargin - (buttonSize + buttonSpacing) * i,
+            x = leftMargin + (i-1) * (buttonSize + buttonSpacing),
+            y = love.graphics.getHeight() - bottomMargin - buttonSize,
             width = buttonSize,
             height = buttonSize,
             text = ballInfo.name,
@@ -107,7 +125,16 @@ function MobileUI.createMobileButtons()
                     if game.ball and game.ball.body then game.ball.body:destroy() end
                     game.ball = newBall
                     if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
-                    print("Switched to " .. ballInfo.name .. " Ball")
+                    -- Get the ball type name for logging
+                    local ballTypeToName = {
+                        [Balls.TYPES.STANDARD] = "Standard",
+                        [Balls.TYPES.HEAVY] = "Heavy",
+                        [Balls.TYPES.EXPLODING] = "Exploding",
+                        [Balls.TYPES.STICKY] = "Sticky",
+                        [Balls.TYPES.SPRAYING] = "Spraying"
+                    }
+                    local ballName = ballTypeToName[ballInfo.type] or "Unknown"
+                    print("Switched to " .. ballName .. " Ball")
                     return true -- Ball type was changed
                 end
                 return false
@@ -119,22 +146,28 @@ end
 
 -- Update mobile UI
 function MobileUI.update(game, dt)
-    -- Update button position on window resize
-    MobileUI.resetButton.x = love.graphics.getWidth() - 120
-    MobileUI.resetButton.y = love.graphics.getHeight() - 120
+    -- Update button positions on window resize
+    local buttonSize = 50
+    local buttonSpacing = 10
+    local leftMargin = 20
+    local bottomMargin = 20
+    
+    -- Update reset button position
+    MobileUI.resetButton.x = love.graphics.getWidth() - leftMargin - buttonSize
+    MobileUI.resetButton.y = love.graphics.getHeight() - bottomMargin - buttonSize
     
     -- Update button visibility
     MobileUI.resetButton.visible = game.ball and not game.ball:isMoving()
     
     -- Update ball button positions
-    local buttonSize = 80
+    local buttonSize = 50
     local buttonSpacing = 10
     local leftMargin = 20
     local bottomMargin = 20
     
     for i, button in ipairs(MobileUI.ballButtons) do
-        button.x = leftMargin
-        button.y = love.graphics.getHeight() - bottomMargin - (buttonSize + buttonSpacing) * i
+        button.x = leftMargin + (i-1) * (buttonSize + buttonSpacing)
+        button.y = love.graphics.getHeight() - bottomMargin - buttonSize
         
         -- Show ball type buttons in SANDBOX mode, when testing in EDITOR, or in PLAY mode if the ball type is available
         if game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
@@ -190,7 +223,7 @@ function MobileUI.drawBallButton(button, visible, isSelected, color)
     else
         love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
     end
-    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height, 10, 10)
+    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height)
     
     -- Draw button border (thicker for selected button)
     if isSelected then
@@ -200,26 +233,16 @@ function MobileUI.drawBallButton(button, visible, isSelected, color)
         love.graphics.setLineWidth(1)
         love.graphics.setColor(1, 1, 1, 0.8)
     end
-    love.graphics.rectangle("line", button.x, button.y, button.width, button.height, 10, 10)
+    love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
     love.graphics.setLineWidth(1)
     
     -- Draw ball representation (colored square)
     love.graphics.setColor(color)
-    local ballSize = button.width * 0.4
+    local ballSize = button.width * 0.6 -- Make the colored square larger since we don't have text
     love.graphics.rectangle("fill", 
         button.x + (button.width - ballSize) / 2, 
-        button.y + (button.height - ballSize) / 2 - 10, 
+        button.y + (button.height - ballSize) / 2, 
         ballSize, ballSize)
-    
-    -- Draw button text below the ball
-    love.graphics.setColor(1, 1, 1, 1)
-    local textWidth = love.graphics.getFont():getWidth(button.text)
-    local textHeight = love.graphics.getFont():getHeight()
-    love.graphics.print(
-        button.text,
-        button.x + (button.width - textWidth) / 2,
-        button.y + button.height - textHeight - 5
-    )
     
     -- Reset color
     love.graphics.setColor(1, 1, 1, 1)
@@ -233,21 +256,50 @@ function MobileUI.drawButton(button, visible)
     
     -- Draw button background
     love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
-    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height, 10, 10)
+    love.graphics.rectangle("fill", button.x, button.y, button.width, button.height)
     
     -- Draw button border
     love.graphics.setColor(1, 1, 1, 0.8)
-    love.graphics.rectangle("line", button.x, button.y, button.width, button.height, 10, 10)
+    love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
     
-    -- Draw button text
-    love.graphics.setColor(1, 1, 1, 1)
-    local textWidth = love.graphics.getFont():getWidth(button.text)
-    local textHeight = love.graphics.getFont():getHeight()
-    love.graphics.print(
-        button.text,
-        button.x + (button.width - textWidth) / 2,
-        button.y + (button.height - textHeight) / 2
-    )
+    -- Check if this is the reset button (no text)
+    if button == MobileUI.resetButton then
+        -- Draw reset icon from the PNG image
+        love.graphics.setColor(1, 1, 1, 1)
+        
+        -- Calculate icon dimensions and position
+        local iconSize = button.width * 0.7
+        local centerX = button.x + button.width / 2
+        local centerY = button.y + button.height / 2
+        
+        -- Draw the reset icon image
+        if MobileUI.resetIcon then
+            local imgWidth = MobileUI.resetIcon:getWidth()
+            local imgHeight = MobileUI.resetIcon:getHeight()
+            local scale = iconSize / math.max(imgWidth, imgHeight)
+            
+            love.graphics.draw(
+                MobileUI.resetIcon,
+                centerX,
+                centerY,
+                0,  -- rotation (0 = no rotation)
+                scale,
+                scale,
+                imgWidth / 2,  -- origin X (center of image)
+                imgHeight / 2   -- origin Y (center of image)
+            )
+        end
+    else
+        -- Draw button text (for other buttons)
+        love.graphics.setColor(1, 1, 1, 1)
+        local textWidth = love.graphics.getFont():getWidth(button.text)
+        local textHeight = love.graphics.getFont():getHeight()
+        love.graphics.print(
+            button.text,
+            button.x + (button.width - textWidth) / 2,
+            button.y + (button.height - textHeight) / 2
+        )
+    end
     
     -- Reset color
     love.graphics.setColor(1, 1, 1, 1)
@@ -276,7 +328,16 @@ function MobileUI.handleMousePressed(x, y, button, game)
                 if game.ball and game.ball.body then game.ball.body:destroy() end
                 game.ball = newBall
                 if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
-                print("Switched to " .. btn.text .. " Ball in PLAY mode")
+                -- Get the ball type name for logging
+                local ballTypeToName = {
+                    [Balls.TYPES.STANDARD] = "Standard",
+                    [Balls.TYPES.HEAVY] = "Heavy",
+                    [Balls.TYPES.EXPLODING] = "Exploding",
+                    [Balls.TYPES.STICKY] = "Sticky",
+                    [Balls.TYPES.SPRAYING] = "Spraying"
+                }
+                local ballName = ballTypeToName[btn.ballType] or "Unknown"
+                print("Switched to " .. ballName .. " Ball in PLAY mode")
                 return true -- Ball type was changed
             elseif game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
                 return btn.action(game)
@@ -305,7 +366,16 @@ function MobileUI.handleTouchPressed(id, x, y, game)
                 if game.ball and game.ball.body then game.ball.body:destroy() end
                 game.ball = newBall
                 if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
-                print("Switched to " .. btn.text .. " Ball in PLAY mode (touch)")
+                -- Get the ball type name for logging
+                local ballTypeToName = {
+                    [Balls.TYPES.STANDARD] = "Standard",
+                    [Balls.TYPES.HEAVY] = "Heavy",
+                    [Balls.TYPES.EXPLODING] = "Exploding",
+                    [Balls.TYPES.STICKY] = "Sticky",
+                    [Balls.TYPES.SPRAYING] = "Spraying"
+                }
+                local ballName = ballTypeToName[btn.ballType] or "Unknown"
+                print("Switched to " .. ballName .. " Ball in PLAY mode (touch)")
                 return true -- Ball type was changed
             elseif game.currentMode == game.MODES.SANDBOX or game.testPlayMode then
                 return btn.action(game)
