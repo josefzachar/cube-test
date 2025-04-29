@@ -229,16 +229,41 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     
     -- Only draw active clusters if specifically requested
     if Debug.showActiveCells then
-        love.graphics.setColor(0, 1, 0, 0.2)
+        -- Draw active clusters with a green overlay
         for cy = 0, clusterRows - 1 do
             for cx = 0, clusterCols - 1 do
                 if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
+                    -- Use a more visible green color with pulsating effect
+                    local time = love.timer.getTime()
+                    local pulse = math.sin(time * 2) * 0.1 + 0.2 -- Values between 0.1 and 0.3
+                    
+                    love.graphics.setColor(0, 1, 0, pulse)
                     love.graphics.rectangle(
                         "fill", 
-                            cx * level.clusterSize * CellTypes.SIZE, 
-                            cy * level.clusterSize * CellTypes.SIZE, 
-                            level.clusterSize * CellTypes.SIZE, 
-                            level.clusterSize * CellTypes.SIZE
+                        cx * level.clusterSize * CellTypes.SIZE, 
+                        cy * level.clusterSize * CellTypes.SIZE, 
+                        level.clusterSize * CellTypes.SIZE, 
+                        level.clusterSize * CellTypes.SIZE
+                    )
+                    
+                    -- Draw cluster border
+                    love.graphics.setColor(0, 1, 0, 0.5)
+                    love.graphics.rectangle(
+                        "line", 
+                        cx * level.clusterSize * CellTypes.SIZE, 
+                        cy * level.clusterSize * CellTypes.SIZE, 
+                        level.clusterSize * CellTypes.SIZE, 
+                        level.clusterSize * CellTypes.SIZE
+                    )
+                    
+                    -- Draw cluster coordinates in the center
+                    love.graphics.setColor(1, 1, 1, 0.7)
+                    local text = cx .. "," .. cy
+                    local textWidth = debugFont:getWidth(text)
+                    love.graphics.print(
+                        text,
+                        cx * level.clusterSize * CellTypes.SIZE + (level.clusterSize * CellTypes.SIZE - textWidth) / 2,
+                        cy * level.clusterSize * CellTypes.SIZE + level.clusterSize * CellTypes.SIZE / 2 - 8
                     )
                 end
             end
@@ -248,13 +273,18 @@ end
 
 function Debug.drawActiveCells(level)
     if Debug.showActiveCells and level.debugActiveCells then
-        love.graphics.setColor(0, 1, 0, 0.7)
+        -- Draw active cells with a bright highlight
         for _, cell in ipairs(level.debugActiveCells) do
             -- Fade out based on time
             local age = love.timer.getTime() - cell.time
             if age < 0.5 then
-                love.graphics.setColor(0, 1, 0, 0.7 * (1 - age / 0.5))
+                -- Use a brighter color for active cells
+                love.graphics.setColor(1, 0, 1, 0.7 * (1 - age / 0.5))  -- Magenta for contrast with green clusters
                 love.graphics.rectangle("fill", cell.x * CellTypes.SIZE, cell.y * CellTypes.SIZE, CellTypes.SIZE, CellTypes.SIZE)
+                
+                -- Draw a border around the cell
+                love.graphics.setColor(1, 0, 1, 0.9 * (1 - age / 0.5))
+                love.graphics.rectangle("line", cell.x * CellTypes.SIZE, cell.y * CellTypes.SIZE, CellTypes.SIZE, CellTypes.SIZE)
             end
         end
     end

@@ -31,38 +31,28 @@ function Updater.updateRowLeftToRight(level, y, dt)
     
     for x = 0, level.width - 1 do
         if level.cells[y] and level.cells[y][x] then
-            -- Update visual sand cells
-            if level.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
+            -- Get the cluster for this cell
+            local clusterX = math.floor(x / level.clusterSize)
+            local clusterY = math.floor(y / level.clusterSize)
+            
+            -- Only update cells in active clusters or visual sand cells
+            local cellType = level.cells[y][x].type
+            local isInActiveCluster = level.clusters[clusterY] and 
+                                     level.clusters[clusterY][clusterX] and 
+                                     level.clusters[clusterY][clusterX].active
+            
+            -- Always update visual sand cells regardless of cluster
+            if cellType == Cell.TYPES.VISUAL_SAND or cellType == Cell.TYPES.VISUAL_DIRT then
                 level.cells[y][x]:update(dt, level)
-            end
-            
-            -- Update sand cells - ALWAYS update ALL sand cells
-            if level.cells[y][x].type == Cell.TYPES.SAND then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
-                end
-            end
-            
-            -- Update water cells - ALWAYS update ALL water cells
-            if level.cells[y][x].type == Cell.TYPES.WATER then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
-                end
-            end
-            
-            -- Update dirt cells - ALWAYS update ALL dirt cells
-            if level.cells[y][x].type == Cell.TYPES.DIRT then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
+            -- Only update other cell types if they're in an active cluster
+            elseif isInActiveCluster then
+                if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER or cellType == Cell.TYPES.DIRT then
+                    local changed = level.cells[y][x]:update(dt, level)
+                    
+                    -- If the cell changed, mark it as active for next frame
+                    if changed then
+                        table.insert(level.activeCells, {x = x, y = y})
+                    end
                 end
             end
         end
@@ -75,28 +65,28 @@ function Updater.updateRowRightToLeft(level, y, dt)
     
     for x = level.width - 1, 0, -1 do
         if level.cells[y] and level.cells[y][x] then
-            -- Update visual sand cells
-            if level.cells[y][x].type == Cell.TYPES.VISUAL_SAND then
+            -- Get the cluster for this cell
+            local clusterX = math.floor(x / level.clusterSize)
+            local clusterY = math.floor(y / level.clusterSize)
+            
+            -- Only update cells in active clusters or visual sand cells
+            local cellType = level.cells[y][x].type
+            local isInActiveCluster = level.clusters[clusterY] and 
+                                     level.clusters[clusterY][clusterX] and 
+                                     level.clusters[clusterY][clusterX].active
+            
+            -- Always update visual sand cells regardless of cluster
+            if cellType == Cell.TYPES.VISUAL_SAND or cellType == Cell.TYPES.VISUAL_DIRT then
                 level.cells[y][x]:update(dt, level)
-            end
-            
-            -- Update sand cells - ALWAYS update ALL sand cells
-            if level.cells[y][x].type == Cell.TYPES.SAND then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
-                end
-            end
-            
-            -- Update water cells - ALWAYS update ALL water cells
-            if level.cells[y][x].type == Cell.TYPES.WATER then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
+            -- Only update other cell types if they're in an active cluster
+            elseif isInActiveCluster then
+                if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER or cellType == Cell.TYPES.DIRT then
+                    local changed = level.cells[y][x]:update(dt, level)
+                    
+                    -- If the cell changed, mark it as active for next frame
+                    if changed then
+                        table.insert(level.activeCells, {x = x, y = y})
+                    end
                 end
             end
         end

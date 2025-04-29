@@ -14,11 +14,16 @@ function Renderer.drawLevel(level, debug)
     -- Calculate visible cell range with some margin
     local margin = 5 -- Extra cells to draw outside the visible area
     
-    -- Use the correct cell size (Cell.SIZE) for calculations
-    local minX = 0 -- Start from the leftmost cell
-    local maxX = level.width - 1 -- Go to the rightmost cell
-    local minY = 0 -- Start from the topmost cell
-    local maxY = level.height - 1 -- Go to the bottommost cell
+    -- Get camera position (assuming centered on screen)
+    local cameraX = love.graphics.getWidth() / 2
+    local cameraY = love.graphics.getHeight() / 2
+    
+    -- Calculate visible area in grid coordinates
+    -- For now, we'll use the entire grid but optimize by only drawing active clusters
+    local minX = 0
+    local maxX = level.width - 1
+    local minY = 0
+    local maxY = level.height - 1
     
     -- Batch drawing for better performance
     local sandBatch = {}
@@ -29,27 +34,37 @@ function Renderer.drawLevel(level, debug)
     local smokeBatch = {}
     local winHoleBatch = {}
     
-    -- Collect cells for batch drawing
+    -- Collect cells for batch drawing - draw all cells in visible area
     for y = minY, maxY do
         for x = minX, maxX do
             if level.cells[y] and level.cells[y][x] then
                 local cell = level.cells[y][x]
                 local cellType = cell.type
                 
+                -- Get the cluster for this cell (for debug visualization only)
+                local clusterX = math.floor(x / level.clusterSize)
+                local clusterY = math.floor(y / level.clusterSize)
+                
+                -- Check if this cell is in an active cluster (for debug visualization only)
+                local isInActiveCluster = level.clusters[clusterY] and 
+                                         level.clusters[clusterY][clusterX] and 
+                                         level.clusters[clusterY][clusterX].active
+                
+                -- Draw all cells regardless of cluster status
                 if cellType == Cell.TYPES.SAND then
-                    table.insert(sandBatch, {x = x, y = y})
+                    table.insert(sandBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == Cell.TYPES.STONE then
-                    table.insert(stoneBatch, {x = x, y = y})
+                    table.insert(stoneBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == Cell.TYPES.WATER then
-                    table.insert(waterBatch, {x = x, y = y})
+                    table.insert(waterBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == Cell.TYPES.DIRT then
-                    table.insert(dirtBatch, {x = x, y = y})
+                    table.insert(dirtBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == CellTypes.TYPES.FIRE then
-                    table.insert(fireBatch, {x = x, y = y})
+                    table.insert(fireBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == CellTypes.TYPES.SMOKE then
-                    table.insert(smokeBatch, {x = x, y = y})
+                    table.insert(smokeBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif cellType == CellTypes.TYPES.WIN_HOLE then
-                    table.insert(winHoleBatch, {x = x, y = y})
+                    table.insert(winHoleBatch, {x = x, y = y, active = isInActiveCluster})
                 elseif debug and cellType == Cell.TYPES.EMPTY then
                     -- Draw empty cells only in debug mode
                     love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
@@ -94,6 +109,7 @@ function Renderer.drawSandBatch(level, sandBatch, debug)
     local Cell = require("cell")
     local COLORS = CellTypes.COLORS
     local sandColor = COLORS[Cell.TYPES.SAND]
+    local Debug = require("src.debug")
     
     for _, cellPos in ipairs(sandBatch) do
         -- Get the actual cell from the level
@@ -110,8 +126,17 @@ function Renderer.drawSandBatch(level, sandBatch, debug)
         
         -- Draw debug info
         if debug then
-            love.graphics.setColor(0, 0, 1, 1) -- Blue
-            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
+            -- If debug mode is on and active cells visualization is enabled, 
+            -- show which cells are in active clusters
+            if Debug.showActiveCells and cellPos.active then
+                -- Draw a small indicator for active cells
+                love.graphics.setColor(1, 1, 0, 0.7) -- Yellow for active cells
+                love.graphics.rectangle("line", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            else
+                -- Regular debug indicator
+                love.graphics.setColor(0, 0, 1, 1) -- Blue
+                love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
+            end
         end
     end
 end
@@ -148,6 +173,7 @@ function Renderer.drawWaterBatch(level, waterBatch, debug)
     local Cell = require("cell")
     local COLORS = CellTypes.COLORS
     local waterColor = COLORS[Cell.TYPES.WATER]
+    local Debug = require("src.debug")
     
     for _, cellPos in ipairs(waterBatch) do
         -- Get the actual cell from the level
@@ -164,8 +190,17 @@ function Renderer.drawWaterBatch(level, waterBatch, debug)
         
         -- Draw debug info
         if debug then
-            love.graphics.setColor(0, 1, 1, 1) -- Cyan
-            love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
+            -- If debug mode is on and active cells visualization is enabled, 
+            -- show which cells are in active clusters
+            if Debug.showActiveCells and cellPos.active then
+                -- Draw a small indicator for active cells
+                love.graphics.setColor(1, 1, 0, 0.7) -- Yellow for active cells
+                love.graphics.rectangle("line", cellPos.x * Cell.SIZE, cellPos.y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            else
+                -- Regular debug indicator
+                love.graphics.setColor(0, 1, 1, 1) -- Cyan
+                love.graphics.circle("fill", cellPos.x * Cell.SIZE + Cell.SIZE/2, cellPos.y * Cell.SIZE + Cell.SIZE/2, 2)
+            end
         end
     end
 end
@@ -213,6 +248,7 @@ function Renderer.drawDirtBatch(level, dirtBatch, debug)
     local dirtColor = COLORS[Cell.TYPES.DIRT]
     -- Define grass color (green)
     local grassColor = {0.2, 0.7, 0.2, 1}
+    local Debug = require("src.debug")
     
     for _, cellPos in ipairs(dirtBatch) do
         -- Get the actual cell from the level
@@ -233,8 +269,17 @@ function Renderer.drawDirtBatch(level, dirtBatch, debug)
         
         -- Draw debug info
         if debug then
-            love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
-            love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+            -- If debug mode is on and active cells visualization is enabled, 
+            -- show which cells are in active clusters
+            if Debug.showActiveCells and cellPos.active then
+                -- Draw a small indicator for active cells
+                love.graphics.setColor(1, 1, 0, 0.7) -- Yellow for active cells
+                love.graphics.rectangle("line", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+            else
+                -- Regular debug indicator
+                love.graphics.setColor(0.8, 0.4, 0, 1) -- Orange
+                love.graphics.circle("fill", x * Cell.SIZE + Cell.SIZE/2, y * Cell.SIZE + Cell.SIZE/2, 2)
+            end
         end
     end
 end

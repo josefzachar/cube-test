@@ -89,6 +89,21 @@ function Level:update(dt, ball)
     -- Update cells in active clusters
     Updater.updateCells(self, dt)
     
+    -- Debug visualization of active clusters
+    if self.debug then
+        self.debugActiveClusters = {}
+        local clusterRows = math.ceil(self.height / self.clusterSize)
+        local clusterCols = math.ceil(self.width / self.clusterSize)
+        
+        for cy = 0, clusterRows - 1 do
+            for cx = 0, clusterCols - 1 do
+                if self.clusters[cy] and self.clusters[cy][cx] and self.clusters[cy][cx].active then
+                    table.insert(self.debugActiveClusters, {x = cx, y = cy})
+                end
+            end
+        end
+    end
+    
     -- Update boulders
     if self.boulders then
         for _, boulder in ipairs(self.boulders) do
