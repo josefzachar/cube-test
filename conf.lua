@@ -9,8 +9,8 @@ function love.conf(t)
     t.window.minwidth = 320        -- Lower minimum window width for mobile
     t.window.minheight = 180       -- Lower minimum window height for mobile
     
-    -- Enable VSync for mobile to save battery
-    t.window.vsync = 1             -- 0 = No VSync, 1 = VSync, 2 = Adaptive VSync
+    -- VSync disabled by default
+    t.window.vsync = 0             -- 0 = No VSync, 1 = VSync, 2 = Adaptive VSync
     
     -- Enable touch for all devices
     t.modules.joystick = false
