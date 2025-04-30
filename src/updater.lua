@@ -1,20 +1,78 @@
 -- updater.lua - Cell update utilities
 
 local CellTypes = require("src.cell_types")
+local Cell = require("cell")
 
 local Updater = {}
 
+-- Helper function to update a single cell and track changes
+function Updater.updateCell(level, x, y, dt)
+    local cell = level.cells[y][x]
+    if cell.type ~= CellTypes.TYPES.EMPTY and cell.type ~= CellTypes.TYPES.STONE then
+        local changed = cell:update(dt, level)
+        if changed then
+            table.insert(level.activeCells, {x = x, y = y})
+        end
+        return changed
+    end
+    return false
+end
+
 -- Update all cells in the level
 function Updater.updateCells(level, dt)
-    -- Process from bottom to top for natural falling
-    for y = level.height - 1, 0, -1 do
-        -- Alternate direction each row for more natural movement
-        if y % 2 == 0 then
-            -- Process left to right
-            Updater.updateRowLeftToRight(level, y, dt)
-        else
-            -- Process right to left
-            Updater.updateRowRightToLeft(level, y, dt)
+    -- Get active clusters
+    local activeClusters = {}
+    local clusterRows = math.ceil(level.height / level.clusterSize)
+    local clusterCols = math.ceil(level.width / level.clusterSize)
+    
+    for cy = 0, clusterRows - 1 do
+        for cx = 0, clusterCols - 1 do
+            if level.clusters[cy] and level.clusters[cy][cx] and level.clusters[cy][cx].active then
+                table.insert(activeClusters, {cx = cx, cy = cy})
+            end
+        end
+    end
+    
+    -- If there are no active clusters, use the traditional update method
+    if #activeClusters == 0 then
+        -- Process from bottom to top for natural falling
+        for y = level.height - 1, 0, -1 do
+            -- Alternate direction each row for more natural movement
+            if y % 2 == 0 then
+                -- Process left to right
+                Updater.updateRowLeftToRight(level, y, dt)
+            else
+                -- Process right to left
+                Updater.updateRowRightToLeft(level, y, dt)
+            end
+        end
+    else
+        -- Use sparse matrix technique - only update cells in active clusters
+        for _, cluster in ipairs(activeClusters) do
+            local startX = cluster.cx * level.clusterSize
+            local startY = cluster.cy * level.clusterSize
+            local endX = math.min(startX + level.clusterSize - 1, level.width - 1)
+            local endY = math.min(startY + level.clusterSize - 1, level.height - 1)
+            
+            -- Process from bottom to top for natural falling
+            for y = endY, startY, -1 do
+                -- Alternate direction for more natural movement
+                if y % 2 == 0 then
+                    -- Process left to right
+                    for x = startX, endX do
+                        if level.cells[y] and level.cells[y][x] then
+                            Updater.updateCell(level, x, y, dt)
+                        end
+                    end
+                else
+                    -- Process right to left
+                    for x = endX, startX, -1 do
+                        if level.cells[y] and level.cells[y][x] then
+                            Updater.updateCell(level, x, y, dt)
+                        end
+                    end
+                end
+            end
         end
     end
     
@@ -27,8 +85,6 @@ end
 
 -- Update a row of cells from left to right
 function Updater.updateRowLeftToRight(level, y, dt)
-    local Cell = require("cell")
-    
     for x = 0, level.width - 1 do
         if level.cells[y] and level.cells[y][x] then
             -- Get the cluster for this cell
@@ -61,8 +117,6 @@ end
 
 -- Update a row of cells from right to left
 function Updater.updateRowRightToLeft(level, y, dt)
-    local Cell = require("cell")
-    
     for x = level.width - 1, 0, -1 do
         if level.cells[y] and level.cells[y][x] then
             -- Get the cluster for this cell
@@ -93,45 +147,83 @@ function Updater.updateRowRightToLeft(level, y, dt)
     end
 end
 
--- Update visual sand cells
+-- Update visual sand cells with optimized boundary checks
 function Updater.updateVisualSand(level, dt)
+    -- Cache level boundaries for faster access
+    local levelWidth = level.width * Cell.SIZE
+    local levelHeight = level.height * Cell.SIZE
+    local gravity = 500 -- Gravity constant
+    
     local i = 1
     while i <= #level.visualSandCells do
         local cell = level.visualSandCells[i]
+        local maxLifetime = cell.maxLifetime or 2.0
         
         -- Update position based on velocity
         cell.visualX = cell.visualX + cell.velocityX * dt
         cell.visualY = cell.visualY + cell.velocityY * dt
         
         -- Apply gravity
-        cell.velocityY = cell.velocityY + 500 * dt  -- Gravity
+        cell.velocityY = cell.velocityY + gravity * dt
         
         -- Update lifetime and alpha
         cell.lifetime = (cell.lifetime or 0) + dt
-        cell.alpha = math.max(0, 1 - (cell.lifetime / (cell.maxLifetime or 2.0)))
+        cell.alpha = math.max(0, 1 - (cell.lifetime / maxLifetime))
         
-        -- Check if the visual sand should disappear
-        if cell.lifetime >= (cell.maxLifetime or 2.0) or
-           cell.visualX < 0 or cell.visualX >= level.width * cell.SIZE or 
-           cell.visualY < 0 or cell.visualY >= level.height * cell.SIZE then
-            -- Remove the visual sand
-            table.remove(level.visualSandCells, i)
+        -- Fast check for lifetime first (most common reason for removal)
+        local shouldRemove = cell.lifetime >= maxLifetime
+        
+        -- Only check boundaries if lifetime hasn't expired yet
+        if not shouldRemove then
+            -- Combine boundary checks into a single condition
+            shouldRemove = cell.visualX < 0 or cell.visualX >= levelWidth or 
+                           cell.visualY < 0 or cell.visualY >= levelHeight
+        end
+        
+        if shouldRemove then
+            -- Remove the visual sand - use fast removal by swapping with the last element
+            local lastIndex = #level.visualSandCells
+            if i < lastIndex then
+                level.visualSandCells[i] = level.visualSandCells[lastIndex]
+                level.visualSandCells[lastIndex] = nil
+            else
+                level.visualSandCells[i] = nil
+            end
         else
             i = i + 1
         end
     end
 end
 
--- Update active clusters
+-- Update active clusters with adaptive runtime optimization
 function Updater.updateActiveClusters(level, dt, ball)
     local Cell = require("cell")
     -- Reset all clusters to inactive
     local clusterRows = math.ceil(level.height / level.clusterSize)
     local clusterCols = math.ceil(level.width / level.clusterSize)
     
+    -- Initialize cluster activity counts if not present
+    if not level.clusterActivityCounts then
+        level.clusterActivityCounts = {}
+        for cy = 0, clusterRows - 1 do
+            level.clusterActivityCounts[cy] = {}
+            for cx = 0, clusterCols - 1 do
+                level.clusterActivityCounts[cy][cx] = 0
+            end
+        end
+    end
+    
+    -- Decay activity counts for all clusters
     for cy = 0, clusterRows - 1 do
         for cx = 0, clusterCols - 1 do
-            level.clusters[cy][cx].active = false
+            if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] then
+                level.clusterActivityCounts[cy][cx] = level.clusterActivityCounts[cy][cx] * 0.9 -- Decay factor
+            end
+            
+            -- Reset active state
+            if level.clusters[cy] and level.clusters[cy][cx] then
+                level.clusters[cy][cx].active = false
+            end
         end
     end
     
@@ -150,13 +242,22 @@ function Updater.updateActiveClusters(level, dt, ball)
         for cy = clusterY - radius, clusterY + radius do
             for cx = clusterX - radius, clusterX + radius do
                 if cy >= 0 and cy < clusterRows and cx >= 0 and cx < clusterCols then
-                    -- Always activate clusters
-                    level.clusters[cy][cx].active = true
+                    -- Always activate clusters near the ball
+                    if level.clusters[cy] and level.clusters[cy][cx] then
+                        level.clusters[cy][cx].active = true
+                    end
+                    
+                    -- Increase activity count for this cluster
+                    if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] then
+                        level.clusterActivityCounts[cy][cx] = level.clusterActivityCounts[cy][cx] + 5 -- Higher weight for ball proximity
+                    end
                     
                     -- Store distance to ball for prioritization
-                    local distX = cx - clusterX
-                    local distY = cy - clusterY
-                    level.clusters[cy][cx].distanceToBall = math.sqrt(distX * distX + distY * distY)
+                    if level.clusters[cy] and level.clusters[cy][cx] then
+                        local distX = cx - clusterX
+                        local distY = cy - clusterY
+                        level.clusters[cy][cx].distanceToBall = math.sqrt(distX * distX + distY * distY)
+                    end
                 end
             end
         end
@@ -168,11 +269,26 @@ function Updater.updateActiveClusters(level, dt, ball)
         local clusterY = math.floor(cell.y / level.clusterSize)
         
         if clusterY >= 0 and clusterY < clusterRows and clusterX >= 0 and clusterX < clusterCols then
-            level.clusters[clusterY][clusterX].active = true
+            -- Activate this cluster
+            if level.clusters[clusterY] and level.clusters[clusterY][clusterX] then
+                level.clusters[clusterY][clusterX].active = true
+            end
+            
+            -- Increase activity count for this cluster
+            if level.clusterActivityCounts[clusterY] and level.clusterActivityCounts[clusterY][clusterX] then
+                level.clusterActivityCounts[clusterY][clusterX] = level.clusterActivityCounts[clusterY][clusterX] + 1
+            end
             
             -- Also mark clusters below as active (for falling sand)
             if clusterY + 1 < clusterRows then
-                level.clusters[clusterY + 1][clusterX].active = true
+                if level.clusters[clusterY + 1] and level.clusters[clusterY + 1][clusterX] then
+                    level.clusters[clusterY + 1][clusterX].active = true
+                end
+                
+                -- Increase activity count for the cluster below
+                if level.clusterActivityCounts[clusterY + 1] and level.clusterActivityCounts[clusterY + 1][clusterX] then
+                    level.clusterActivityCounts[clusterY + 1][clusterX] = level.clusterActivityCounts[clusterY + 1][clusterX] + 0.5 -- Lower weight for clusters below
+                end
             end
         end
     end
@@ -255,7 +371,18 @@ function Updater.updateActiveClusters(level, dt, ball)
         end
     end
     
-    -- No cluster limiting needed
+    -- Also activate clusters with high activity counts (from optimization commit)
+    local activityThreshold = 0.5 -- Threshold for activation based on activity
+    for cy = 0, clusterRows - 1 do
+        for cx = 0, clusterCols - 1 do
+            if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] and 
+               level.clusterActivityCounts[cy][cx] > activityThreshold then
+                if level.clusters[cy] and level.clusters[cy][cx] then
+                    level.clusters[cy][cx].active = true
+                end
+            end
+        end
+    end
     
     -- Store active cells for debug visualization
     level.debugActiveCells = {}
