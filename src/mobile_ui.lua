@@ -200,11 +200,30 @@ function MobileUI.draw(game)
         MobileUI.drawBallButton(button, button.visible, isSelected, button.color)
     end
     
-    -- Draw pinch-to-zoom hint
+    -- Draw zoom level in the top center with game font
     love.graphics.setColor(1, 1, 1, 0.7)
-    local zoomHint = "Pinch to zoom"
-    local zoomHintWidth = love.graphics.getFont():getWidth(zoomHint)
-    love.graphics.print(zoomHint, love.graphics.getWidth() - zoomHintWidth - 20, 20)
+    local zoomText = string.format("%.1f", ZOOM_LEVEL) .. "x"
+    
+    -- Load the pixel font for zoom display if not already loaded
+    if not MobileUI.zoomFont then
+        MobileUI.zoomFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
+    end
+    
+    -- Save current font
+    local currentFont = love.graphics.getFont()
+    
+    -- Set font to game font
+    love.graphics.setFont(MobileUI.zoomFont)
+    
+    -- Calculate width with the game font
+    local zoomTextWidth = MobileUI.zoomFont:getWidth(zoomText)
+    local screenWidth = love.graphics.getWidth()
+    
+    -- Draw zoom text
+    love.graphics.print(zoomText, (screenWidth - zoomTextWidth) / 2, 10)
+    
+    -- Restore original font
+    love.graphics.setFont(currentFont)
     
     -- Restore original font
     love.graphics.setFont(originalFont)

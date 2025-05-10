@@ -16,9 +16,9 @@ local GameState = {
     testPlayMode = false, -- Flag to track if we're in test play mode
     
     -- Zoom control
-    MIN_ZOOM = 0.5,
+    MIN_ZOOM = 0.3,
     MAX_ZOOM = 2.0,
-    ZOOM_STEP = 0.1,
+    ZOOM_STEP = 0.05,
 
     -- Game modes
     MODES = {
@@ -46,7 +46,7 @@ local GameState = {
 currentDifficulty = 1
 
 -- Global zoom level (0.5-2.0) - Controls the game's visual scale
-ZOOM_LEVEL = 1.0
+ZOOM_LEVEL = 0.7
 
 -- Make these global so they can be accessed from other modules - Keep these global
 GAME_SCALE = 1

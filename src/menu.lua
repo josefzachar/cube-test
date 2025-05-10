@@ -4,14 +4,44 @@ local Menu = {}
 local Camera = require("src.camera")
 local Cell = require("cell")
 
+-- Function to detect if running on a mobile device
+function Menu.isMobileDevice()
+    -- Check if love.system is available (added in LÖVE 0.9.0)
+    if love.system then
+        -- Check if running on Android or iOS
+        local os = love.system.getOS()
+        if os == "Android" or os == "iOS" then
+            return true
+        end
+        
+        -- Also check screen dimensions - small screens are likely mobile
+        local width, height = love.graphics.getDimensions()
+        -- If either dimension is less than 600 pixels, it's likely a mobile device
+        if width < 600 or height < 600 then
+            return true
+        end
+    end
+    
+    -- Default to false if we can't determine
+    return false
+end
+
 -- Menu state
 Menu.active = false
 Menu.selectedOption = 1
+
+-- Create menu options based on device type
 Menu.options = {
-    { text = "Play" },
-    { text = "Editor" },
-    { text = "Sandbox" }
+    { text = "Play" }
 }
+
+-- Only add Editor option if not on a mobile device
+if not Menu.isMobileDevice() then
+    table.insert(Menu.options, { text = "Editor" })
+end
+
+-- Add Sandbox option
+table.insert(Menu.options, { text = "Sandbox" })
 
 -- Current level in play mode
 Menu.currentLevel = 1
@@ -244,11 +274,12 @@ love.graphics.draw(Menu.logoImage, (width - logoWidth) / 2, 50, 0, 0.5, 0.5)
         love.graphics.print(option.text, option.x + 30, option.y + 8)
     end
     
-    -- Display zoom level
-    love.graphics.setFont(Menu.descriptionFont)
-    love.graphics.setColor(0, 0.8, 0.8, 1)
-    local zoomText = "ZOOM: " .. string.format("%.1f", ZOOM_LEVEL) .. "x (Use +/- keys or mouse wheel)"
-    love.graphics.print(zoomText, 10, 10)
+    -- Display zoom level in the top center
+    love.graphics.setFont(Menu.optionFont)
+    love.graphics.setColor(1, 1, 1, 0.7)
+    local zoomText = string.format("%.1f", ZOOM_LEVEL) .. "x"
+    local zoomTextWidth = Menu.optionFont:getWidth(zoomText)
+    love.graphics.print(zoomText, (width - zoomTextWidth) / 2, 10)
 end
 
 -- Update the menu
@@ -337,15 +368,21 @@ end
 
 -- Execute the selected option
 function Menu.executeOption(optionIndex)
-    if optionIndex == 1 then
+    local selectedOption = Menu.options[optionIndex]
+    
+    if not selectedOption then
+        return true
+    end
+    
+    if selectedOption.text == "Play" then
         -- PLAY
         Menu.active = false
         return { action = "play", level = Menu.currentLevel }
-    elseif optionIndex == 2 then
+    elseif selectedOption.text == "Editor" then
         -- EDITOR
         Menu.active = false
         return { action = "editor" }
-    elseif optionIndex == 3 then
+    elseif selectedOption.text == "Sandbox" then
         -- SANDBOX
         Menu.active = false
         return { action = "sandbox" }

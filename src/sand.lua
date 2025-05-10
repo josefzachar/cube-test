@@ -50,8 +50,12 @@ function Sand.update(cell, dt, level)
     end
     
     -- Mark cells below as active to ensure continuous falling
-    if y < levelHeight - 2 then
-        table.insert(level.activeCells, {x = x, y = y + 2})
+    -- Mark more cells below to prevent gaps in falling sand
+    local activationDepth = 10  -- Increase this to mark more cells below
+    for i = 1, activationDepth do
+        if y + i < levelHeight then
+            table.insert(level.activeCells, {x = x, y = y + i})
+        end
     end
     
     -- Get cell types
@@ -69,8 +73,12 @@ function Sand.update(cell, dt, level)
         table.insert(activeCells, {x = x, y = y + 1})
         
         -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x, y = y + 2})
+        -- Mark more cells below to prevent gaps in falling sand
+        local activationDepth = 10  -- Increase this to mark more cells below
+        for i = 1, activationDepth do
+            if y + i < levelHeight then
+                table.insert(activeCells, {x = x, y = y + i})
+            end
         end
         
         return true -- Cell changed
@@ -127,8 +135,12 @@ function Sand.update(cell, dt, level)
             table.insert(activeCells, {x = x - 1, y = y + 1})
             
             -- Mark cells below as active to ensure continuous falling
-            if y < levelHeight - 2 then
-                table.insert(activeCells, {x = x - 1, y = y + 2})
+            -- Mark more cells below to prevent gaps in falling sand
+            local activationDepth = 10  -- Increase this to mark more cells below
+            for i = 1, activationDepth do
+                if y + i < levelHeight then
+                    table.insert(activeCells, {x = x - 1, y = y + i})
+                end
             end
         else
             -- Fall diagonally right
@@ -145,8 +157,12 @@ function Sand.update(cell, dt, level)
             table.insert(activeCells, {x = x + 1, y = y + 1})
             
             -- Mark cells below as active to ensure continuous falling
-            if y < levelHeight - 2 then
-                table.insert(activeCells, {x = x + 1, y = y + 2})
+            -- Mark more cells below to prevent gaps in falling sand
+            local activationDepth = 10  -- Increase this to mark more cells below
+            for i = 1, activationDepth do
+                if y + i < levelHeight then
+                    table.insert(activeCells, {x = x + 1, y = y + i})
+                end
             end
         end
         
@@ -161,8 +177,12 @@ function Sand.update(cell, dt, level)
         table.insert(activeCells, {x = x - 1, y = y + 1})
         
         -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x - 1, y = y + 2})
+        -- Mark more cells below to prevent gaps in falling sand
+        local activationDepth = 10  -- Increase this to mark more cells below
+        for i = 1, activationDepth do
+            if y + i < levelHeight then
+                table.insert(activeCells, {x = x - 1, y = y + i})
+            end
         end
         
         return true -- Cell changed
@@ -176,8 +196,12 @@ function Sand.update(cell, dt, level)
         table.insert(activeCells, {x = x + 1, y = y + 1})
         
         -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x + 1, y = y + 2})
+        -- Mark more cells below to prevent gaps in falling sand
+        local activationDepth = 10  -- Increase this to mark more cells below
+        for i = 1, activationDepth do
+            if y + i < levelHeight then
+                table.insert(activeCells, {x = x + 1, y = y + i})
+            end
         end
         
         return true -- Cell changed
@@ -191,8 +215,12 @@ function Sand.update(cell, dt, level)
         table.insert(activeCells, {x = x - 1, y = y + 1})
         
         -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x - 1, y = y + 2})
+        -- Mark more cells below to prevent gaps in falling sand
+        local activationDepth = 10  -- Increase this to mark more cells below
+        for i = 1, activationDepth do
+            if y + i < levelHeight then
+                table.insert(activeCells, {x = x - 1, y = y + i})
+            end
         end
         
         return true -- Cell changed
@@ -206,8 +234,12 @@ function Sand.update(cell, dt, level)
         table.insert(activeCells, {x = x + 1, y = y + 1})
         
         -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x + 1, y = y + 2})
+        -- Mark more cells below to prevent gaps in falling sand
+        local activationDepth = 10  -- Increase this to mark more cells below
+        for i = 1, activationDepth do
+            if y + i < levelHeight then
+                table.insert(activeCells, {x = x + 1, y = y + i})
+            end
         end
         
         return true -- Cell changed

@@ -195,7 +195,7 @@ function UI.init(ballTypes)
     local rightEdge = GAME_WIDTH - buttonMargin
     local buttonX = rightEdge - buttonWidth
     
-    -- Create toggle UI button in the top right corner (always visible)
+    -- Create toggle UI button in the top right corner (only visible in EDITOR mode)
     toggleUIButton = Button.new(rightEdge - buttonWidth, buttonMargin, buttonWidth, buttonHeight, "TERMINAL", function()
         isUIVisible = not isUIVisible
     end)
@@ -364,7 +364,12 @@ function UI.update(mouseX, mouseY)
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = UI.convertCoordinates(mouseX, mouseY)
     
-    toggleUIButton:update(gameX, gameY)
+    -- Only update the toggle button in EDITOR mode
+    local Game = require("src.game")
+    local GameState = require("src.game_state")
+    if Game.currentMode == GameState.MODES.EDITOR then
+        toggleUIButton:update(gameX, gameY)
+    end
     
     -- Update the separate ball buttons in PLAY mode
     if isPlayMode and #ballButtons > 0 then
@@ -453,8 +458,12 @@ function UI.draw()
     local buttonMargin = 10
     local panelWidth = buttonWidth + buttonMargin * 2
     
-    -- Always draw the toggle button
-    toggleUIButton:draw()
+    -- Only draw the toggle button in EDITOR mode
+    local Game = require("src.game")
+    local GameState = require("src.game_state")
+    if Game.currentMode == GameState.MODES.EDITOR then
+        toggleUIButton:draw()
+    end
     
     -- Draw the ball buttons in PLAY mode
     if isPlayMode and #ballButtons > 0 then
@@ -612,8 +621,10 @@ function UI.handlePress(x, y)
     -- Convert screen coordinates to game coordinates
     local gameX, gameY = UI.convertCoordinates(x, y)
     
-    -- Check toggle button first
-    if toggleUIButton:handlePress(gameX, gameY) then
+    -- Check toggle button only in EDITOR mode
+    local Game = require("src.game")
+    local GameState = require("src.game_state")
+    if Game.currentMode == GameState.MODES.EDITOR and toggleUIButton:handlePress(gameX, gameY) then
         return true
     end
     

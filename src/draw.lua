@@ -98,26 +98,41 @@ function Draw.draw(Game)
     -- No scaling for UI elements
     love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
     
-    -- Display game mode
-    local modeText = "MODE: "
-    if Game.currentMode == Game.MODES.PLAY then
-        modeText = modeText .. "PLAY (Level " .. Menu.currentLevel .. ")"
-    elseif Game.currentMode == Game.MODES.EDITOR then
-        modeText = modeText .. "EDITOR"
-    elseif Game.currentMode == Game.MODES.SANDBOX then
-        modeText = modeText .. "SANDBOX"
+    -- Only display game mode in EDITOR mode
+    if Game.currentMode == Game.MODES.EDITOR then
+        local modeText = "MODE: EDITOR"
+        
+        -- Add test play indicator if in test play mode
+        if Game.testPlayMode then
+            modeText = modeText .. " (TEST PLAY)"
+        end
+        
+        love.graphics.print(modeText, 10, 50)
     end
     
-    -- Add test play indicator if in test play mode
-    if Game.testPlayMode then
-        modeText = modeText .. " (TEST PLAY)"
+    -- Display zoom level in the top center with game font
+    local zoomText = string.format("%.1f", ZOOM_LEVEL) .. "x"
+    
+    -- Load the pixel font for zoom display if not already loaded
+    if not Game.zoomFont then
+        Game.zoomFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
     end
     
-    love.graphics.print(modeText, 10, 50)
+    -- Save current font
+    local currentFont = love.graphics.getFont()
     
-    -- Display zoom level
-    local zoomText = "ZOOM: " .. string.format("%.1f", ZOOM_LEVEL) .. "x"
-    love.graphics.print(zoomText, 10, 30)
+    -- Set font to game font
+    love.graphics.setFont(Game.zoomFont)
+    
+    -- Calculate width with the game font
+    local zoomTextWidth = Game.zoomFont:getWidth(zoomText)
+    local screenWidth = love.graphics.getWidth()
+    
+    -- Draw zoom text
+    love.graphics.print(zoomText, (screenWidth - zoomTextWidth) / 2, 10)
+    
+    -- Restore original font
+    love.graphics.setFont(currentFont)
     
     -- Reset transformation
     love.graphics.pop()
