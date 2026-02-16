@@ -10,6 +10,7 @@ function Renderer.drawLevel(level, debug)
     -- Get visible area (camera view)
     local screenWidth, screenHeight = love.graphics.getDimensions()
     local Cell = require("cell")
+    local COLORS = CellTypes.COLORS
     
     -- Calculate visible cell range with some margin
     local margin = 5 -- Extra cells to draw outside the visible area
@@ -25,75 +26,64 @@ function Renderer.drawLevel(level, debug)
     local minY = 0
     local maxY = level.height - 1
     
-    -- Batch drawing for better performance
-    local sandBatch = {}
-    local stoneBatch = {}
-    local waterBatch = {}
-    local dirtBatch = {}
-    local fireBatch = {}
-    local smokeBatch = {}
-    local winHoleBatch = {}
-    
-    -- Collect cells for batch drawing - draw all cells in visible area
+    -- Draw cells directly without batching into tables (reduces GC pressure)
     for y = minY, maxY do
         for x = minX, maxX do
             if level.cells[y] and level.cells[y][x] then
                 local cell = level.cells[y][x]
                 local cellType = cell.type
                 
-                -- Get the cluster for this cell (for debug visualization only)
-                local clusterX = math.floor(x / level.clusterSize)
-                local clusterY = math.floor(y / level.clusterSize)
-                
-                -- Check if this cell is in an active cluster (for debug visualization only)
-                local isInActiveCluster = level.clusters[clusterY] and 
-                                         level.clusters[clusterY][clusterX] and 
-                                         level.clusters[clusterY][clusterX].active
-                
-                -- Draw all cells regardless of cluster status
-                if cellType == Cell.TYPES.SAND then
-                    table.insert(sandBatch, {x = x, y = y, active = isInActiveCluster})
+                -- Skip empty cells unless in debug mode
+                if cellType == Cell.TYPES.EMPTY then
+                    if debug then
+                        love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
+                        love.graphics.rectangle("line", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+                    end
+                elseif cellType == Cell.TYPES.SAND then
+                    local color = COLORS[Cell.TYPES.SAND]
+                    love.graphics.setColor(
+                        color[1] * cell.colorVariation.r,
+                        color[2] * cell.colorVariation.g,
+                        color[3] * cell.colorVariation.b,
+                        color[4]
+                    )
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == Cell.TYPES.STONE then
-                    table.insert(stoneBatch, {x = x, y = y, active = isInActiveCluster})
+                    local color = COLORS[Cell.TYPES.STONE]
+                    love.graphics.setColor(
+                        color[1] * cell.colorVariation.r,
+                        color[2] * cell.colorVariation.g,
+                        color[3] * cell.colorVariation.b,
+                        color[4]
+                    )
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == Cell.TYPES.WATER then
-                    table.insert(waterBatch, {x = x, y = y, active = isInActiveCluster})
+                    local color = COLORS[Cell.TYPES.WATER]
+                    love.graphics.setColor(
+                        color[1] * cell.colorVariation.r,
+                        color[2] * cell.colorVariation.g,
+                        color[3] * cell.colorVariation.b,
+                        color[4]
+                    )
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == Cell.TYPES.DIRT then
-                    table.insert(dirtBatch, {x = x, y = y, active = isInActiveCluster})
+                    Renderer.drawDirtCell(cell, x, y, Cell.SIZE, debug)
                 elseif cellType == CellTypes.TYPES.FIRE then
-                    table.insert(fireBatch, {x = x, y = y, active = isInActiveCluster})
+                    local color = COLORS[CellTypes.TYPES.FIRE]
+                    love.graphics.setColor(color[1], color[2], color[3], color[4])
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == CellTypes.TYPES.SMOKE then
-                    table.insert(smokeBatch, {x = x, y = y, active = isInActiveCluster})
+                    local color = COLORS[CellTypes.TYPES.SMOKE]
+                    love.graphics.setColor(color[1], color[2], color[3], color[4])
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == CellTypes.TYPES.WIN_HOLE then
-                    table.insert(winHoleBatch, {x = x, y = y, active = isInActiveCluster})
-                elseif debug and cellType == Cell.TYPES.EMPTY then
-                    -- Draw empty cells only in debug mode
-                    love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
-                    love.graphics.rectangle("line", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+                    local color = COLORS[CellTypes.TYPES.WIN_HOLE]
+                    love.graphics.setColor(color[1], color[2], color[3], color[4])
+                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 end
             end
         end
     end
-    
-    -- Draw sand cells
-    Renderer.drawSandBatch(level, sandBatch, debug)
-    
-    -- Draw stone cells
-    Renderer.drawStoneBatch(level, stoneBatch, debug)
-    
-    -- Draw water cells
-    Renderer.drawWaterBatch(level, waterBatch, debug)
-    
-    -- Draw dirt cells
-    Renderer.drawDirtBatch(level, dirtBatch, debug)
-    
-    -- Draw fire cells
-    Renderer.drawFireBatch(level, fireBatch, debug)
-    
-    -- Draw smoke cells
-    Renderer.drawSmokeBatch(level, smokeBatch, debug)
-    
-    -- Draw win hole cells
-    Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
     
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
@@ -239,6 +229,25 @@ function Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
             end
         end
     end
+end
+
+-- Draw a single dirt cell (helper for optimized renderer)
+function Renderer.drawDirtCell(cell, x, y, cellSize, debug)
+    local COLORS = CellTypes.COLORS
+    local dirtColor = COLORS[require("cell").TYPES.DIRT]
+    local grassColor = {0.2, 0.7, 0.2, 1}
+    
+    -- Choose color based on whether this cell has grass
+    local color = cell.hasGrass and grassColor or dirtColor
+    
+    -- Apply color variation
+    love.graphics.setColor(
+        color[1] * cell.colorVariation.r,
+        color[2] * cell.colorVariation.g,
+        color[3] * cell.colorVariation.b,
+        color[4]
+    )
+    love.graphics.rectangle("fill", x * cellSize, y * cellSize, cellSize, cellSize)
 end
 
 -- Draw dirt cells

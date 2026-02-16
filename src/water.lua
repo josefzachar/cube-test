@@ -51,15 +51,6 @@ function Water.update(cell, dt, level)
         return false
     end
     
-    -- Mark cells below as active to ensure continuous falling
-    -- Mark more cells below to prevent gaps in falling water
-    local activationDepth = 10  -- Increase this to mark more cells below
-    for i = 1, activationDepth do
-        if y + i < levelHeight then
-            table.insert(level.activeCells, {x = x, y = y + i})
-        end
-    end
-    
     -- Get cell types
     local belowType = level:getCellType(x, y + 1)
     
@@ -68,20 +59,6 @@ function Water.update(cell, dt, level)
         -- Fall straight down
         level:setCellType(x, y, EMPTY)
         level:setCellType(x, y + 1, WATER)
-        
-        -- Mark cells as active for next frame
-        local activeCells = level.activeCells
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling water
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x, y = y + i})
-            end
-        end
         
         return true -- Cell changed
     end
@@ -101,34 +78,10 @@ function Water.update(cell, dt, level)
         -- Both diagonal spaces are empty, choose randomly
         if math.random() < 0.5 then
             level:setCellType(x, y, EMPTY)
-            level:setCellType(x - 1, y + 1, WATER)
-            
-            table.insert(activeCells, {x = x, y = y})
-            table.insert(activeCells, {x = x - 1, y = y + 1})
-            
-            -- Mark cells below as active to ensure continuous falling
-            -- Mark more cells below to prevent gaps in falling water
-            local activationDepth = 10  -- Increase this to mark more cells below
-            for i = 1, activationDepth do
-                if y + i < levelHeight then
-                    table.insert(activeCells, {x = x - 1, y = y + i})
-                end
-            end
+            level:setCellType(x, y + 1, WATER)
         else
             level:setCellType(x, y, EMPTY)
             level:setCellType(x + 1, y + 1, WATER)
-            
-            table.insert(activeCells, {x = x, y = y})
-            table.insert(activeCells, {x = x + 1, y = y + 1})
-            
-            -- Mark cells below as active to ensure continuous falling
-            -- Mark more cells below to prevent gaps in falling water
-            local activationDepth = 10  -- Increase this to mark more cells below
-            for i = 1, activationDepth do
-                if y + i < levelHeight then
-                    table.insert(activeCells, {x = x + 1, y = y + i})
-                end
-            end
         end
         
         return true -- Cell changed
@@ -136,34 +89,10 @@ function Water.update(cell, dt, level)
         level:setCellType(x, y, EMPTY)
         level:setCellType(x - 1, y + 1, WATER)
         
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x - 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling water
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x - 1, y = y + i})
-            end
-        end
-        
         return true -- Cell changed
     elseif rightEmpty then
         level:setCellType(x, y, EMPTY)
         level:setCellType(x + 1, y + 1, WATER)
-        
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x + 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling water
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x + 1, y = y + i})
-            end
-        end
         
         return true -- Cell changed
     end
@@ -195,16 +124,10 @@ function Water.update(cell, dt, level)
         level:setCellType(x, y, EMPTY)
         level:setCellType(x - 1, y, WATER)
         
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x - 1, y = y})
-        
         return true -- Cell changed
     elseif rightType == EMPTY then
         level:setCellType(x, y, EMPTY)
         level:setCellType(x + 1, y, WATER)
-        
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x + 1, y = y})
         
         return true -- Cell changed
     end

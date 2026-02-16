@@ -279,6 +279,9 @@ function EditorLevel.testPlay()
     -- Initialize grass on top of dirt cells
     EditorLevel.editor.level:initializeGrass()
     
+    -- Activate clusters with falling materials so they start updating immediately
+    EditorLevel.editor.level:activateFallingMaterialClusters()
+    
     -- Create a ball at the start position
     local ball = Balls.createBall(EditorLevel.editor.world, EditorLevel.editor.startX * Cell.SIZE, EditorLevel.editor.startY * Cell.SIZE, Balls.TYPES.STANDARD)
     ball.body:setUserData(ball)

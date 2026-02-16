@@ -164,6 +164,9 @@ function GameInit.init(Game, mode, levelNumber)
 
             -- Initialize grass on top of dirt cells
             Game.level:initializeGrass()
+            
+            -- Activate clusters with falling materials
+            Game.level:activateFallingMaterialClusters()
 
             -- Load boulders if they exist in the level data
             if levelData.boulders and type(levelData.boulders) == "table" then

@@ -128,6 +128,9 @@ function Menu.loadBackgroundLevel()
         -- Initialize grass on top of dirt cells
         Menu.backgroundLevel:initializeGrass()
         
+        -- Activate clusters with falling materials
+        Menu.backgroundLevel:activateFallingMaterialClusters()
+        
         -- Store ball starting position for camera centering
         Menu.ballStartX = levelData.startX * Cell.SIZE
         Menu.ballStartY = levelData.startY * Cell.SIZE

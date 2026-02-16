@@ -20,14 +20,27 @@ end
 
 -- Update all cells in the level
 function Updater.updateCells(level, dt)
-    -- First, update ALL sand cells regardless of active clusters
-    -- This ensures sand falls smoothly without gaps
+    -- First, ALWAYS update sand and water cells regardless of clusters
+    -- This prevents gaps at cluster boundaries
+    local Cell = require("cell")
     for y = level.height - 1, 0, -1 do
-        for x = 0, level.width - 1 do
-            if level.cells[y] and level.cells[y][x] and level.cells[y][x].type == Cell.TYPES.SAND then
-                local changed = level.cells[y][x]:update(dt, level)
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
+        -- Alternate direction for natural movement
+        if y % 2 == 0 then
+            for x = 0, level.width - 1 do
+                if level.cells[y] and level.cells[y][x] then
+                    local cellType = level.cells[y][x].type
+                    if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
+                        Updater.updateCell(level, x, y, dt)
+                    end
+                end
+            end
+        else
+            for x = level.width - 1, 0, -1 do
+                if level.cells[y] and level.cells[y][x] then
+                    local cellType = level.cells[y][x].type
+                    if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
+                        Updater.updateCell(level, x, y, dt)
+                    end
                 end
             end
         end
@@ -74,15 +87,23 @@ function Updater.updateCells(level, dt)
                 if y % 2 == 0 then
                     -- Process left to right
                     for x = startX, endX do
-                        if level.cells[y] and level.cells[y][x] and level.cells[y][x].type ~= Cell.TYPES.SAND then
-                            Updater.updateCell(level, x, y, dt)
+                        if level.cells[y] and level.cells[y][x] then
+                            local cellType = level.cells[y][x].type
+                            -- Skip sand and water - already updated
+                            if cellType ~= Cell.TYPES.SAND and cellType ~= Cell.TYPES.WATER then
+                                Updater.updateCell(level, x, y, dt)
+                            end
                         end
                     end
                 else
                     -- Process right to left
                     for x = endX, startX, -1 do
-                        if level.cells[y] and level.cells[y][x] and level.cells[y][x].type ~= Cell.TYPES.SAND then
-                            Updater.updateCell(level, x, y, dt)
+                        if level.cells[y] and level.cells[y][x] then
+                            local cellType = level.cells[y][x].type
+                            -- Skip sand and water - already updated
+                            if cellType ~= Cell.TYPES.SAND and cellType ~= Cell.TYPES.WATER then
+                                Updater.updateCell(level, x, y, dt)
+                            end
                         end
                     end
                 end
@@ -97,82 +118,20 @@ function Updater.updateCells(level, dt)
     end
 end
 
--- Update a row of cells from left to right
+-- Update a row of cells from left to right (only used when no active clusters)
 function Updater.updateRowLeftToRight(level, y, dt)
     for x = 0, level.width - 1 do
         if level.cells[y] and level.cells[y][x] then
-            -- Get the cluster for this cell
-            local clusterX = math.floor(x / level.clusterSize)
-            local clusterY = math.floor(y / level.clusterSize)
-            
-            -- Only update cells in active clusters or visual sand cells
-            local cellType = level.cells[y][x].type
-            local isInActiveCluster = level.clusters[clusterY] and 
-                                     level.clusters[clusterY][clusterX] and 
-                                     level.clusters[clusterY][clusterX].active
-            
-            -- Always update visual sand cells and regular sand cells regardless of cluster
-            if cellType == Cell.TYPES.VISUAL_SAND or cellType == Cell.TYPES.VISUAL_DIRT then
-                level.cells[y][x]:update(dt, level)
-            -- Always update sand cells to prevent gaps in falling sand
-            elseif cellType == Cell.TYPES.SAND then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
-                end
-            -- Only update other cell types if they're in an active cluster
-            elseif isInActiveCluster then
-                if cellType == Cell.TYPES.WATER or cellType == Cell.TYPES.DIRT then
-                    local changed = level.cells[y][x]:update(dt, level)
-                    
-                    -- If the cell changed, mark it as active for next frame
-                    if changed then
-                        table.insert(level.activeCells, {x = x, y = y})
-                    end
-                end
-            end
+            Updater.updateCell(level, x, y, dt)
         end
     end
 end
 
--- Update a row of cells from right to left
+-- Update a row of cells from right to left (only used when no active clusters)
 function Updater.updateRowRightToLeft(level, y, dt)
     for x = level.width - 1, 0, -1 do
         if level.cells[y] and level.cells[y][x] then
-            -- Get the cluster for this cell
-            local clusterX = math.floor(x / level.clusterSize)
-            local clusterY = math.floor(y / level.clusterSize)
-            
-            -- Only update cells in active clusters or visual sand cells
-            local cellType = level.cells[y][x].type
-            local isInActiveCluster = level.clusters[clusterY] and 
-                                     level.clusters[clusterY][clusterX] and 
-                                     level.clusters[clusterY][clusterX].active
-            
-            -- Always update visual sand cells and regular sand cells regardless of cluster
-            if cellType == Cell.TYPES.VISUAL_SAND or cellType == Cell.TYPES.VISUAL_DIRT then
-                level.cells[y][x]:update(dt, level)
-            -- Always update sand cells to prevent gaps in falling sand
-            elseif cellType == Cell.TYPES.SAND then
-                local changed = level.cells[y][x]:update(dt, level)
-                
-                -- If the cell changed, mark it as active for next frame
-                if changed then
-                    table.insert(level.activeCells, {x = x, y = y})
-                end
-            -- Only update other cell types if they're in an active cluster
-            elseif isInActiveCluster then
-                if cellType == Cell.TYPES.WATER or cellType == Cell.TYPES.DIRT then
-                    local changed = level.cells[y][x]:update(dt, level)
-                    
-                    -- If the cell changed, mark it as active for next frame
-                    if changed then
-                        table.insert(level.activeCells, {x = x, y = y})
-                    end
-                end
-            end
+            Updater.updateCell(level, x, y, dt)
         end
     end
 end
@@ -243,14 +202,14 @@ function Updater.updateActiveClusters(level, dt, ball)
         end
     end
     
-    -- Decay activity counts for all clusters
+    -- Decay activity counts for all clusters (slower decay to keep them active longer)
     for cy = 0, clusterRows - 1 do
         for cx = 0, clusterCols - 1 do
             if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] then
-                level.clusterActivityCounts[cy][cx] = level.clusterActivityCounts[cy][cx] * 0.9 -- Decay factor
+                level.clusterActivityCounts[cy][cx] = level.clusterActivityCounts[cy][cx] * 0.95 -- Slower decay
             end
             
-            -- Reset active state
+            -- Don't reset active state - we'll set it based on activity count
             if level.clusters[cy] and level.clusters[cy][cx] then
                 level.clusters[cy][cx].active = false
             end
@@ -293,7 +252,7 @@ function Updater.updateActiveClusters(level, dt, ball)
         end
     end
     
-    -- Mark clusters as active based on recent changes
+    -- Mark clusters as active based on recent changes (only for dirt and non-sand/water materials)
     for _, cell in ipairs(level.activeCells) do
         local clusterX = math.floor(cell.x / level.clusterSize)
         local clusterY = math.floor(cell.y / level.clusterSize)
@@ -309,111 +268,12 @@ function Updater.updateActiveClusters(level, dt, ball)
                 level.clusterActivityCounts[clusterY][clusterX] = level.clusterActivityCounts[clusterY][clusterX] + 1
             end
             
-            -- Mark more clusters below as active (for falling sand/water)
-            -- This helps prevent gaps in falling particles
-            local clusterActivationDepth = 3  -- Activate clusters up to 3 rows below
-            for i = 1, clusterActivationDepth do
-                if clusterY + i < clusterRows then
-                    if level.clusters[clusterY + i] and level.clusters[clusterY + i][clusterX] then
-                        level.clusters[clusterY + i][clusterX].active = true
-                    end
-                    
-                    -- Increase activity count for the clusters below with decreasing weight
-                    if level.clusterActivityCounts[clusterY + i] and level.clusterActivityCounts[clusterY + i][clusterX] then
-                        local weight = 0.5 / i  -- Decreasing weight for clusters further below
-                        level.clusterActivityCounts[clusterY + i][clusterX] = level.clusterActivityCounts[clusterY + i][clusterX] + weight
-                    end
-                end
-            end
+            -- Note: No longer activating clusters below since sand/water always update
         end
     end
     
-    -- NEW: Check for sand and water cells that should be moving
-    -- This ensures cells don't freeze in mid-air when not near the ball
-    for y = 0, level.height - 1 do
-        for x = 0, level.width - 1 do
-            if level.cells[y] and level.cells[y][x] then
-                local cellType = level.cells[y][x].type
-                
-                -- Check if this is a sand or water cell
-                if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
-                    -- Check if there's empty space or water below (for sand)
-                    local shouldActivate = false
-                    
-                    -- Check below
-                    if y < level.height - 1 then
-                        local belowType = level.cells[y+1][x].type
-                        if belowType == Cell.TYPES.EMPTY or 
-                           (cellType == Cell.TYPES.SAND and belowType == Cell.TYPES.WATER) then
-                            shouldActivate = true
-                        end
-                    end
-                    
-                    -- Check diagonally below
-                    if not shouldActivate and y < level.height - 1 then
-                        -- Check left diagonal
-                        if x > 0 then
-                            local diagLeftType = level.cells[y+1][x-1].type
-                            if diagLeftType == Cell.TYPES.EMPTY or 
-                               (cellType == Cell.TYPES.SAND and diagLeftType == Cell.TYPES.WATER) then
-                                shouldActivate = true
-                            end
-                        end
-                        
-                        -- Check right diagonal
-                        if x < level.width - 1 then
-                            local diagRightType = level.cells[y+1][x+1].type
-                            if diagRightType == Cell.TYPES.EMPTY or 
-                               (cellType == Cell.TYPES.SAND and diagRightType == Cell.TYPES.WATER) then
-                                shouldActivate = true
-                            end
-                        end
-                    end
-                    
-                    -- For water, also check horizontally
-                    if not shouldActivate and cellType == Cell.TYPES.WATER then
-                        -- Check left
-                        if x > 0 and level.cells[y][x-1].type == Cell.TYPES.EMPTY then
-                            shouldActivate = true
-                        end
-                        
-                        -- Check right
-                        if x < level.width - 1 and level.cells[y][x+1].type == Cell.TYPES.EMPTY then
-                            shouldActivate = true
-                        end
-                    end
-                    
-                    -- If this cell should be moving, activate its cluster
-                    if shouldActivate then
-                        local clusterX = math.floor(x / level.clusterSize)
-                        local clusterY = math.floor(y / level.clusterSize)
-                        
-                        if clusterY >= 0 and clusterY < clusterRows and 
-                           clusterX >= 0 and clusterX < clusterCols then
-                            level.clusters[clusterY][clusterX].active = true
-                            
-                            -- Mark more clusters below as active
-                            -- This helps prevent gaps in falling particles
-                            local clusterActivationDepth = 3  -- Activate clusters up to 3 rows below
-                            for i = 1, clusterActivationDepth do
-                                if clusterY + i < clusterRows then
-                                    if level.clusters[clusterY + i] and level.clusters[clusterY + i][clusterX] then
-                                        level.clusters[clusterY + i][clusterX].active = true
-                                    end
-                                end
-                            end
-                            
-                            -- Add this cell to active cells for next frame
-                            table.insert(level.activeCells, {x = x, y = y})
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    -- Also activate clusters with high activity counts (from optimization commit)
-    local activityThreshold = 0.5 -- Threshold for activation based on activity
+    -- Activate clusters with any recent activity (very low threshold)
+    local activityThreshold = 0.1 -- Very low threshold - activate on any recent activity
     for cy = 0, clusterRows - 1 do
         for cx = 0, clusterCols - 1 do
             if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] and 
@@ -424,6 +284,75 @@ function Updater.updateActiveClusters(level, dt, ball)
             end
         end
     end
+    
+    -- CRITICAL: Keep clusters active if they contain falling materials (checked AFTER activity-based activation)
+    -- Only check clusters that aren't already active to avoid redundant work
+    -- OPTIMIZATION: Don't scan ALL clusters every frame - only scan a batch per frame
+    local SAND = Cell.TYPES.SAND
+    local WATER = Cell.TYPES.WATER
+    local EMPTY = Cell.TYPES.EMPTY
+    
+    -- Initialize scan position if not present
+    if not level.clusterScanPosition then
+        level.clusterScanPosition = 0
+    end
+    
+    -- Only scan a small batch of clusters per frame (spread work across frames)
+    local clustersPerFrame = 20  -- Scan 20 clusters per frame instead of all clusters
+    local scannedCount = 0
+    local startPos = level.clusterScanPosition
+    
+    for i = 0, clusterRows * clusterCols - 1 do
+        if scannedCount >= clustersPerFrame then
+            break
+        end
+        
+        local idx = (startPos + i) % (clusterRows * clusterCols)
+        local cy = math.floor(idx / clusterCols)
+        local cx = idx % clusterCols
+        
+        -- Only scan if cluster is not already active
+        if level.clusters[cy] and level.clusters[cy][cx] and not level.clusters[cy][cx].active then
+            scannedCount = scannedCount + 1
+            
+            local startX = cx * level.clusterSize
+            local startY = cy * level.clusterSize
+            local endX = math.min(startX + level.clusterSize - 1, level.width - 1)
+            local endY = math.min(startY + level.clusterSize - 1, level.height - 1)
+            
+            -- Quick scan for falling materials in this cluster
+            local hasFallingMaterial = false
+            for y = startY, endY do
+                for x = startX, endX do
+                    if level.cells[y] and level.cells[y][x] then
+                        local cellType = level.cells[y][x].type
+                        
+                        if (cellType == SAND or cellType == WATER) and y < level.height - 1 then
+                            local belowType = level.cells[y+1][x].type
+                            -- Check if material can fall
+                            if belowType == EMPTY or (cellType == SAND and belowType == WATER) then
+                                hasFallingMaterial = true
+                                break
+                            end
+                        end
+                    end
+                end
+                if hasFallingMaterial then break end
+            end
+            
+            if hasFallingMaterial then
+                level.clusters[cy][cx].active = true
+                -- Give it activity score so it stays active
+                if level.clusterActivityCounts[cy] and level.clusterActivityCounts[cy][cx] then
+                    level.clusterActivityCounts[cy][cx] = 1.0
+                end
+                -- Note: No longer activating clusters below since sand/water always update anyway
+            end
+        end
+    end
+    
+    -- Update scan position for next frame
+    level.clusterScanPosition = (startPos + clustersPerFrame) % (clusterRows * clusterCols)
     
     -- Store active cells for debug visualization
     level.debugActiveCells = {}

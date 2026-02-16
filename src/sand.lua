@@ -49,15 +49,6 @@ function Sand.update(cell, dt, level)
         return false
     end
     
-    -- Mark cells below as active to ensure continuous falling
-    -- Mark more cells below to prevent gaps in falling sand
-    local activationDepth = 10  -- Increase this to mark more cells below
-    for i = 1, activationDepth do
-        if y + i < levelHeight then
-            table.insert(level.activeCells, {x = x, y = y + i})
-        end
-    end
-    
     -- Get cell types
     local belowType = level:getCellType(x, y + 1)
     
@@ -67,36 +58,12 @@ function Sand.update(cell, dt, level)
         level:setCellType(x, y, EMPTY)
         level:setCellType(x, y + 1, SAND)
         
-        -- Mark cells as active for next frame
-        local activeCells = level.activeCells
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling sand
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x, y = y + i})
-            end
-        end
-        
         return true -- Cell changed
     -- Check if there's water below - sand should sink in water
     elseif belowType == WATER then
         -- Swap positions - sand sinks, water rises
         level:setCellType(x, y, WATER)
         level:setCellType(x, y + 1, SAND)
-        
-        -- Mark cells as active for next frame
-        local activeCells = level.activeCells
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        if y < levelHeight - 2 then
-            table.insert(activeCells, {x = x, y = y + 2})
-        end
         
         return true -- Cell changed
     end
@@ -129,19 +96,6 @@ function Sand.update(cell, dt, level)
                 level:setCellType(x, y, WATER)
                 level:setCellType(x - 1, y + 1, SAND)
             end
-            
-            -- Mark cells as active for next frame
-            table.insert(activeCells, {x = x, y = y})
-            table.insert(activeCells, {x = x - 1, y = y + 1})
-            
-            -- Mark cells below as active to ensure continuous falling
-            -- Mark more cells below to prevent gaps in falling sand
-            local activationDepth = 10  -- Increase this to mark more cells below
-            for i = 1, activationDepth do
-                if y + i < levelHeight then
-                    table.insert(activeCells, {x = x - 1, y = y + i})
-                end
-            end
         else
             -- Fall diagonally right
             if rightEmpty then
@@ -151,19 +105,6 @@ function Sand.update(cell, dt, level)
                 level:setCellType(x, y, WATER)
                 level:setCellType(x + 1, y + 1, SAND)
             end
-            
-            -- Mark cells as active for next frame
-            table.insert(activeCells, {x = x, y = y})
-            table.insert(activeCells, {x = x + 1, y = y + 1})
-            
-            -- Mark cells below as active to ensure continuous falling
-            -- Mark more cells below to prevent gaps in falling sand
-            local activationDepth = 10  -- Increase this to mark more cells below
-            for i = 1, activationDepth do
-                if y + i < levelHeight then
-                    table.insert(activeCells, {x = x + 1, y = y + i})
-                end
-            end
         end
         
         return true -- Cell changed
@@ -172,37 +113,11 @@ function Sand.update(cell, dt, level)
         level:setCellType(x, y, EMPTY)
         level:setCellType(x - 1, y + 1, SAND)
         
-        -- Mark cells as active for next frame
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x - 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling sand
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x - 1, y = y + i})
-            end
-        end
-        
         return true -- Cell changed
     elseif rightEmpty then
         -- Fall diagonally right
         level:setCellType(x, y, EMPTY)
         level:setCellType(x + 1, y + 1, SAND)
-        
-        -- Mark cells as active for next frame
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x + 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling sand
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x + 1, y = y + i})
-            end
-        end
         
         return true -- Cell changed
     elseif leftWater then
@@ -210,37 +125,11 @@ function Sand.update(cell, dt, level)
         level:setCellType(x, y, WATER)
         level:setCellType(x - 1, y + 1, SAND)
         
-        -- Mark cells as active for next frame
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x - 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling sand
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x - 1, y = y + i})
-            end
-        end
-        
         return true -- Cell changed
     elseif rightWater then
         -- Fall diagonally right through water
         level:setCellType(x, y, WATER)
         level:setCellType(x + 1, y + 1, SAND)
-        
-        -- Mark cells as active for next frame
-        table.insert(activeCells, {x = x, y = y})
-        table.insert(activeCells, {x = x + 1, y = y + 1})
-        
-        -- Mark cells below as active to ensure continuous falling
-        -- Mark more cells below to prevent gaps in falling sand
-        local activationDepth = 10  -- Increase this to mark more cells below
-        for i = 1, activationDepth do
-            if y + i < levelHeight then
-                table.insert(activeCells, {x = x + 1, y = y + i})
-            end
-        end
         
         return true -- Cell changed
     end

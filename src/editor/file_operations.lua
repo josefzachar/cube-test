@@ -73,6 +73,9 @@ function FileOperations.saveLevel(editor)
     -- Initialize grass on top of dirt cells
     editor.level:initializeGrass()
     
+    -- Activate clusters with falling materials
+    editor.level:activateFallingMaterialClusters()
+    
     -- Save cell data
     for y = 0, editor.level.height - 1 do
         levelData.cells[y] = {}
@@ -289,6 +292,9 @@ function FileOperations.loadLevel(editor)
     
     -- Initialize grass on top of dirt cells
     editor.level:initializeGrass()
+    
+    -- Activate clusters with falling materials
+    editor.level:activateFallingMaterialClusters()
     
     -- Close file selector
     editor.fileSelector.active = false

@@ -64,6 +64,9 @@ function LevelGenerator.createProceduralLevel(level, difficulty)
     -- Initialize grass on top of dirt cells
     level:initializeGrass()
     
+    -- Activate clusters with falling materials so they start updating immediately
+    level:activateFallingMaterialClusters()
+    
     -- Final pass to remove any isolated dirt cells
     removeIsolatedDirtCells(level)
 end
@@ -805,6 +808,9 @@ function LevelGenerator.createSandTestLevel(level, amount)
     
     -- Initialize grass on top of dirt cells
     level:initializeGrass()
+    
+    -- Activate clusters with falling materials
+    level:activateFallingMaterialClusters()
 end
 
 -- Create a level with water for testing fluid dynamics
@@ -849,6 +855,9 @@ function LevelGenerator.createMixedLevel(level)
     
     -- Initialize grass on top of dirt cells
     level:initializeGrass()
+    
+    -- Activate clusters with falling materials
+    level:activateFallingMaterialClusters()
 end
 
 -- Create a level for testing dirt and water interaction
@@ -874,6 +883,9 @@ function LevelGenerator.createDirtWaterTestLevel(level)
     
     -- Initialize grass on top of dirt cells
     level:initializeGrass()
+    
+    -- Activate clusters with falling materials
+    level:activateFallingMaterialClusters()
 end
 
 return LevelGenerator

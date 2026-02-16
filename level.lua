@@ -76,6 +76,62 @@ function Level:initializeGrass()
     end
 end
 
+-- Activate clusters that contain falling materials (sand, water)
+-- This should be called after level generation to ensure materials start falling immediately
+function Level:activateFallingMaterialClusters()
+    local SAND = Cell.TYPES.SAND
+    local WATER = Cell.TYPES.WATER
+    local EMPTY = Cell.TYPES.EMPTY
+    
+    local clusterRows = math.ceil(self.height / self.clusterSize)
+    local clusterCols = math.ceil(self.width / self.clusterSize)
+    
+    -- Check each cluster for falling materials
+    for cy = 0, clusterRows - 1 do
+        for cx = 0, clusterCols - 1 do
+            local startX = cx * self.clusterSize
+            local startY = cy * self.clusterSize
+            local endX = math.min(startX + self.clusterSize - 1, self.width - 1)
+            local endY = math.min(startY + self.clusterSize - 1, self.height - 1)
+            
+            local hasFallingMaterial = false
+            
+            -- Check if cluster contains sand or water that can fall
+            for y = startY, endY do
+                for x = startX, endX do
+                    if self.cells[y] and self.cells[y][x] then
+                        local cellType = self.cells[y][x].type
+                        
+                        if cellType == SAND or cellType == WATER then
+                            -- Check if there's space below for it to fall
+                            if y < self.height - 1 then
+                                local belowType = self.cells[y+1][x].type
+                                if belowType == EMPTY or (cellType == SAND and belowType == WATER) then
+                                    hasFallingMaterial = true
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+                if hasFallingMaterial then break end
+            end
+            
+            -- Activate this cluster and clusters below if it has falling material
+            if hasFallingMaterial then
+                self.clusters[cy][cx].active = true
+                
+                -- Also activate a few clusters below to ensure continuous falling
+                for i = 1, 3 do
+                    if cy + i < clusterRows then
+                        self.clusters[cy + i][cx].active = true
+                    end
+                end
+            end
+        end
+    end
+end
+
 function Level:update(dt, ball)
     -- Increment frame counter
     self.frameCount = self.frameCount + 1
