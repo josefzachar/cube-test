@@ -177,8 +177,34 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     love.graphics.print("PERFORMANCE:", margin, yPos)
     yPos = yPos + lineHeight + 5
     
-    -- Display optimization info with retro styling
+    -- Display performance stats
     love.graphics.setColor(retroColors.text)
+    local stats = level.perfStats or {}
+    local totalMs = (stats.totalFrameTime or 0) * 1000
+    local fps = love.timer.getFPS()
+    
+    love.graphics.print(string.format("FPS: %d (%.2f ms)", fps, totalMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print("", margin, yPos); yPos = yPos + lineHeight * 0.5
+    
+    -- Show breakdown of frame time
+    local sandWaterMs = (stats.sandWaterUpdate or 0) * 1000
+    local clusterMs = (stats.clusterUpdate or 0) * 1000
+    local otherCellsMs = (stats.otherCellsUpdate or 0) * 1000
+    local visualSandMs = (stats.visualSandUpdate or 0) * 1000
+    local bouldersMs = (stats.bouldersUpdate or 0) * 1000
+    local physicsBodyMs = (stats.physicsBodyManagement or 0) * 1000
+    
+    love.graphics.print(string.format("SAND/WATER: %.2f ms", sandWaterMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("  - %d cells", stats.sandWaterCellsCount or 0), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("CLUSTERS: %.2f ms", clusterMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("  - %d active", stats.activeClustersCount or 0), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("OTHER CELLS: %.2f ms", otherCellsMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("VISUAL SAND: %.2f ms", visualSandMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("BOULDERS: %.2f ms", bouldersMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("PHYSICS MGR: %.2f ms", physicsBodyMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("  - %d bodies", stats.physicsBodyCount or 0), margin, yPos); yPos = yPos + lineHeight * 1.5
+    
+    -- Display optimization info with retro styling
     love.graphics.print("CLUSTER SIZE: " .. level.clusterSize .. "x" .. level.clusterSize, margin, yPos); yPos = yPos + lineHeight
     
     -- Count active clusters
@@ -195,7 +221,6 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
         end
     end
     
-    love.graphics.print("ACTIVE CLUSTERS: " .. activeClusterCount .. "/" .. totalClusters, margin, yPos); yPos = yPos + lineHeight
     love.graphics.print("ACTIVE CELLS: " .. #level.activeCells, margin, yPos); yPos = yPos + lineHeight * 1.5
     
     -- Shortcuts section

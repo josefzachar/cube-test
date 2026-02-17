@@ -24,12 +24,22 @@ function Water.createPool(level, x, y, width, height)
 end
 
 -- Create water physics for a cell
-function Water.createPhysics(cell, world)
+function Water.createPhysics(cell, world, skipBody)
+    if skipBody then
+        -- Don't create physics body for interior cells
+        cell.body = nil
+        cell.shape = nil
+        cell.fixture = nil
+        cell.hasPhysicsBody = false
+        return
+    end
+    
     -- Water cells are static but have special properties
     cell.body = love.physics.newBody(world, cell.x * cell.SIZE + cell.SIZE/2, cell.y * cell.SIZE + cell.SIZE/2, "static")
     cell.shape = love.physics.newRectangleShape(cell.SIZE, cell.SIZE)
     cell.fixture = love.physics.newFixture(cell.body, cell.shape)
     cell.fixture:setUserData("water")
+    cell.hasPhysicsBody = true
     
     -- Make water very slippery with medium restitution
     cell.fixture:setFriction(0.05)
@@ -133,6 +143,61 @@ function Water.update(cell, dt, level)
     end
     
     return false -- Water didn't move
+end
+
+-- Check if a water cell should have a physics body (surface cell or near ball)
+function Water.shouldHaveBody(cell, level, ballX, ballY)
+    local x, y = cell.x, cell.y
+    
+    -- Check if near ball (within 12 cells)
+    if ballX and ballY then
+        local gridBallX, gridBallY = level:getGridCoordinates(ballX, ballY)
+        local dist = math.sqrt((x - gridBallX)^2 + (y - gridBallY)^2)
+        if dist <= 12 then
+            return true
+        end
+    end
+    
+    -- Check if it's a surface cell (has empty space adjacent)
+    for dy = -1, 1 do
+        for dx = -1, 1 do
+            if dx ~= 0 or dy ~= 0 then
+                local nx, ny = x + dx, y + dy
+                if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                    if level.cells[ny] and level.cells[ny][nx] then
+                        local neighborType = level.cells[ny][nx].type
+                        if neighborType == EMPTY then
+                            return true
+                        end
+                    end
+                else
+                    -- Edge of map counts as surface
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- Ensure cell has a physics body
+function Water.ensurePhysicsBody(cell, world)
+    if not cell.hasPhysicsBody then
+        Water.createPhysics(cell, world, false)
+    end
+end
+
+-- Remove physics body from cell
+function Water.removePhysicsBody(cell)
+    if cell.hasPhysicsBody then
+        if cell.fixture then cell.fixture:destroy() end
+        if cell.body then cell.body:destroy() end
+        cell.body = nil
+        cell.shape = nil
+        cell.fixture = nil
+        cell.hasPhysicsBody = false
+    end
 end
 
 return Water

@@ -60,23 +60,28 @@ function Cell.new(world, x, y, type)
     self.body = nil
     self.shape = nil
     self.fixture = nil
+    self.hasPhysicsBody = false
     
-    -- Create physics bodies for stone, sand, water, and dirt cells
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT then
+    -- Create physics bodies for stone and dirt (always need bodies)
+    -- Sand and water bodies are created dynamically based on surface detection
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.DIRT then
         self:createPhysics(world)
+    elseif self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER then
+        -- Skip body creation initially - will be created dynamically
+        self:createPhysics(world, true)
     end
     
     return self
 end
 
-function Cell:createPhysics(world)
+function Cell:createPhysics(world, skipBody)
     -- Create physics body based on cell type
     if self.type == Cell.TYPES.STONE then
         Stone.createPhysics(self, world)
     elseif self.type == Cell.TYPES.SAND then
-        Sand.createPhysics(self, world)
+        Sand.createPhysics(self, world, skipBody)
     elseif self.type == Cell.TYPES.WATER then
-        Water.createPhysics(self, world)
+        Water.createPhysics(self, world, skipBody)
     elseif self.type == Cell.TYPES.DIRT then
         Dirt.createPhysics(self, world)
     end

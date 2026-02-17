@@ -28,6 +28,20 @@ function Level.new(world, width, height)
     self.updateInterval = 1/60 -- Update interval for inactive clusters (once per frame)
     self.frameCount = 0 -- Frame counter for staggered updates
     
+    -- Performance profiling
+    self.perfStats = {
+        sandWaterUpdate = 0,
+        clusterUpdate = 0,
+        otherCellsUpdate = 0,
+        visualSandUpdate = 0,
+        bouldersUpdate = 0,
+        physicsBodyManagement = 0,
+        totalFrameTime = 0,
+        activeClustersCount = 0,
+        sandWaterCellsCount = 0,
+        physicsBodyCount = 0,
+    }
+    
     -- Initialize empty grid
     for y = 0, height - 1 do
         self.cells[y] = {}
@@ -136,20 +150,55 @@ function Level:update(dt, ball)
     -- Increment frame counter
     self.frameCount = self.frameCount + 1
     
+    -- Reset performance stats
+    local frameStartTime = love.timer.getTime()
+    
     -- Update visual sand cells
+    local startTime = love.timer.getTime()
     Updater.updateVisualSand(self, dt)
+    self.perfStats.visualSandUpdate = love.timer.getTime() - startTime
     
     -- Update active clusters
+    startTime = love.timer.getTime()
     Updater.updateActiveClusters(self, dt, ball)
+    self.perfStats.clusterUpdate = love.timer.getTime() - startTime
     
     -- Update cells in active clusters
-    Updater.updateCells(self, dt)
+    startTime = love.timer.getTime()
+    local sandWaterTime, otherCellsTime = Updater.updateCells(self, dt)
+    self.perfStats.sandWaterUpdate = sandWaterTime or 0
+    self.perfStats.otherCellsUpdate = otherCellsTime or 0
+    
+    -- Manage physics bodies dynamically (only every 10 frames to reduce overhead)
+    startTime = love.timer.getTime()
+    if self.frameCount % 10 == 0 then
+        self:managePhysicsBodies(ball)
+    end
+    self.perfStats.physicsBodyManagement = love.timer.getTime() - startTime
+    
+    -- Update boulders
+    startTime = love.timer.getTime()
+    self:updateBoulders(dt)
+    self.perfStats.bouldersUpdate = love.timer.getTime() - startTime
+    
+    -- Calculate total frame time
+    self.perfStats.totalFrameTime = love.timer.getTime() - frameStartTime
+    
+    -- Count active clusters
+    local clusterRows = math.ceil(self.height / self.clusterSize)
+    local clusterCols = math.ceil(self.width / self.clusterSize)
+    self.perfStats.activeClustersCount = 0
+    for cy = 0, clusterRows - 1 do
+        for cx = 0, clusterCols - 1 do
+            if self.clusters[cy] and self.clusters[cy][cx] and self.clusters[cy][cx].active then
+                self.perfStats.activeClustersCount = self.perfStats.activeClustersCount + 1
+            end
+        end
+    end
     
     -- Debug visualization of active clusters
     if self.debug then
         self.debugActiveClusters = {}
-        local clusterRows = math.ceil(self.height / self.clusterSize)
-        local clusterCols = math.ceil(self.width / self.clusterSize)
         
         for cy = 0, clusterRows - 1 do
             for cx = 0, clusterCols - 1 do
@@ -159,7 +208,10 @@ function Level:update(dt, ball)
             end
         end
     end
-    
+end
+
+-- Update boulders
+function Level:updateBoulders(dt)
     -- Update boulders
     if self.boulders then
         for _, boulder in ipairs(self.boulders) do
@@ -195,6 +247,59 @@ function Level:update(dt, ball)
             end
         end
     end
+end
+
+-- Dynamically manage physics bodies for sand and water cells
+function Level:managePhysicsBodies(ball)
+    local Sand = require("src.sand")
+    local Water = require("src.water")
+    local SAND = Cell.TYPES.SAND
+    local WATER = Cell.TYPES.WATER
+    
+    local ballX, ballY
+    if ball and ball.body then
+        ballX, ballY = ball.body:getPosition()
+    end
+    
+    local physicsBodyCount = 0
+    
+    -- Check all sand and water cells
+    for y = 0, self.height - 1 do
+        for x = 0, self.width - 1 do
+            if self.cells[y] and self.cells[y][x] then
+                local cell = self.cells[y][x]
+                local cellType = cell.type
+                
+                if cellType == SAND then
+                    local shouldHaveBody = Sand.shouldHaveBody(cell, self, ballX, ballY)
+                    if shouldHaveBody and not cell.hasPhysicsBody then
+                        -- Create body
+                        Sand.ensurePhysicsBody(cell, self.world)
+                    elseif not shouldHaveBody and cell.hasPhysicsBody then
+                        -- Remove body
+                        Sand.removePhysicsBody(cell)
+                    end
+                    if cell.hasPhysicsBody then
+                        physicsBodyCount = physicsBodyCount + 1
+                    end
+                elseif cellType == WATER then
+                    local shouldHaveBody = Water.shouldHaveBody(cell, self, ballX, ballY)
+                    if shouldHaveBody and not cell.hasPhysicsBody then
+                        -- Create body
+                        Water.ensurePhysicsBody(cell, self.world)
+                    elseif not shouldHaveBody and cell.hasPhysicsBody then
+                        -- Remove body
+                        Water.removePhysicsBody(cell)
+                    end
+                    if cell.hasPhysicsBody then
+                        physicsBodyCount = physicsBodyCount + 1
+                    end
+                end
+            end
+        end
+    end
+    
+    self.perfStats.physicsBodyCount = physicsBodyCount
 end
 
 function Level:draw(debug)

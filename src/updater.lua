@@ -20,6 +20,10 @@ end
 
 -- Update all cells in the level
 function Updater.updateCells(level, dt)
+    -- Track performance
+    local sandWaterStart = love.timer.getTime()
+    local sandWaterCellCount = 0
+    
     -- First, ALWAYS update sand and water cells regardless of clusters
     -- This prevents gaps at cluster boundaries
     local Cell = require("cell")
@@ -31,6 +35,7 @@ function Updater.updateCells(level, dt)
                     local cellType = level.cells[y][x].type
                     if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
                         Updater.updateCell(level, x, y, dt)
+                        sandWaterCellCount = sandWaterCellCount + 1
                     end
                 end
             end
@@ -40,11 +45,18 @@ function Updater.updateCells(level, dt)
                     local cellType = level.cells[y][x].type
                     if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
                         Updater.updateCell(level, x, y, dt)
+                        sandWaterCellCount = sandWaterCellCount + 1
                     end
                 end
             end
         end
     end
+    
+    local sandWaterTime = love.timer.getTime() - sandWaterStart
+    level.perfStats.sandWaterCellsCount = sandWaterCellCount
+    
+    -- Track other cells performance
+    local otherCellsStart = love.timer.getTime()
     
     -- Then update other cell types only in active clusters
     -- Get active clusters
@@ -111,11 +123,16 @@ function Updater.updateCells(level, dt)
         end
     end
     
+    local otherCellsTime = love.timer.getTime() - otherCellsStart
+    
     -- Keep track of active cells for debug visualization
     level.debugActiveCells = {}
     for _, cell in ipairs(level.activeCells) do
         table.insert(level.debugActiveCells, {x = cell.x, y = cell.y, time = love.timer.getTime()})
     end
+    
+    -- Return timing info
+    return sandWaterTime, otherCellsTime
 end
 
 -- Update a row of cells from left to right (only used when no active clusters)

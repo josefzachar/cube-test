@@ -25,12 +25,22 @@ function Sand.createPile(level, x, y, width, height)
 end
 
 -- Create sand physics for a cell
-function Sand.createPhysics(cell, world)
+function Sand.createPhysics(cell, world, skipBody)
+    if skipBody then
+        -- Don't create physics body for interior cells
+        cell.body = nil
+        cell.shape = nil
+        cell.fixture = nil
+        cell.hasPhysicsBody = false
+        return
+    end
+    
     -- Sand cells are static but can be displaced
     cell.body = love.physics.newBody(world, cell.x * cell.SIZE + cell.SIZE/2, cell.y * cell.SIZE + cell.SIZE/2, "static")
     cell.shape = love.physics.newRectangleShape(cell.SIZE, cell.SIZE)
     cell.fixture = love.physics.newFixture(cell.body, cell.shape)
     cell.fixture:setUserData("sand")
+    cell.hasPhysicsBody = true
     
     -- Make sand have less friction and higher restitution to be more easily displaced
     cell.fixture:setFriction(0.4)       -- Decreased from 0.8 to 0.4
@@ -179,6 +189,61 @@ function Sand.updateVisual(cell, dt, level)
     end
     
     return true -- Visual sand always changes (moves)
+end
+
+-- Check if a sand cell should have a physics body (surface cell or near ball)
+function Sand.shouldHaveBody(cell, level, ballX, ballY)
+    local x, y = cell.x, cell.y
+    
+    -- Check if near ball (within 12 cells)
+    if ballX and ballY then
+        local gridBallX, gridBallY = level:getGridCoordinates(ballX, ballY)
+        local dist = math.sqrt((x - gridBallX)^2 + (y - gridBallY)^2)
+        if dist <= 12 then
+            return true
+        end
+    end
+    
+    -- Check if it's a surface cell (has empty space or water adjacent)
+    for dy = -1, 1 do
+        for dx = -1, 1 do
+            if dx ~= 0 or dy ~= 0 then
+                local nx, ny = x + dx, y + dy
+                if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                    if level.cells[ny] and level.cells[ny][nx] then
+                        local neighborType = level.cells[ny][nx].type
+                        if neighborType == EMPTY or neighborType == WATER then
+                            return true
+                        end
+                    end
+                else
+                    -- Edge of map counts as surface
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- Ensure cell has a physics body
+function Sand.ensurePhysicsBody(cell, world)
+    if not cell.hasPhysicsBody then
+        Sand.createPhysics(cell, world, false)
+    end
+end
+
+-- Remove physics body from cell
+function Sand.removePhysicsBody(cell)
+    if cell.hasPhysicsBody then
+        if cell.fixture then cell.fixture:destroy() end
+        if cell.body then cell.body:destroy() end
+        cell.body = nil
+        cell.shape = nil
+        cell.fixture = nil
+        cell.hasPhysicsBody = false
+    end
 end
 
 return Sand
