@@ -193,6 +193,8 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     local visualSandMs = (stats.visualSandUpdate or 0) * 1000
     local bouldersMs = (stats.bouldersUpdate or 0) * 1000
     local physicsBodyMs = (stats.physicsBodyManagement or 0) * 1000
+    local physicsStepMs = (stats.physicsStep or 0) * 1000
+    local renderingMs = (stats.renderingTime or 0) * 1000
     
     love.graphics.print(string.format("SAND/WATER: %.2f ms", sandWaterMs), margin, yPos); yPos = yPos + lineHeight
     love.graphics.print(string.format("  - %d cells", stats.sandWaterCellsCount or 0), margin, yPos); yPos = yPos + lineHeight
@@ -202,7 +204,17 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     love.graphics.print(string.format("VISUAL SAND: %.2f ms", visualSandMs), margin, yPos); yPos = yPos + lineHeight
     love.graphics.print(string.format("BOULDERS: %.2f ms", bouldersMs), margin, yPos); yPos = yPos + lineHeight
     love.graphics.print(string.format("PHYSICS MGR: %.2f ms", physicsBodyMs), margin, yPos); yPos = yPos + lineHeight
-    love.graphics.print(string.format("  - %d bodies", stats.physicsBodyCount or 0), margin, yPos); yPos = yPos + lineHeight * 1.5
+    love.graphics.print(string.format("  - %d bodies", stats.physicsBodyCount or 0), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("PHYSICS STEP: %.2f ms", physicsStepMs), margin, yPos); yPos = yPos + lineHeight
+    love.graphics.print(string.format("RENDERING: %.2f ms", renderingMs), margin, yPos); yPos = yPos + lineHeight
+    
+    -- Culling stats
+    if stats.visibleCells and stats.totalCells then
+        local cullPercent = 100 * (1 - stats.visibleCells / stats.totalCells)
+        love.graphics.print(string.format("  - %d/%d cells (%.0f%% culled)", 
+            stats.visibleCells, stats.totalCells, cullPercent), margin, yPos); yPos = yPos + lineHeight
+    end
+    yPos = yPos + lineHeight * 0.5
     
     -- Display optimization info with retro styling
     love.graphics.print("CLUSTER SIZE: " .. level.clusterSize .. "x" .. level.clusterSize, margin, yPos); yPos = yPos + lineHeight

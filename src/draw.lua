@@ -12,6 +12,9 @@ local Draw = {}
 
 -- Draw the game
 function Draw.draw(Game)
+    -- Track rendering time
+    local renderStart = love.timer.getTime()
+    
     -- If menu is active, use the level background color for clearing
     if Game.currentMode == Game.MODES.MENU then
         love.graphics.clear(Game.LEVEL_BACKGROUND_COLOR[1], Game.LEVEL_BACKGROUND_COLOR[2], 
@@ -152,6 +155,11 @@ function Draw.draw(Game)
     -- Draw win message if the game is won
     if Game.gameWon and Game.winMessageTimer > 0 then
         Draw.drawWinScreen(Game)
+    end
+    
+    -- Store rendering time
+    if Game.level and Game.level.perfStats then
+        Game.level.perfStats.renderingTime = love.timer.getTime() - renderStart
     end
 end
 

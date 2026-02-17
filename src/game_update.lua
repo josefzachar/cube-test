@@ -31,7 +31,11 @@ function GameUpdate.update(Game, dt)
 
     -- Update the physics world
     if Game.world then
+        local physicsStart = love.timer.getTime()
         Game.world:update(dt)
+        if Game.level and Game.level.perfStats then
+            Game.level.perfStats.physicsStep = love.timer.getTime() - physicsStart
+        end
     end
 
     -- Update sound system and camera shake effect

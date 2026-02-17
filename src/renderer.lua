@@ -5,28 +5,82 @@ local Fire = require("src.fire")
 
 local Renderer = {}
 
+-- Initialize sprite batches for efficient rendering
+local cellTexture = nil
+local spriteBatches = {}
+local quadCache = {}
+
+function Renderer.initSpriteBatches()
+    -- Create a simple 1x1 white texture
+    local imageData = love.image.newImageData(1, 1)
+    imageData:setPixel(0, 0, 1, 1, 1, 1)
+    cellTexture = love.graphics.newImage(imageData)
+    
+    -- Create sprite batches for each cell type (max 10000 cells per type)
+    local Cell = require("cell")
+    spriteBatches[Cell.TYPES.SAND] = love.graphics.newSpriteBatch(cellTexture, 10000, "dynamic")
+    spriteBatches[Cell.TYPES.STONE] = love.graphics.newSpriteBatch(cellTexture, 10000, "dynamic")
+    spriteBatches[Cell.TYPES.WATER] = love.graphics.newSpriteBatch(cellTexture, 10000, "dynamic")
+    spriteBatches[Cell.TYPES.DIRT] = love.graphics.newSpriteBatch(cellTexture, 10000, "dynamic")
+    spriteBatches[CellTypes.TYPES.FIRE] = love.graphics.newSpriteBatch(cellTexture, 1000, "dynamic")
+    spriteBatches[CellTypes.TYPES.SMOKE] = love.graphics.newSpriteBatch(cellTexture, 1000, "dynamic")
+    spriteBatches[CellTypes.TYPES.WIN_HOLE] = love.graphics.newSpriteBatch(cellTexture, 100, "dynamic")
+    
+    -- Create quad for a single cell (covers entire 1x1 texture)
+    quadCache.cell = love.graphics.newQuad(0, 0, 1, 1, 1, 1)
+end
+
 -- Draw all cells in the level
 function Renderer.drawLevel(level, debug)
     -- Get visible area (camera view)
     local screenWidth, screenHeight = love.graphics.getDimensions()
     local Cell = require("cell")
     local COLORS = CellTypes.COLORS
+    local Camera = require("src.camera")
     
-    -- Calculate visible cell range with some margin
-    local margin = 5 -- Extra cells to draw outside the visible area
+    -- Calculate visible cell range based on screen size and zoom
+    local margin = 10 -- Extra cells to draw outside the visible area to avoid pop-in
     
-    -- Get camera position (assuming centered on screen)
-    local cameraX = love.graphics.getWidth() / 2
-    local cameraY = love.graphics.getHeight() / 2
+    -- Get zoom level
+    local zoom = ZOOM_LEVEL or 1
     
-    -- Calculate visible area in grid coordinates
-    -- For now, we'll use the entire grid but optimize by only drawing active clusters
-    local minX = 0
-    local maxX = level.width - 1
-    local minY = 0
-    local maxY = level.height - 1
+    -- Calculate viewport in world coordinates (unscaled)
+    local viewportWidth = screenWidth / zoom
+    local viewportHeight = screenHeight / zoom
     
-    -- Draw cells directly without batching into tables (reduces GC pressure)
+    -- Get camera position
+    local cameraX = Camera.x or (level.width * Cell.SIZE / 2)
+    local cameraY = Camera.y or (level.height * Cell.SIZE / 2)
+    
+    -- Calculate viewport bounds in world space (centered on camera)
+    local viewLeft = cameraX - viewportWidth / 2
+    local viewRight = cameraX + viewportWidth / 2
+    local viewTop = cameraY - viewportHeight / 2
+    local viewBottom = cameraY + viewportHeight / 2
+    
+    -- Convert to grid coordinates with margin
+    local minX = math.max(0, math.floor(viewLeft / Cell.SIZE) - margin)
+    local maxX = math.min(level.width - 1, math.ceil(viewRight / Cell.SIZE) + margin)
+    local minY = math.max(0, math.floor(viewTop / Cell.SIZE) - margin)
+    local maxY = math.min(level.height - 1, math.ceil(viewBottom / Cell.SIZE) + margin)
+    
+    -- Store culling stats in perfStats
+    if level.perfStats then
+        level.perfStats.visibleCells = (maxX - minX + 1) * (maxY - minY + 1)
+        level.perfStats.totalCells = level.width * level.height
+    end
+    
+    -- Initialize sprite batches if not already done
+    if not cellTexture then
+        Renderer.initSpriteBatches()
+    end
+    
+    -- Clear all sprite batches
+    for _, batch in pairs(spriteBatches) do
+        batch:clear()
+    end
+    
+    -- Add cells to sprite batches
     for y = minY, maxY do
         for x = minX, maxX do
             if level.cells[y] and level.cells[y][x] then
@@ -39,50 +93,28 @@ function Renderer.drawLevel(level, debug)
                         love.graphics.setColor(0.2, 0.2, 0.2, 0.2)
                         love.graphics.rectangle("line", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                     end
-                elseif cellType == Cell.TYPES.SAND then
-                    local color = COLORS[Cell.TYPES.SAND]
-                    love.graphics.setColor(
-                        color[1] * cell.colorVariation.r,
-                        color[2] * cell.colorVariation.g,
-                        color[3] * cell.colorVariation.b,
-                        color[4]
-                    )
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
-                elseif cellType == Cell.TYPES.STONE then
-                    local color = COLORS[Cell.TYPES.STONE]
-                    love.graphics.setColor(
-                        color[1] * cell.colorVariation.r,
-                        color[2] * cell.colorVariation.g,
-                        color[3] * cell.colorVariation.b,
-                        color[4]
-                    )
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
-                elseif cellType == Cell.TYPES.WATER then
-                    local color = COLORS[Cell.TYPES.WATER]
-                    love.graphics.setColor(
-                        color[1] * cell.colorVariation.r,
-                        color[2] * cell.colorVariation.g,
-                        color[3] * cell.colorVariation.b,
-                        color[4]
-                    )
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
                 elseif cellType == Cell.TYPES.DIRT then
+                    -- Dirt has special rendering with grass
                     Renderer.drawDirtCell(cell, x, y, Cell.SIZE, debug)
-                elseif cellType == CellTypes.TYPES.FIRE then
-                    local color = COLORS[CellTypes.TYPES.FIRE]
-                    love.graphics.setColor(color[1], color[2], color[3], color[4])
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
-                elseif cellType == CellTypes.TYPES.SMOKE then
-                    local color = COLORS[CellTypes.TYPES.SMOKE]
-                    love.graphics.setColor(color[1], color[2], color[3], color[4])
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
-                elseif cellType == CellTypes.TYPES.WIN_HOLE then
-                    local color = COLORS[CellTypes.TYPES.WIN_HOLE]
-                    love.graphics.setColor(color[1], color[2], color[3], color[4])
-                    love.graphics.rectangle("fill", x * Cell.SIZE, y * Cell.SIZE, Cell.SIZE, Cell.SIZE)
+                elseif spriteBatches[cellType] then
+                    -- Add to sprite batch with color variation
+                    local color = COLORS[cellType]
+                    local r = color[1] * cell.colorVariation.r
+                    local g = color[2] * cell.colorVariation.g
+                    local b = color[3] * cell.colorVariation.b
+                    local a = color[4]
+                    
+                    spriteBatches[cellType]:setColor(r, g, b, a)
+                    spriteBatches[cellType]:add(quadCache.cell, x * Cell.SIZE, y * Cell.SIZE, 0, Cell.SIZE, Cell.SIZE)
                 end
             end
         end
+    end
+    
+    -- Draw all sprite batches
+    love.graphics.setColor(1, 1, 1, 1)
+    for _, batch in pairs(spriteBatches) do
+        love.graphics.draw(batch)
     end
     
     -- Draw visual sand cells
