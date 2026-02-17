@@ -24,33 +24,122 @@ function Updater.updateCells(level, dt)
     local sandWaterStart = love.timer.getTime()
     local sandWaterCellCount = 0
     
-    -- First, ALWAYS update sand and water cells regardless of clusters
-    -- This prevents gaps at cluster boundaries
+    -- Initialize movingSandWater if not present
+    if not level.movingSandWater then
+        level.movingSandWater = {}
+    end
+    
+    local newMovingSandWater = {}
+    
+    -- Build set of sand/water cells to check
     local Cell = require("cell")
-    for y = level.height - 1, 0, -1 do
-        -- Alternate direction for natural movement
-        if y % 2 == 0 then
-            for x = 0, level.width - 1 do
-                if level.cells[y] and level.cells[y][x] then
-                    local cellType = level.cells[y][x].type
-                    if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
-                        Updater.updateCell(level, x, y, dt)
-                        sandWaterCellCount = sandWaterCellCount + 1
-                    end
-                end
-            end
-        else
-            for x = level.width - 1, 0, -1 do
-                if level.cells[y] and level.cells[y][x] then
-                    local cellType = level.cells[y][x].type
-                    if cellType == Cell.TYPES.SAND or cellType == Cell.TYPES.WATER then
-                        Updater.updateCell(level, x, y, dt)
-                        sandWaterCellCount = sandWaterCellCount + 1
+    local SAND = Cell.TYPES.SAND
+    local WATER = Cell.TYPES.WATER
+    local EMPTY = Cell.TYPES.EMPTY
+    
+    local cellsToCheck = {}
+    
+    -- Add previously moving cells and their neighbors
+    for key, _ in pairs(level.movingSandWater) do
+        local x, y = key:match("(%d+),(%d+)")
+        x, y = tonumber(x), tonumber(y)
+        
+        if x and y then
+            -- Add this cell and neighbors (3x3 area)
+            for dy = -1, 1 do
+                for dx = -1, 1 do
+                    local nx, ny = x + dx, y + dy
+                    if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                        local cellKey = nx .. "," .. ny
+                        if not cellsToCheck[cellKey] then
+                            if level.cells[ny] and level.cells[ny][nx] then
+                                local cellType = level.cells[ny][nx].type
+                                if cellType == SAND or cellType == WATER then
+                                    cellsToCheck[cellKey] = {x = nx, y = ny}
+                                end
+                            end
+                        end
                     end
                 end
             end
         end
     end
+    
+    -- Also check sand/water near the ball (to wake up settled cells)
+    if level.ball and level.ball.body then
+        local ballX, ballY = level.ball.body:getPosition()
+        local gridX, gridY = level:getGridCoordinates(ballX, ballY)
+        local radius = 16  -- Check 16 cells around ball
+        
+        for dy = -radius, radius do
+            for dx = -radius, radius do
+                local nx, ny = gridX + dx, gridY + dy
+                if nx >= 0 and nx < level.width and ny >= 0 and ny < level.height then
+                    local cellKey = nx .. "," .. ny
+                    if not cellsToCheck[cellKey] then
+                        if level.cells[ny] and level.cells[ny][nx] then
+                            local cellType = level.cells[ny][nx].type
+                            if cellType == SAND or cellType == WATER then
+                                cellsToCheck[cellKey] = {x = nx, y = ny}
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- CRITICAL: Always check sand/water that has empty space below (unsettled cells)
+    -- This ensures materials fall even when ball is far away
+    -- Only scan every 5 frames to reduce overhead
+    if not level.unsettledScanFrame then
+        level.unsettledScanFrame = 0
+    end
+    level.unsettledScanFrame = level.unsettledScanFrame + 1
+    
+    if level.unsettledScanFrame % 5 == 0 then
+        for y = 0, level.height - 2 do  -- -2 because we check y+1
+            for x = 0, level.width - 1 do
+                if level.cells[y] and level.cells[y][x] and level.cells[y+1] and level.cells[y+1][x] then
+                    local cellType = level.cells[y][x].type
+                    if cellType == SAND or cellType == WATER then
+                        local belowType = level.cells[y+1][x].type
+                        -- If there's empty space or water below sand, cell needs to update
+                        if belowType == EMPTY or (cellType == SAND and belowType == WATER) then
+                            local cellKey = x .. "," .. y
+                            if not cellsToCheck[cellKey] then
+                                cellsToCheck[cellKey] = {x = x, y = y}
+                                -- Also mark as moving so it continues next frame
+                                newMovingSandWater[cellKey] = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Update only the cells we need to check (bottom to top for natural falling)
+    local sortedCells = {}
+    for key, cell in pairs(cellsToCheck) do
+        table.insert(sortedCells, cell)
+    end
+    table.sort(sortedCells, function(a, b) return a.y > b.y end)
+    
+    for _, cell in ipairs(sortedCells) do
+        local x, y = cell.x, cell.y
+        if level.cells[y] and level.cells[y][x] then
+            local changed = Updater.updateCell(level, x, y, dt)
+            sandWaterCellCount = sandWaterCellCount + 1
+            if changed then
+                local key = x .. "," .. y
+                newMovingSandWater[key] = true
+            end
+        end
+    end
+    
+    -- Update movingSandWater for next frame
+    level.movingSandWater = newMovingSandWater
     
     local sandWaterTime = love.timer.getTime() - sandWaterStart
     level.perfStats.sandWaterCellsCount = sandWaterCellCount

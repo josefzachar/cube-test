@@ -22,6 +22,8 @@ function Level.new(world, width, height)
     
     -- Performance optimization variables
     self.activeCells = {} -- Table to track cells that need updating
+    self.movingSandWater = {} -- Track which sand/water cells moved last frame
+    self.ball = nil -- Reference to ball for proximity checks
     self.clusterSize = 8 -- Size of each cluster (8x8 cells)
     self.clusters = {} -- Table to track active clusters
     self.lastUpdateTime = {} -- Track when each cluster was last updated
@@ -97,6 +99,20 @@ function Level:activateFallingMaterialClusters()
     local WATER = Cell.TYPES.WATER
     local EMPTY = Cell.TYPES.EMPTY
     
+    -- Initialize all sand and water as "moving" so they settle properly
+    self.movingSandWater = {}
+    for y = 0, self.height - 1 do
+        for x = 0, self.width - 1 do
+            if self.cells[y] and self.cells[y][x] then
+                local cellType = self.cells[y][x].type
+                if cellType == SAND or cellType == WATER then
+                    local key = x .. "," .. y
+                    self.movingSandWater[key] = true
+                end
+            end
+        end
+    end
+    
     local clusterRows = math.ceil(self.height / self.clusterSize)
     local clusterCols = math.ceil(self.width / self.clusterSize)
     
@@ -149,6 +165,9 @@ end
 function Level:update(dt, ball)
     -- Increment frame counter
     self.frameCount = self.frameCount + 1
+    
+    -- Store ball reference for proximity checks
+    self.ball = ball
     
     -- Reset performance stats
     local frameStartTime = love.timer.getTime()
