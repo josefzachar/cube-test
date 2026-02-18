@@ -373,7 +373,16 @@ function EditorInput.handleMouseWheel(x, y)
     if EditorInput.editor.textInput.active or EditorInput.editor.fileSelector.active then
         return false
     end
-    
+
+    -- Ignore wheel over UI panels
+    local EditorUI = require("src.editor.ui")
+    local leftW, rightW, menuH, statusH = EditorUI.getPanelSizes()
+    local sw, sh = love.graphics.getDimensions()
+    local mx, my = love.mouse.getPosition()
+    if mx < leftW or mx > sw - rightW or my < menuH or my > sh - statusH then
+        return false
+    end
+
     -- Get camera module
     local EditorCamera = require("src.editor.camera")
     

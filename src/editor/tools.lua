@@ -407,6 +407,9 @@ function EditorTools.handleKeyPressed(key)
     elseif key == "b" then
         EditorTools.editor.currentTool = "boulder"
         return true
+    elseif key == "e" then
+        EditorTools.editor.currentTool = "barrel"
+        return true
     end
     
     -- Brush size

@@ -122,6 +122,9 @@ end
 
 -- Update the editor
 function EditorCore.update(dt)
+    -- Update UI (tooltip timers etc.)
+    EditorUI.update(dt)
+
     -- Get mouse position
     local mouseX, mouseY = love.mouse.getPosition()
     
@@ -171,8 +174,8 @@ function EditorCore.draw()
     -- Get screen dimensions
     local screenWidth, screenHeight = love.graphics.getDimensions()
     
-    -- Draw background (dark blue)
-    love.graphics.clear(0.05, 0.05, 0.15, 1)
+    -- Draw background (dark grey to match Aseprite-style UI)
+    love.graphics.clear(0.10, 0.10, 0.10, 1)
     
     -- Apply camera transformation
     EditorCamera.applyTransform()
@@ -217,28 +220,10 @@ function EditorCore.draw()
         EditorFile.drawFileSelector()
     end
     
-    -- Draw cursor preview last, so it's on top of everything
-    if not EditorCore.fileSelector.active and not EditorCore.textInput.active and not EditorCore.isPanning then
-        -- Get mouse position
-        local mouseX, mouseY = love.mouse.getPosition()
-        
-        -- Get game coordinates
-        local gameX, gameY
-        
-        -- For mobile devices, use the InputUtils module for direct conversion
-        if _G.isMobile then
-            local InputUtils = require("src.input_utils")
-            gameX, gameY = InputUtils.screenToGameCoords(mouseX, mouseY)
-        else
-            gameX, gameY = EditorCamera.screenToGameCoords(mouseX, mouseY)
-        end
-        
-        -- Draw cursor preview
+    -- Draw cursor preview last (UI panels excluded inside drawCursorPreview)
+    if not EditorCore.fileSelector.active and not EditorCore.isPanning then
         EditorUI.drawCursorPreview()
     end
-    
-    -- Draw zoom indicator
-    EditorCamera.drawZoomIndicator()
 end
 
 -- Handle key press in editor
@@ -258,6 +243,12 @@ function EditorCore.handleKeyPressed(key)
     -- Handle space key for toggling UI
     if key == "space" then
         EditorCore.showUI = not EditorCore.showUI
+        return true
+    end
+
+    -- Barrel tool shortcut
+    if key == "e" then
+        EditorCore.currentTool = "barrel"
         return true
     end
     
