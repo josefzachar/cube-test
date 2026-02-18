@@ -169,6 +169,21 @@ function ExplodingBall:explode(level, sandToConvert)
     
     -- Switch to standard ball after explosion
     -- We'll return a special value to indicate that the ball should be switched
+
+    -- Chain reaction: trigger any barrels caught within the blast radius
+    if level.barrels then
+        local blastWorldRadius = explosionRadius * CellTypes.SIZE
+        for _, barrel in ipairs(level.barrels) do
+            if not barrel.exploded then
+                local bx, by = barrel.body:getPosition()
+                local dist   = math.sqrt((bx - x) ^ 2 + (by - y) ^ 2)
+                if dist <= blastWorldRadius then
+                    barrel.pendingExplosion = true
+                end
+            end
+        end
+    end
+
     return "switch_to_standard"
 end
 

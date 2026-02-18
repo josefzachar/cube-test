@@ -36,8 +36,8 @@ function EditorUI.createUI()
     local panelWidth = 150
     
     -- Create tool buttons
-    local tools = {"draw", "erase", "fill", "start", "winhole", "boulder"}
-    local toolNames = {"DRAW", "ERASE", "FILL", "SET START", "SET HOLE", "BOULDER"}
+    local tools = {"draw", "erase", "fill", "start", "winhole", "boulder", "barrel"}
+    local toolNames = {"DRAW", "ERASE", "FILL", "SET START", "SET HOLE", "BOULDER", "BARREL"}
     
     for i, tool in ipairs(tools) do
         local button = {
@@ -61,7 +61,7 @@ function EditorUI.createUI()
     for i, size in ipairs(brushSizes) do
         local button = {
             x = 10,
-            y = 300 + (i-1) * (buttonHeight + buttonMargin),
+            y = 330 + (i-1) * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = "SIZE " .. size,
@@ -79,7 +79,7 @@ function EditorUI.createUI()
     for i, cellTypeName in ipairs(EditorUI.editor.CELL_TYPES) do
         local button = {
             x = 10,
-            y = 500 + (i-1) * (buttonHeight + buttonMargin),
+            y = 530 + (i-1) * (buttonHeight + buttonMargin),
             width = buttonWidth,
             height = buttonHeight,
             text = cellTypeName,

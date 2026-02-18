@@ -407,6 +407,42 @@ function Collision.beginContact(a, b, coll, level, ball)
             end
         end
     end
+
+    -- ── Barrel collision detection ─────────────────────────────────────────
+    -- Determine if a barrel is involved in this contact
+    local barrelFixture, otherFixtureB
+    if type(aData) == "table" and aData.isBarrel then
+        barrelFixture  = a
+        otherFixtureB  = b
+    elseif type(bData) == "table" and bData.isBarrel then
+        barrelFixture  = b
+        otherFixtureB  = a
+    end
+
+    if barrelFixture then
+        local barrel    = barrelFixture:getUserData()
+        local otherData = otherFixtureB:getUserData()
+
+        -- Sand, water, fire, smoke, and win-hole do NOT trigger the barrel.
+        -- Only hard collisions (ball, boulder, another barrel, or solid cells) do.
+        local isSoft = (otherData == "sand"     or otherData == "water" or
+                        otherData == "fire"     or otherData == "smoke" or
+                        otherData == "win_hole")
+
+        if not isSoft and barrel and not barrel.exploded and barrel.armed then
+            -- Use relative velocity so a gently-resting barrel is not triggered
+            local barrelBody = barrelFixture:getBody()
+            local otherBody  = otherFixtureB:getBody()
+            local bvx, bvy   = barrelBody:getLinearVelocity()
+            local ovx, ovy   = otherBody:getLinearVelocity()
+            local relVx, relVy = bvx - ovx, bvy - ovy
+            local relSpeed     = math.sqrt(relVx * relVx + relVy * relVy)
+
+            if relSpeed > 200 then
+                barrel.pendingExplosion = true
+            end
+        end
+    end
 end
 
 function Collision.endContact(a, b, coll, level)

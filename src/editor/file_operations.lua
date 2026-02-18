@@ -54,7 +54,8 @@ function FileOperations.saveLevel(editor)
         winHoleY = editor.winHoleY,
         availableBalls = editor.availableBalls,
         cells = {},
-        boulders = {}
+        boulders = {},
+        barrels = {}
     }
     
     -- Save boulder data if there are any boulders
@@ -68,6 +69,15 @@ function FileOperations.saveLevel(editor)
             })
         end
         print("Saving " .. #editor.level.boulders .. " boulders to level file")
+    end
+
+    -- Save barrel data if there are any barrels
+    if editor.level.barrels and #editor.level.barrels > 0 then
+        for i, barrel in ipairs(editor.level.barrels) do
+            local bx, by = barrel:getPosition()
+            table.insert(levelData.barrels, { x = bx, y = by })
+        end
+        print("Saving " .. #editor.level.barrels .. " barrels to level file")
     end
     
     -- Initialize grass on top of dirt cells
@@ -287,7 +297,28 @@ function FileOperations.loadLevel(editor)
         end
         print("Loaded", #editor.level.boulders, "boulders from level file")
     end
-    
+
+    -- Load barrels if they exist in the level data
+    if levelData.barrels and type(levelData.barrels) == "table" then
+        -- Clear existing barrels
+        if editor.level.barrels then
+            for _, barrel in ipairs(editor.level.barrels) do
+                if barrel.body then barrel.body:destroy() end
+            end
+        end
+        editor.level.barrels = {}
+
+        for i, barrelData in ipairs(levelData.barrels) do
+            if barrelData.x and barrelData.y then
+                local Barrel = require("src.barrel")
+                local barrel = Barrel.new(editor.world, barrelData.x, barrelData.y)
+                table.insert(editor.level.barrels, barrel)
+                print("Loaded barrel at", barrelData.x, barrelData.y)
+            end
+        end
+        print("Loaded", #editor.level.barrels, "barrels from level file")
+    end
+
     print("Level loaded successfully")
     
     -- Initialize grass on top of dirt cells

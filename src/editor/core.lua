@@ -81,7 +81,8 @@ local EditorCore = {
         "fill",
         "start",
         "winhole",
-        "boulder"
+        "boulder",
+        "barrel"
     },
     
     -- Cell types
@@ -176,8 +177,8 @@ function EditorCore.draw()
     -- Apply camera transformation
     EditorCamera.applyTransform()
     
-    -- Draw the level
-    EditorCore.level:draw(EditorCore.debug)
+    -- Draw the level (noCull=true: render all cells regardless of viewport)
+    EditorCore.level:draw(EditorCore.debug, true)
     
     -- Draw the editor tools
     EditorTools.draw()

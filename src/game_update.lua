@@ -73,6 +73,28 @@ function GameUpdate.update(Game, dt)
     -- Win message timer is no longer decremented automatically
     -- It will only be reset when the user clicks the continue button or presses R
 
+    -- Process barrel explosions (including chain reactions between barrels)
+    if Game.level and Game.level.barrels and #Game.level.barrels > 0 then
+        local anyPending  = true
+        local iterations  = 0
+        local SAFE_LIMIT  = 30   -- prevent infinite loops on degenerate levels
+        while anyPending and iterations < SAFE_LIMIT do
+            anyPending = false
+            iterations = iterations + 1
+            for _, barrel in ipairs(Game.level.barrels) do
+                if barrel.pendingExplosion and not barrel.exploded then
+                    barrel:explode(
+                        Game.level,
+                        Collision.sandToConvert,
+                        Game.level.barrels,
+                        Game.ball
+                    )
+                    anyPending = true
+                end
+            end
+        end
+    end
+
     -- Update the level (always update all clusters)
     if Game.level then
         Game.level:update(dt, Game.ball)

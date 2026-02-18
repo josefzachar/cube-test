@@ -182,6 +182,20 @@ function GameInit.init(Game, mode, levelNumber)
                 print("Loaded", #Game.level.boulders, "boulders from level file")
             end
 
+            -- Load barrels if they exist in the level data
+            if levelData.barrels and type(levelData.barrels) == "table" then
+                Game.level.barrels = {}
+                for i, barrelData in ipairs(levelData.barrels) do
+                    if barrelData.x and barrelData.y then
+                        local Barrel = require("src.barrel")
+                        local barrel = Barrel.new(Game.world, barrelData.x, barrelData.y)
+                        table.insert(Game.level.barrels, barrel)
+                        print("Loaded barrel at", barrelData.x, barrelData.y)
+                    end
+                end
+                print("Loaded", #Game.level.barrels, "barrels from level file")
+            end
+
         -- Create the ball at the specified starting position
         Game.ball = Balls.createBall(Game.world, levelData.startX * Cell.SIZE, levelData.startY * Cell.SIZE, Balls.TYPES.STANDARD)
 

@@ -4,6 +4,7 @@ local CellTypes = require("src.cell_types")
 local Cell = require("cell")
 local WinHole = require("src.win_hole")
 local Boulder = require("src.boulder")
+local Barrel  = require("src.barrel")
 
 local EditorTools = {
     editor = nil,
@@ -48,7 +49,8 @@ function EditorTools.init(editor)
         fill = EditorTools.fillTool,
         start = EditorTools.startTool,
         winhole = EditorTools.winholeTool,
-        boulder = EditorTools.boulderTool
+        boulder = EditorTools.boulderTool,
+        barrel  = EditorTools.barrelTool
     }
 end
 
@@ -68,15 +70,17 @@ function EditorTools.update(dt, gridX, gridY)
             -- Use the current tool
             local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
             if toolFunc then
-                if EditorTools.editor.currentTool == "boulder" then
+                if EditorTools.editor.currentTool == "boulder" or
+                   EditorTools.editor.currentTool == "barrel" then
                     toolFunc(gridX, gridY, false) -- false for left click
                 else
                     toolFunc(gridX, gridY)
                 end
             end
         elseif love.mouse.isDown(2) then -- Right mouse button
-            -- If boulder tool is selected, use it with right-click parameter
-            if EditorTools.editor.currentTool == "boulder" then
+            -- If boulder or barrel tool is selected, use it with right-click parameter
+            if EditorTools.editor.currentTool == "boulder" or
+               EditorTools.editor.currentTool == "barrel" then
                 local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
                 if toolFunc then
                     toolFunc(gridX, gridY, true) -- true for right click
@@ -217,6 +221,52 @@ function EditorTools.draw()
         if index then
             love.graphics.setColor(1, 0.3, 0.3, 1) -- Red for delete hint
             love.graphics.print(hintText, cursorX + cellSize + 5, cursorY + 20)
+        end
+    elseif EditorTools.editor.currentTool == "barrel" then
+        -- ── Barrel cursor preview ───────────────────────────────────────────
+        local mouseX2, mouseY2 = love.mouse.getPosition()
+        local gameX2, gameY2   = EditorTools.editor.screenToGameCoords(mouseX2, mouseY2)
+        local InputUtils2      = require("src.input_utils")
+        local Cell2            = require("cell")
+        local gx, gy           = InputUtils2.gameToGridCoords(gameX2, gameY2, Cell2.SIZE)
+        local cs               = Cell2.SIZE
+        local cx2              = gx * cs + cs / 2
+        local cy2              = gy * cs + cs / 2
+        local hw               = Barrel.WIDTH  / 2
+        local hh               = Barrel.HEIGHT / 2
+
+        -- Barrel body
+        love.graphics.setColor(0.55, 0.18, 0.15, 0.7)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 - hh, Barrel.WIDTH, Barrel.HEIGHT, 2, 2)
+        -- Caps
+        love.graphics.setColor(0.42, 0.13, 0.11, 0.7)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 - hh,         Barrel.WIDTH, 5)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 + hh - 5,     Barrel.WIDTH, 5)
+        -- Bands
+        love.graphics.setColor(0.20, 0.13, 0.08, 0.7)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 - hh + 7,     Barrel.WIDTH, 3)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 - 2,          Barrel.WIDTH, 4)
+        love.graphics.rectangle("fill", cx2 - hw, cy2 + hh - 10,    Barrel.WIDTH, 3)
+        -- Danger X
+        love.graphics.setColor(1.0, 0.55, 0.0, 0.8)
+        love.graphics.setLineWidth(2)
+        love.graphics.line(cx2 - 7, cy2 - 6 - 5, cx2 + 7, cy2 - 6 + 5)
+        love.graphics.line(cx2 + 7, cy2 - 6 - 5, cx2 - 7, cy2 - 6 + 5)
+        love.graphics.setLineWidth(1)
+        -- Physics outline
+        love.graphics.setColor(1, 0.4, 0, 0.5)
+        local pw, ph = Barrel.WIDTH * 0.85, Barrel.HEIGHT * 0.85
+        love.graphics.rectangle("line", cx2 - pw / 2, cy2 - ph / 2, pw, ph)
+
+        -- Label
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print("Barrel: " .. gx .. "," .. gy, cx2 + hw + 5, cy2 - 8)
+
+        -- Right-click delete hint
+        local bidx, _ = EditorTools.findBarrelAtPosition(gx, gy)
+        if bidx then
+            love.graphics.setColor(1, 0.3, 0.3, 1)
+            love.graphics.print("Right-click to delete", cx2 + hw + 5, cy2 + 8)
         end
     elseif EditorTools.editor.currentTool == "start" then
         -- Get mouse position
@@ -508,7 +558,8 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
             -- Use the current tool
             local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
             if toolFunc then
-                if EditorTools.editor.currentTool == "boulder" then
+                if EditorTools.editor.currentTool == "boulder" or
+                   EditorTools.editor.currentTool == "barrel" then
                     toolFunc(gridX, gridY, false) -- false for left click
                 else
                     toolFunc(gridX, gridY)
@@ -529,8 +580,9 @@ function EditorTools.handleMousePressed(gridX, gridY, button)
         
         -- Only use the tool if the position has changed or it's the first click
         if gridX ~= lastX or gridY ~= lastY or lastX == -1 or lastY == -1 then
-            -- If boulder tool is selected, use it with right-click parameter
-            if EditorTools.editor.currentTool == "boulder" then
+            -- If boulder or barrel tool is selected, use it with right-click parameter
+            if EditorTools.editor.currentTool == "boulder" or
+               EditorTools.editor.currentTool == "barrel" then
                 local toolFunc = EditorTools.tools[EditorTools.editor.currentTool]
                 if toolFunc then
                     toolFunc(gridX, gridY, true) -- true for right click
@@ -806,6 +858,61 @@ function EditorTools.boulderTool(gridX, gridY, isRightClick)
     table.insert(EditorTools.editor.level.boulders, boulder)
     
     print("Boulder created at: " .. gridX .. ", " .. gridY)
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Barrel tool helpers
+-- ──────────────────────────────────────────────────────────────────────────────
+
+-- Find a barrel at (or near) the given grid position
+function EditorTools.findBarrelAtPosition(gridX, gridY)
+    if not EditorTools.editor.level.barrels then return nil end
+
+    local cellSize = Cell.SIZE
+    local targetX  = (gridX + 0.5) * cellSize
+    local targetY  = (gridY + 0.5) * cellSize
+
+    for i, barrel in ipairs(EditorTools.editor.level.barrels) do
+        local bx, by = barrel:getPosition()
+        local dist   = math.sqrt((bx - targetX) ^ 2 + (by - targetY) ^ 2)
+        -- Selection radius: half the physics width + a small margin
+        if dist < (Barrel.WIDTH * 0.85 / 2 + cellSize * 0.3) then
+            return i, barrel
+        end
+    end
+    return nil
+end
+
+-- Barrel tool: left-click places a barrel, right-click removes one
+function EditorTools.barrelTool(gridX, gridY, isRightClick)
+    if gridX < 0 or gridX >= EditorTools.editor.level.width or
+       gridY < 0 or gridY >= EditorTools.editor.level.height then
+        return
+    end
+
+    if isRightClick then
+        -- Delete barrel at this position
+        local index, barrel = EditorTools.findBarrelAtPosition(gridX, gridY)
+        if index then
+            barrel.body:destroy()
+            table.remove(EditorTools.editor.level.barrels, index)
+            print("Barrel deleted at: " .. gridX .. ", " .. gridY)
+        end
+        return
+    end
+
+    -- Place a new barrel centred on the clicked cell
+    local cellSize = Cell.SIZE
+    local x = (gridX + 0.5) * cellSize
+    local y = (gridY + 0.5) * cellSize
+
+    if not EditorTools.editor.level.barrels then
+        EditorTools.editor.level.barrels = {}
+    end
+
+    local barrel = Barrel.new(EditorTools.editor.world, x, y)
+    table.insert(EditorTools.editor.level.barrels, barrel)
+    print("Barrel created at: " .. gridX .. ", " .. gridY)
 end
 
 return EditorTools

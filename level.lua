@@ -19,6 +19,7 @@ function Level.new(world, width, height)
     self.cells = {}
     self.visualSandCells = {} -- Array to store visual sand cells
     self.boulders = {} -- Array to store boulders
+    self.barrels  = {} -- Array to store explosive barrels
     
     -- Performance optimization variables
     self.activeCells = {} -- Table to track cells that need updating
@@ -198,6 +199,7 @@ function Level:update(dt, ball)
     -- Update boulders
     startTime = love.timer.getTime()
     self:updateBoulders(dt)
+    self:updateBarrels(dt)
     self.perfStats.bouldersUpdate = love.timer.getTime() - startTime
     
     -- Calculate total frame time
@@ -268,6 +270,41 @@ function Level:updateBoulders(dt)
     end
 end
 
+-- Update barrels (identical pattern to updateBoulders)
+function Level:updateBarrels(dt)
+    if not self.barrels then return end
+    for _, barrel in ipairs(self.barrels) do
+        if not barrel.exploded then
+            barrel:update(dt)
+
+            -- Check surrounding cells for water and sand
+            local bx, by = barrel:getPosition()
+            local gridX, gridY = self:getGridCoordinates(bx, by)
+
+            for y = gridY - 2, gridY + 2 do
+                for x = gridX - 2, gridX + 2 do
+                    if x >= 0 and x < self.width and y >= 0 and y < self.height then
+                        local cellType = self:getCellType(x, y)
+                        if barrel:isCollidingWithCell(x, y, Cell.SIZE) then
+                            if cellType == CellTypes.TYPES.WATER then
+                                barrel:enterWater(x, y)
+                            elseif cellType == CellTypes.TYPES.SAND then
+                                barrel:enterSand(x, y)
+                            end
+                        else
+                            if cellType == CellTypes.TYPES.WATER then
+                                barrel:exitWater(x, y)
+                            elseif cellType == CellTypes.TYPES.SAND then
+                                barrel:exitSand(x, y)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Dynamically manage physics bodies for sand and water cells
 function Level:managePhysicsBodies(ball)
     local Sand = require("src.sand")
@@ -321,14 +358,21 @@ function Level:managePhysicsBodies(ball)
     self.perfStats.physicsBodyCount = physicsBodyCount
 end
 
-function Level:draw(debug)
+function Level:draw(debug, noCull)
     -- Delegate to the Renderer module
-    Renderer.drawLevel(self, debug)
+    Renderer.drawLevel(self, debug, noCull)
     
     -- Draw boulders
     if self.boulders then
         for _, boulder in ipairs(self.boulders) do
             boulder:draw(debug)
+        end
+    end
+
+    -- Draw barrels
+    if self.barrels then
+        for _, barrel in ipairs(self.barrels) do
+            barrel:draw(debug)
         end
     end
 end
@@ -448,6 +492,16 @@ function Level:clearAllCells()
         end
         self.boulders = {}
     end
+
+    -- Clear barrels
+    if self.barrels then
+        for _, barrel in ipairs(self.barrels) do
+            if barrel.body then
+                barrel.body:destroy()
+            end
+        end
+        self.barrels = {}
+    end
     
     -- Reset active cells
     self.activeCells = {}
@@ -505,6 +559,16 @@ function Level:destroy()
             end
         end
         self.boulders = {}
+    end
+
+    -- Destroy all barrels
+    if self.barrels then
+        for _, barrel in ipairs(self.barrels) do
+            if barrel.body then
+                barrel.body:destroy()
+            end
+        end
+        self.barrels = {}
     end
 end
 

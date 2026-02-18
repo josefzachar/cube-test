@@ -31,7 +31,8 @@ function Renderer.initSpriteBatches()
 end
 
 -- Draw all cells in the level
-function Renderer.drawLevel(level, debug)
+-- noCull: when true, draw ALL cells regardless of viewport (used by the editor)
+function Renderer.drawLevel(level, debug, noCull)
     -- Get visible area (camera view)
     local screenWidth, screenHeight = love.graphics.getDimensions()
     local Cell = require("cell")
@@ -41,28 +42,30 @@ function Renderer.drawLevel(level, debug)
     -- Calculate visible cell range based on screen size and zoom
     local margin = 10 -- Extra cells to draw outside the visible area to avoid pop-in
     
-    -- Get zoom level
-    local zoom = ZOOM_LEVEL or 1
-    
-    -- Calculate viewport in world coordinates (unscaled)
-    local viewportWidth = screenWidth / zoom
-    local viewportHeight = screenHeight / zoom
-    
-    -- Get camera position
-    local cameraX = Camera.x or (level.width * Cell.SIZE / 2)
-    local cameraY = Camera.y or (level.height * Cell.SIZE / 2)
-    
-    -- Calculate viewport bounds in world space (centered on camera)
-    local viewLeft = cameraX - viewportWidth / 2
-    local viewRight = cameraX + viewportWidth / 2
-    local viewTop = cameraY - viewportHeight / 2
-    local viewBottom = cameraY + viewportHeight / 2
-    
-    -- Convert to grid coordinates with margin
-    local minX = math.max(0, math.floor(viewLeft / Cell.SIZE) - margin)
-    local maxX = math.min(level.width - 1, math.ceil(viewRight / Cell.SIZE) + margin)
-    local minY = math.max(0, math.floor(viewTop / Cell.SIZE) - margin)
-    local maxY = math.min(level.height - 1, math.ceil(viewBottom / Cell.SIZE) + margin)
+    local minX, maxX, minY, maxY
+
+    if noCull then
+        -- Editor mode: render every cell so nothing is invisible off-screen
+        minX = 0
+        maxX = level.width  - 1
+        minY = 0
+        maxY = level.height - 1
+    else
+        -- Game mode: frustum-cull to visible viewport for performance
+        local zoom = ZOOM_LEVEL or 1
+        local viewportWidth  = screenWidth  / zoom
+        local viewportHeight = screenHeight / zoom
+        local cameraX = Camera.x or (level.width  * Cell.SIZE / 2)
+        local cameraY = Camera.y or (level.height * Cell.SIZE / 2)
+        local viewLeft   = cameraX - viewportWidth  / 2
+        local viewRight  = cameraX + viewportWidth  / 2
+        local viewTop    = cameraY - viewportHeight / 2
+        local viewBottom = cameraY + viewportHeight / 2
+        minX = math.max(0,              math.floor(viewLeft   / Cell.SIZE) - margin)
+        maxX = math.min(level.width  - 1, math.ceil(viewRight  / Cell.SIZE) + margin)
+        minY = math.max(0,              math.floor(viewTop    / Cell.SIZE) - margin)
+        maxY = math.min(level.height - 1, math.ceil(viewBottom / Cell.SIZE) + margin)
+    end
     
     -- Store culling stats in perfStats
     if level.perfStats then

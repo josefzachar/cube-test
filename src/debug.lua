@@ -172,11 +172,37 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
         love.graphics.print("NO BALL DATA", margin, yPos); yPos = yPos + lineHeight * 1.5
     end
     
+    -- Barrels section
+    love.graphics.setColor(retroColors.highlight)
+    love.graphics.print("BARRELS:", margin, yPos)
+    yPos = yPos + lineHeight + 5
+
+    love.graphics.setColor(retroColors.text)
+    local barrels = level.barrels or {}
+    local barrelTotal    = #barrels
+    local barrelAlive    = 0
+    local barrelExploded = 0
+    for _, b in ipairs(barrels) do
+        if b.exploded then
+            barrelExploded = barrelExploded + 1
+        else
+            barrelAlive = barrelAlive + 1
+        end
+    end
+    love.graphics.print("TOTAL:    " .. barrelTotal,    margin, yPos); yPos = yPos + lineHeight
+    if barrelAlive > 0 then
+        love.graphics.setColor(retroColors.success)
+    end
+    love.graphics.print("ALIVE:    " .. barrelAlive,    margin, yPos); yPos = yPos + lineHeight
+    love.graphics.setColor(retroColors.warning)
+    love.graphics.print("EXPLODED: " .. barrelExploded, margin, yPos); yPos = yPos + lineHeight
+    love.graphics.setColor(retroColors.text)
+    yPos = yPos + lineHeight * 0.5
+
     -- Performance section
     love.graphics.setColor(retroColors.highlight)
     love.graphics.print("PERFORMANCE:", margin, yPos)
-    yPos = yPos + lineHeight + 5
-    
+    yPos = yPos + lineHeight + 5    
     -- Display performance stats
     love.graphics.setColor(retroColors.text)
     local stats = level.perfStats or {}
