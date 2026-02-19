@@ -66,7 +66,8 @@ end
 
 function StickyBall:update(dt)
     -- Handle sticky ball special case
-    if self.stuck then
+    -- Skip the stuck-freeze when the win animation is running — BaseBall.update owns movement then
+    if self.stuck and not self.hasWon then
         -- If the sticky ball is stuck, force it to stop completely
         self.body:setLinearVelocity(0, 0)
         self.body:setAngularVelocity(0)

@@ -56,15 +56,62 @@ function GameUpdate.update(Game, dt)
             print("Switched to Standard Ball after explosion")
         end
 
-        -- Check for win condition
+        -- Check for win condition — wait for the spiral animation to finish before showing the win screen
         if Game.ball.hasWon and not Game.gameWon then
-            Game.gameWon = true
-            Game.winMessageTimer = 999999.0 -- Display win message until user dismisses it
-            print("GAME WON! Congratulations!")
+            -- winAnimTimer is set on the first animation frame; scale reaches 0 when done
+            if Game.ball.winAnimTimer and Game.ball.scale and Game.ball.scale <= 0 then
+                Game.gameWon = true
+                Game.winMessageTimer = 999999.0 -- Display win message until user dismisses it
+                print("GAME WON! Congratulations!")
 
-            -- If in PLAY mode, advance to next level
-            if Game.currentMode == Game.MODES.PLAY and Menu.currentLevel < Menu.totalLevels then
-                Menu.currentLevel = Menu.currentLevel + 1
+                -- If in PLAY mode, advance to next level
+                if Game.currentMode == Game.MODES.PLAY and Menu.currentLevel < Menu.totalLevels then
+                    Menu.currentLevel = Menu.currentLevel + 1
+                end
+            end
+        end
+
+        -- Proximity fallback: if the ball is very close to the win hole but the physics
+        -- sensor didn't fire (e.g. high speed tunnelling), set hasWon manually.
+        if not Game.ball.hasWon and Game.level then
+            local bx, by = Game.ball.body:getPosition()
+            local CellTypes = require("src.cell_types")
+            local Cell = require("cell")
+            local gx = math.floor(bx / Cell.SIZE)
+            local gy = math.floor(by / Cell.SIZE)
+            -- Check the 3x3 grid area around the ball's grid position
+            for dy = -1, 1 do
+                for dx = -1, 1 do
+                    local cx, cy = gx + dx, gy + dy
+                    if Game.level.cells[cy] and Game.level.cells[cy][cx] and
+                       Game.level.cells[cy][cx].type == CellTypes.TYPES.WIN_HOLE then
+                        -- Ball centre is within one cell of a WIN_HOLE cell — trigger win
+                        Game.ball.hasWon = true
+                        local vx, vy = Game.ball.body:getLinearVelocity()
+                        Game.ball.winEntrySpeed = math.sqrt(vx*vx + vy*vy)
+                        local Sound = require("src.sound")
+                        Sound.playWin()
+                        -- Compute hole centroid
+                        local holeSumX, holeSumY, holeCount = 0, 0, 0
+                        for sy = 0, Game.level.height - 1 do
+                            for sx = 0, Game.level.width - 1 do
+                                if Game.level.cells[sy] and Game.level.cells[sy][sx] and
+                                   Game.level.cells[sy][sx].type == CellTypes.TYPES.WIN_HOLE then
+                                    holeSumX = holeSumX + sx
+                                    holeSumY = holeSumY + sy
+                                    holeCount = holeCount + 1
+                                end
+                            end
+                        end
+                        if holeCount > 0 then
+                            Game.ball.winHoleCenterX = (holeSumX / holeCount + 0.5) * Cell.SIZE
+                            Game.ball.winHoleCenterY = (holeSumY / holeCount + 0.5) * Cell.SIZE
+                        end
+                        print("Win triggered by proximity fallback!")
+                        break
+                    end
+                end
+                if Game.ball.hasWon then break end
             end
         end
     end

@@ -55,7 +55,12 @@ function StandardBall:draw(debug)
     
     love.graphics.translate(self.body:getX(), self.body:getY())
     love.graphics.rotate(self.body:getAngle())
-    
+
+    -- Shrink visually during win animation
+    if self.scale and self.scale < 1.0 and self.scale > 0 then
+        love.graphics.scale(self.scale, self.scale)
+    end
+
     -- Draw the ball using the image instead of a rectangle
     local imgWidth, imgHeight = ballImage:getDimensions()
     local scaleX = 20 / imgWidth  -- Scale to fit 20x20 square (ball size)
@@ -76,7 +81,19 @@ function StandardBall:draw(debug)
     end
     
     love.graphics.pop()
-    
+
+    -- Draw win burst particles (world-space, outside the ball transform)
+    if self.winBurst and #self.winBurst > 0 then
+        for _, p in ipairs(self.winBurst) do
+            local frac  = p.life / p.maxLife
+            local alpha = 1.0 - frac * frac
+            love.graphics.setColor(p.col[1], p.col[2], p.col[3], alpha)
+            local sx = math.floor(p.x / p.sz) * p.sz
+            local sy = math.floor(p.y / p.sz) * p.sz
+            love.graphics.rectangle("fill", sx, sy, p.sz, p.sz)
+        end
+    end
+
     -- Draw additional debug info outside the transform
     if debug then
         local x, y = self.body:getPosition()

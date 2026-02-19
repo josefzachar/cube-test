@@ -34,7 +34,8 @@ function Collision.beginContact(a, b, coll, level, ball)
         end
         
         local ballBody = ballFixture:getBody()
-        local ball = ballBody:getUserData() -- Get the ball object
+        -- Prefer body user-data (set in game_init), fall back to the passed-in ball parameter
+        local ball = ballBody:getUserData() or ball
         local otherData = otherFixture:getUserData()
         
         -- Get the ball's velocity
@@ -72,18 +73,34 @@ function Collision.beginContact(a, b, coll, level, ball)
             local winHoleX, winHoleY = winHoleBody:getPosition()
             local gridX, gridY = level:getGridCoordinates(winHoleX, winHoleY)
             
-            -- Set the win flag on the ball
-            if ball then
+            -- Set the win flag on the ball (only once)
+            if ball and not ball.hasWon then
                 ball.hasWon = true
-                
+
+                -- Store the entry speed so the fall-animation can react to it
+                ball.winEntrySpeed = speed
+
                 -- Play win sound
                 Sound.playWin()
-                
+
+                -- Find centroid of all win-hole cells so the ball has an exact target to fall into
+                local holeSumX, holeSumY, holeCount = 0, 0, 0
+                for gy = 0, level.height - 1 do
+                    for gx = 0, level.width - 1 do
+                        if level.cells[gy] and level.cells[gy][gx] and
+                           level.cells[gy][gx].type == CellTypes.TYPES.WIN_HOLE then
+                            holeSumX  = holeSumX  + gx
+                            holeSumY  = holeSumY  + gy
+                            holeCount = holeCount + 1
+                        end
+                    end
+                end
+                if holeCount > 0 then
+                    ball.winHoleCenterX = (holeSumX / holeCount + 0.5) * Cell.SIZE
+                    ball.winHoleCenterY = (holeSumY / holeCount + 0.5) * Cell.SIZE
+                end
+
                 print("Ball entered win hole! Player wins!")
-                print("Ball position:", ballBody:getX(), ballBody:getY())
-                print("Win hole position:", winHoleX, winHoleY)
-                print("Win hole grid coordinates:", gridX, gridY)
-                print("Ball hasWon flag:", ball.hasWon)
             end
         -- Handle water collisions
         elseif otherData == "water" then

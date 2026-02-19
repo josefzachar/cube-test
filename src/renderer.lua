@@ -10,6 +10,25 @@ local cellTexture = nil
 local spriteBatches = {}
 local quadCache = {}
 
+-- Orbit-particle state for win hole (persists across frames)
+local orbitParticles    = {}
+local orbitCenterSnap   = nil  -- "x,y" string, detects level change
+local currentBall       = nil  -- set each frame by Renderer.setBall()
+local prevBallHasWon    = false -- edge-detect the moment ball enters hole
+
+-- Called by draw.lua each frame so the win-hole animator can read ball state
+function Renderer.setBall(ball)
+    currentBall = ball
+end
+local ORBIT_COLORS = {
+    {0.78, 0.08, 1.00},  -- vivid violet
+    {0.92, 0.35, 1.00},  -- lavender
+    {0.55, 0.00, 0.88},  -- deep purple
+    {1.00, 0.55, 1.00},  -- pink
+    {0.45, 0.00, 0.80},  -- indigo
+    {0.65, 0.10, 0.95},  -- mid-purple
+}
+
 function Renderer.initSpriteBatches()
     -- Create a simple 1x1 white texture
     local imageData = love.image.newImageData(1, 1)
@@ -82,7 +101,10 @@ function Renderer.drawLevel(level, debug, noCull)
     for _, batch in pairs(spriteBatches) do
         batch:clear()
     end
-    
+
+    -- Collect win hole cells for custom animated rendering
+    local winHoleCells = {}
+
     -- Add cells to sprite batches
     for y = minY, maxY do
         for x = minX, maxX do
@@ -99,6 +121,9 @@ function Renderer.drawLevel(level, debug, noCull)
                 elseif cellType == Cell.TYPES.DIRT then
                     -- Dirt has special rendering with grass
                     Renderer.drawDirtCell(cell, x, y, Cell.SIZE, debug)
+                elseif cellType == CellTypes.TYPES.WIN_HOLE then
+                    -- Collect for special animated rendering (drawn after sprite batches)
+                    table.insert(winHoleCells, {x = x, y = y})
                 elseif spriteBatches[cellType] then
                     -- Add to sprite batch with color variation
                     local color = COLORS[cellType]
@@ -120,6 +145,9 @@ function Renderer.drawLevel(level, debug, noCull)
         love.graphics.draw(batch)
     end
     
+    -- Draw win hole cells with special vortex animation
+    Renderer.drawWinHoleBatch(level, winHoleCells, debug)
+
     -- Draw visual sand cells
     Renderer.drawVisualSand(level, minX, maxX, minY, maxY, debug)
     
@@ -410,42 +438,167 @@ function Renderer.drawSmokeBatch(level, smokeBatch, debug)
     end
 end
 
--- Draw win hole cells with slower, gradient pulsating effect
+-- Draw win hole: orbiting purple pixel-art cells, like moths around a flame
 function Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
+    if not winHoleBatch or #winHoleBatch == 0 then
+        orbitParticles  = {}
+        orbitCenterSnap = nil
+        return
+    end
     local Cell = require("cell")
-    local COLORS = CellTypes.COLORS
-    
-    -- Get current time for animation
+    local dt   = love.timer.getDelta()
     local time = love.timer.getTime()
-    
-    for _, cellPos in ipairs(winHoleBatch) do
-        -- Get the actual cell from the level
-        local cell = level.cells[cellPos.y][cellPos.x]
-        local x, y = cellPos.x, cellPos.y
-        
-        -- Calculate cell position
-        local cellX = x * Cell.SIZE
-        local cellY = y * Cell.SIZE
-        
-        -- Slower, smoother pulsating animation (using sine wave)
-        local pulse = math.sin(time * 1.5 + x * 0.05 + y * 0.05) * 0.5 + 0.5 -- Values between 0 and 1
-        
-        -- Create a gradient between dark blue and dark purple
-        local r = 0.2 + (0.4 * pulse) -- Range: 0.2 to 0.6
-        local g = 0.1 + (0.1 * pulse) -- Range: 0.1 to 0.2
-        local b = 0.5 + (0.3 * pulse) -- Range: 0.5 to 0.8
-        
-        -- Set the color with the gradient effect
-        love.graphics.setColor(r, g, b, 1.0)
-        
-        -- Draw the entire win hole cell with the colorful effect
-        love.graphics.rectangle("fill", cellX, cellY, Cell.SIZE, Cell.SIZE)
-        
-        -- Draw debug info
-        if debug then
-            love.graphics.setColor(0, 1, 0, 1) -- Green
-            love.graphics.rectangle("fill", cellX + Cell.SIZE/2 - 1, cellY + Cell.SIZE/2 - 1, 2, 2)
+    local CS   = Cell.SIZE  -- 10 px
+
+    -- Centroid of the physical hole cells (world pixels)
+    local sumX, sumY = 0, 0
+    for _, p in ipairs(winHoleBatch) do
+        sumX = sumX + p.x
+        sumY = sumY + p.y
+    end
+    local n       = #winHoleBatch
+    local centerX = (sumX / n + 0.5) * CS
+    local centerY = (sumY / n + 0.5) * CS
+    local snapKey = math.floor(centerX) .. "," .. math.floor(centerY)
+
+    -- (Re-)initialise particles when hole appears or level changes
+    if orbitCenterSnap ~= snapKey then
+        orbitCenterSnap = snapKey
+        orbitParticles  = {}
+        local TOTAL = 42
+        for i = 1, TOTAL do
+            -- bias radius toward center: t^1.8 gives high density near 0
+            local t          = math.random() ^ 1.8
+            local baseRadius = 8 + t * 58
+            -- inner particles orbit faster (Kepler-like: faster near centre)
+            local clockwise  = (math.random() < 0.25) and -1 or 1
+            local speedFactor = 1.0 + (1.0 - t) * 2.0
+    table.insert(orbitParticles, {
+                angle        = math.random() * math.pi * 2,
+                angSpeed     = clockwise * (0.4 + math.random() * 1.6) * speedFactor,
+                baseRadius   = baseRadius,
+                wobbleAmp    = 2  + t * 16,
+                wobbleFreq   = 0.8 + math.random() * 2.5,
+                wobbleOff    = math.random() * math.pi * 2,
+                stutterAcc   = 0,
+                stutterTimer = math.random() * 2.0,
+                driftAmp     = 1 + t * 9,
+                driftFreq    = 0.4 + math.random() * 1.2,
+                driftOff     = math.random() * math.pi * 2,
+                col          = ORBIT_COLORS[math.random(#ORBIT_COLORS)],
+                pulseFreq    = 2.0 + math.random() * 4.0,
+                pulseOff     = math.random() * math.pi * 2,
+                scatterRadius = 0,   -- extra outward push on ball impact
+                scatterDecay  = 2.5 + math.random() * 2.0,  -- how fast scatter fades (per-particle variation)
+            })
         end
+    end
+
+    -- Draw the gravity-centre: tiny dark void so the eye has a target
+    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.rectangle("fill",
+        math.floor(centerX/CS)*CS - CS,
+        math.floor(centerY/CS)*CS - CS,
+        CS * 2, CS * 2)
+    -- Faint purple glint at centre, slow pulse
+    local glint = math.sin(time * 1.8) * 0.5 + 0.5
+    love.graphics.setColor(0.6, 0.0, 0.9, 0.35 + glint * 0.35)
+    love.graphics.rectangle("fill",
+        math.floor(centerX/CS)*CS,
+        math.floor(centerY/CS)*CS,
+        CS, CS)
+
+    -- Win-spiral progress: 0 when idle, 0→1 as ball animates into the hole
+    local winProg = 0
+    if currentBall and currentBall.hasWon and
+       currentBall.winAnimTimer and currentBall.winAnimDuration then
+        winProg = math.min(currentBall.winAnimTimer / currentBall.winAnimDuration, 1.0)
+    end
+
+    -- Detect the exact frame the ball enters the hole → apply scatter impulse
+    local ballJustWon = currentBall and currentBall.hasWon and not prevBallHasWon
+    prevBallHasWon    = (currentBall and currentBall.hasWon) or false
+    if ballJustWon then
+        local es = (currentBall and currentBall.winEntrySpeed) or 0
+        -- Power curve: gentle tap barely reacts, hard shot strongly reacts
+        -- es=50→1px, es=100→4px, es=200→11px, es=300→21px, es=500→45px
+        local scatterStrength = math.min(es, 500) ^ 1.5 * 0.004
+        for _, p in ipairs(orbitParticles) do
+            -- Each particle gets a slightly different kick (inner ones react more)
+            local innerFactor = 1.0 + (1.0 - p.baseRadius / 66) * 0.6
+            p.scatterRadius = scatterStrength * innerFactor * (0.6 + math.random() * 0.8)
+        end
+    end
+
+    -- Particles start spiraling in only after ball is 30% through its own animation
+    local SPIRAL_DELAY = 0.30
+    local delayedProg  = winProg > SPIRAL_DELAY
+        and math.min((winProg - SPIRAL_DELAY) / (1.0 - SPIRAL_DELAY), 1.0)
+        or  0.0
+
+    -- Update & draw each orbiting cell
+    for _, p in ipairs(orbitParticles) do
+        -- Stutter kick every few seconds (suppressed during win spiral)
+        if winProg == 0 then
+            p.stutterTimer = p.stutterTimer - dt
+            if p.stutterTimer <= 0 then
+                p.stutterAcc   = (math.random() - 0.5) * 6.0
+                p.stutterTimer = 1.2 + math.random() * 3.0
+            end
+            p.stutterAcc = p.stutterAcc * (1 - dt * 8)
+        else
+            p.stutterAcc = 0
+        end
+
+        -- Decay scatter impulse
+        if p.scatterRadius > 0.1 then
+            p.scatterRadius = p.scatterRadius * (1 - p.scatterDecay * dt)
+        else
+            p.scatterRadius = 0
+        end
+
+        -- During win: radius shrinks to zero using delayedProg (30% lag behind ball)
+        local radFrac = delayedProg > 0
+            and math.max(0.0, 1.0 - delayedProg ^ 0.75)
+            or  1.0
+        local effectiveBase = p.baseRadius * radFrac
+
+        -- Angular speed: Kepler-like, faster as radius shrinks
+        local speedMult = delayedProg > 0
+            and (p.baseRadius / math.max(effectiveBase, 2))
+            or  1.0
+        p.angle = p.angle + (p.angSpeed + p.stutterAcc) * speedMult * dt
+
+        -- Wobble amplitude also shrinks to zero during win
+        local wobble = math.sin(time * p.wobbleFreq + p.wobbleOff)
+                       * p.wobbleAmp * radFrac
+        local r = effectiveBase + wobble + p.scatterRadius
+
+        -- Perpendicular drift (also shrinks)
+        local drift     = math.sin(time * p.driftFreq + p.driftOff)
+                          * p.driftAmp * radFrac
+        local perpAngle = p.angle + math.pi * 0.5
+
+        local wx = centerX + math.cos(p.angle) * r + math.cos(perpAngle) * drift
+        local wy = centerY + math.sin(p.angle) * r + math.sin(perpAngle) * drift
+
+        -- Snap to game pixel grid (cell-aligned like every other block)
+        local sx = math.floor(wx / CS) * CS
+        local sy = math.floor(wy / CS) * CS
+
+        local pulse  = math.sin(time * p.pulseFreq + p.pulseOff) * 0.5 + 0.5
+        local bright = 0.55 + pulse * 0.45
+        -- Fade out in the final 30% of win animation (mapped to delayedProg)
+        local alpha  = delayedProg > 0.70
+            and (1.0 - (delayedProg - 0.70) / 0.30)
+            or  1.0
+
+        love.graphics.setColor(
+            p.col[1] * bright,
+            p.col[2] * bright,
+            p.col[3] * bright,
+            alpha)
+        love.graphics.rectangle("fill", sx, sy, CS, CS)
     end
 end
 

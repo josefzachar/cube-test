@@ -58,11 +58,114 @@ end
 
 -- Update method - handles physics updates
 function Ball:update(dt)
-    -- Handle ball winning condition
+    -- Handle ball winning condition: play a satisfying fall-into-hole animation
     if self.hasWon then
-        -- Simply hide the ball
-        self.scale = 0
-        return true -- Ball is stationary
+        -- Initialise animation state on the very first frame
+        if not self.winAnimTimer then
+            self.winAnimTimer = 0
+            self.scale        = 1.0
+            self.body:setGravityScale(0)
+            self.body:setLinearVelocity(0, 0)
+            self.body:setLinearDamping(20)
+            self.body:setAngularDamping(2)
+
+            -- Determine initial orbit position relative to hole centre
+            local bx, by = self.body:getPosition()
+            local cx = self.winHoleCenterX or bx
+            local cy = self.winHoleCenterY or by
+            local odx = bx - cx
+            local ody = by - cy
+            self.winOrbitStartRadius = math.max(math.sqrt(odx*odx + ody*ody), 18)
+            self.winOrbitAngle       = math.atan2(ody, odx)
+            self.winOrbitDir         = 1  -- counter-clockwise (matches majority of orbit particles)
+
+            -- Spawn burst particles that shoot outward from ball position
+            self.winBurst = {}
+            local burstColors = {
+                {0.80, 0.20, 1.00}, {0.90, 0.40, 1.00},
+                {0.55, 0.05, 0.90}, {1.00, 0.60, 1.00},
+                {1.00, 1.00, 1.00},
+            }
+            local es = self.winEntrySpeed or 0
+            local numParticles = es > 280 and 28 or (es > 80 and 20 or 12)
+            for i = 1, numParticles do
+                local angle = (i / numParticles) * math.pi * 2 + math.random() * 0.6
+                local spd   = 100 + math.random() * (100 + es * 0.6)
+                local col   = burstColors[math.random(#burstColors)]
+                local sz    = (math.random(2) == 1) and 2 or 4
+                table.insert(self.winBurst, {
+                    x = bx, y = by,
+                    vx = math.cos(angle) * spd,
+                    vy = math.sin(angle) * spd - 30,  -- slight upward bias
+                    life = 0,
+                    maxLife = 0.25 + math.random() * 0.35,
+                    col = col,
+                    sz  = sz,
+                })
+            end
+
+            -- Animation duration and base orbit speed from entry speed
+            if es > 280 then
+                self.winAnimDuration = 1.0
+                self.winBaseAngSpeed = 2.8
+            elseif es > 80 then
+                self.winAnimDuration = 1.6
+                self.winBaseAngSpeed = 1.8
+            else
+                self.winAnimDuration = 2.2
+                self.winBaseAngSpeed = 1.1
+            end
+        end
+
+        -- Update burst particles
+        if self.winBurst then
+            local i = 1
+            while i <= #self.winBurst do
+                local p = self.winBurst[i]
+                p.x    = p.x + p.vx * dt
+                p.y    = p.y + p.vy * dt
+                p.vy   = p.vy + 400 * dt  -- gravity pulls them back down
+                p.life = p.life + dt
+                if p.life >= p.maxLife then
+                    table.remove(self.winBurst, i)
+                else
+                    i = i + 1
+                end
+            end
+        end
+
+        self.winAnimTimer = self.winAnimTimer + dt
+        local progress    = math.min(self.winAnimTimer / self.winAnimDuration, 1.0)
+
+        -- Spiral orbit: radius shrinks, angular speed grows (conservation of angular momentum)
+        local radFrac       = math.max(0.0, 1.0 - progress ^ 0.75)
+        local currentRadius = self.winOrbitStartRadius * radFrac
+
+        -- ω ∝ 1/r  (faster spin as it tightens toward the singularity)
+        local angSpeed = self.winBaseAngSpeed
+            * self.winOrbitStartRadius / math.max(currentRadius, 3)
+        self.winOrbitAngle = self.winOrbitAngle + angSpeed * self.winOrbitDir * dt
+
+        -- Teleport ball to its spiral position (physics body, no velocity fighting)
+        if self.winHoleCenterX and self.winHoleCenterY then
+            local tx = self.winHoleCenterX + math.cos(self.winOrbitAngle) * currentRadius
+            local ty = self.winHoleCenterY + math.sin(self.winOrbitAngle) * currentRadius
+            self.body:setPosition(tx, ty)
+            self.body:setLinearVelocity(0, 0)
+        end
+
+        -- Visual rotation matches orbital spin
+        self.body:setAngularVelocity(angSpeed * self.winOrbitDir * 3)
+
+        -- Scale shrinks only in the final 40% (ball "absorbs" into singularity)
+        local scaleProg = math.max(0.0, (progress - 0.60) / 0.40)
+        self.scale      = math.max(0, 1.0 - scaleProg * scaleProg * (3 - 2 * scaleProg))
+
+        if progress >= 1.0 then
+            self.scale = 0
+            return true  -- animation finished
+        end
+        return false  -- still animating
     end
     
     -- Get ball velocity
@@ -194,7 +297,12 @@ function Ball:draw(debug)
     
     love.graphics.translate(self.body:getX(), self.body:getY())
     love.graphics.rotate(self.body:getAngle())
-    
+
+    -- Shrink visually during win animation
+    if self.scale and self.scale < 1.0 and self.scale > 0 then
+        love.graphics.scale(self.scale, self.scale)
+    end
+
     -- Draw the ball
     love.graphics.rectangle("fill", -10, -10, 20, 20) -- Draw a filled 20x20 square centered at the body position
     
@@ -215,7 +323,19 @@ function Ball:draw(debug)
     end
     
     love.graphics.pop()
-    
+
+    -- Draw win burst particles (world-space, outside the ball transform)
+    if self.winBurst and #self.winBurst > 0 then
+        for _, p in ipairs(self.winBurst) do
+            local frac  = p.life / p.maxLife
+            local alpha = 1.0 - frac * frac  -- fast fade
+            love.graphics.setColor(p.col[1], p.col[2], p.col[3], alpha)
+            local sx = math.floor(p.x / p.sz) * p.sz
+            local sy = math.floor(p.y / p.sz) * p.sz
+            love.graphics.rectangle("fill", sx, sy, p.sz, p.sz)
+        end
+    end
+
     -- Draw additional debug info outside the transform
     if debug then
         local x, y = self.body:getPosition()

@@ -7,6 +7,7 @@ local Menu = require("src.menu")
 local UI = require("src.ui")
 local Camera = require("src.camera")
 local Cell = require("cell")
+local Renderer = require("src.renderer")
 
 local Draw = {}
 
@@ -71,6 +72,8 @@ function Draw.draw(Game)
         return
     end
     
+    -- Give the renderer a reference to the ball (needed for win-hole animation)
+    Renderer.setBall(Game.ball)
     -- Draw the level (only if editor is not active)
     Game.level:draw(Game.debug) -- Pass debug flag to level:draw
     
