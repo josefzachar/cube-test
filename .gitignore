@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Build outputs
+build/
+
+# Downloaded dependencies
+love-ios/
+love-android/
+
+# Editor temporary files
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.so
+*.dylib
+*.dll
+
+# Packaged files
+*.love
+*.apk
+*.ipa
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
