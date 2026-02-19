@@ -80,14 +80,17 @@ function Draw.draw(Game)
     -- Draw the ball on top of everything
     Game.ball:draw(Game.debug) -- Pass debug flag to ball:draw
     
-    -- Debug info
-    Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)
-    
-    -- Draw active cells for debugging
+    -- Draw active cells for debugging (needs world-space coordinates)
     Debug.drawActiveCells(Game.level)
+    
+    -- Draw world-space debug overlays: cluster highlights, cell coords (needs world-space)
+    Debug.drawWorldOverlays(Game.level, Game.debug)
     
     -- Reset camera transformation before drawing UI
     love.graphics.pop()
+    
+    -- Debug info sidebar (drawn in screen space, after camera transform reset)
+    Debug.drawDebugInfo(Game.level, Game.ball, Game.attempts, Game.debug)
     
     -- Draw FPS counter in absolute screen coordinates (sticky to top left corner)
     love.graphics.push()
@@ -96,49 +99,36 @@ function Draw.draw(Game)
     love.graphics.print("FPS: " .. love.timer.getFPS(), 0, 0)
     love.graphics.pop()
     
-    -- Apply transformation for UI elements (without scaling or camera offset)
-    love.graphics.push()
-    -- No scaling for UI elements
-    love.graphics.translate(GAME_OFFSET_X, GAME_OFFSET_Y)
-    
-    -- Only display game mode in EDITOR mode
-    if Game.currentMode == Game.MODES.EDITOR then
-        local modeText = "MODE: EDITOR"
+    -- Display zoom level in top center (only when NOT in editor - editor has its own zoom indicator)
+    if not Editor.active then
+        love.graphics.push()
+        love.graphics.origin()
         
-        -- Add test play indicator if in test play mode
-        if Game.testPlayMode then
-            modeText = modeText .. " (TEST PLAY)"
+        local zoomText = string.format("%.1f", ZOOM_LEVEL) .. "x"
+        
+        if not Game.zoomFont then
+            Game.zoomFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
         end
         
-        love.graphics.print(modeText, 10, 50)
+        local currentFont = love.graphics.getFont()
+        love.graphics.setFont(Game.zoomFont)
+        local zoomTextWidth = Game.zoomFont:getWidth(zoomText)
+        local screenWidth = love.graphics.getWidth()
+        love.graphics.setColor(Game.WHITE)
+        love.graphics.print(zoomText, (screenWidth - zoomTextWidth) / 2, 10)
+        love.graphics.setFont(currentFont)
+        
+        love.graphics.pop()
     end
     
-    -- Display zoom level in the top center with game font
-    local zoomText = string.format("%.1f", ZOOM_LEVEL) .. "x"
-    
-    -- Load the pixel font for zoom display if not already loaded
-    if not Game.zoomFont then
-        Game.zoomFont = love.graphics.newFont("fonts/pixel_font.ttf", 24)
+    -- Display test play indicator when in editor test play mode
+    if Game.currentMode == Game.MODES.EDITOR and Game.testPlayMode then
+        love.graphics.push()
+        love.graphics.origin()
+        love.graphics.setColor(Game.WHITE)
+        love.graphics.print("TEST PLAY", 10, 50)
+        love.graphics.pop()
     end
-    
-    -- Save current font
-    local currentFont = love.graphics.getFont()
-    
-    -- Set font to game font
-    love.graphics.setFont(Game.zoomFont)
-    
-    -- Calculate width with the game font
-    local zoomTextWidth = Game.zoomFont:getWidth(zoomText)
-    local screenWidth = love.graphics.getWidth()
-    
-    -- Draw zoom text
-    love.graphics.print(zoomText, (screenWidth - zoomTextWidth) / 2, 10)
-    
-    -- Restore original font
-    love.graphics.setFont(currentFont)
-    
-    -- Reset transformation
-    love.graphics.pop()
     
     
     -- Draw UI (UI is drawn at screen coordinates, not scaled)

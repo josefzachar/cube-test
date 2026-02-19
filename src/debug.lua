@@ -291,7 +291,19 @@ function Debug.drawDebugInfo(level, ball, attempts, debug)
     end
     
     -- Only draw active clusters if specifically requested
+    -- NOTE: This requires world-space coordinates - call Debug.drawWorldOverlays() inside camera transform instead
+    -- Cluster drawing moved to drawWorldOverlays()
+end
+
+-- Draw world-space debug overlays (MUST be called inside camera transform)
+function Debug.drawWorldOverlays(level, debug)
+    if not debug then return end
+    if not debugFont then loadDebugFont() end
+    
     if Debug.showActiveCells then
+        local clusterRows = math.ceil(level.height / level.clusterSize)
+        local clusterCols = math.ceil(level.width / level.clusterSize)
+        
         -- Draw active clusters with a green overlay
         for cy = 0, clusterRows - 1 do
             for cx = 0, clusterCols - 1 do

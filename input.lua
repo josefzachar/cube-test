@@ -192,9 +192,12 @@ function Input:drawPixelatedCircle(x, y, radius, pixelSize, mode)
 end
 
 function Input:draw(ball, attempts)
-    -- Draw mode indicator
+    -- Draw shots counter in screen space (not affected by camera transform)
+    love.graphics.push()
+    love.graphics.origin()
     love.graphics.setColor(1, 1, 1, 1) -- White
-    love.graphics.print("Shots: " .. attempts, 10, 30)
+    love.graphics.print("Shots: " .. attempts, 0, 16)
+    love.graphics.pop()
     
     -- Draw aim line if ball is not moving and user is aiming
     if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
