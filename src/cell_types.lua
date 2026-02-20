@@ -13,7 +13,8 @@ CellTypes.TYPES = {
     VISUAL_DIRT = 6,  -- Visual effect for flying dirt (no physics)
     FIRE = 7,         -- Fire that acts as an energy type
     SMOKE = 8,        -- Visual effect for smoke from fire
-    WIN_HOLE = 9      -- Win hole that makes the player win when the ball enters it
+    WIN_HOLE = 9,     -- Win hole that makes the player win when the ball enters it
+    ICE = 10          -- Frozen water (static, slippery)
 }
 
 -- Colors
@@ -26,8 +27,9 @@ CellTypes.COLORS = {
     [CellTypes.TYPES.DIRT] = {0.6, 0.4, 0.2, 1}, -- Brown for dirt
     [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1}, -- Brighter dirt for visual effect
     [CellTypes.TYPES.FIRE] = {1.0, 0.3, 0.1, 0.9}, -- Bright orange-red for fire with some transparency
-    [CellTypes.TYPES.SMOKE] = {0.8, 0.8, 0.8, 0.6}, -- Gray with transparency for smoke
-    [CellTypes.TYPES.WIN_HOLE] = {0.0, 0.0, 0.0, 1.0} -- Black for the win hole
+    [CellTypes.TYPES.SMOKE] = {0.45, 0.45, 0.45, 0.55}, -- Medium dark gray smoke
+    [CellTypes.TYPES.WIN_HOLE] = {0.0, 0.0, 0.0, 1.0}, -- Black for the win hole
+    [CellTypes.TYPES.ICE] = {0.6, 0.9, 1.0, 1.0}        -- Light cyan for ice
 }
 
 -- Material properties for physics and displacement
@@ -75,6 +77,22 @@ CellTypes.PROPERTIES = {
         
         -- Visual properties
         velocityMultiplier = 0.8        -- Multiplier for visual particle velocity
+    },
+
+    -- Ice properties (breakable by heavy ball only, shatters back to water)
+    [CellTypes.TYPES.ICE] = {
+        -- Low thresholds so heavy ball (with 0.35 multiplier → effective ~52) easily triggers crater.
+        -- Standard ball entering crater code is harmless — isHeavyBall guard prevents actual shattering.
+        displacementThreshold = 150,
+        directHitThreshold = 150,
+
+        -- Crater size properties
+        craterBaseRadius = 0.3,
+        craterMaxRadius = 0.6,
+        craterSpeedDivisor = 250,
+
+        -- Visual properties
+        velocityMultiplier = 0.5
     },
     
     -- Fire properties

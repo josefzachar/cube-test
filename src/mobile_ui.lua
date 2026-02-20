@@ -97,11 +97,13 @@ function MobileUI.createMobileButtons()
     
     -- Ball types and colors (no text labels)
     local ballTypes = {
-        { name = "", type = Balls.TYPES.STANDARD, color = {1, 1, 1, 1} },
-        { name = "", type = Balls.TYPES.HEAVY, color = {0.6, 0.6, 0.8, 1} },
+        { name = "", type = Balls.TYPES.STANDARD,  color = {1, 1, 1, 1} },
+        { name = "", type = Balls.TYPES.HEAVY,     color = {0.6, 0.6, 0.8, 1} },
         { name = "", type = Balls.TYPES.EXPLODING, color = {1, 0.4, 0.2, 1} },
-        { name = "", type = Balls.TYPES.STICKY, color = {0.3, 0.8, 0.3, 1} },
-        { name = "", type = Balls.TYPES.SPRAYING, color = {0.9, 0.8, 0.3, 1} }
+        { name = "", type = Balls.TYPES.STICKY,    color = {0.3, 0.8, 0.3, 1} },
+        { name = "", type = Balls.TYPES.SPRAYING,  color = {0.9, 0.8, 0.3, 1} },
+        { name = "", type = Balls.TYPES.BULLET,    color = {0.25, 0.25, 0.28, 1} },
+        { name = "", type = Balls.TYPES.ICE_BALL,  color = {0.5, 0.85, 1.0, 1} }
     }
     
     MobileUI.ballButtons = {}
@@ -127,11 +129,13 @@ function MobileUI.createMobileButtons()
                     if game.ball and game.ball.body then game.ball.body:setUserData(game.ball) end
                     -- Get the ball type name for logging
                     local ballTypeToName = {
-                        [Balls.TYPES.STANDARD] = "Standard",
-                        [Balls.TYPES.HEAVY] = "Heavy",
+                        [Balls.TYPES.STANDARD]  = "Standard",
+                        [Balls.TYPES.HEAVY]     = "Heavy",
                         [Balls.TYPES.EXPLODING] = "Exploding",
-                        [Balls.TYPES.STICKY] = "Sticky",
-                        [Balls.TYPES.SPRAYING] = "Spraying"
+                        [Balls.TYPES.STICKY]    = "Sticky",
+                        [Balls.TYPES.SPRAYING]  = "Spraying",
+                        [Balls.TYPES.BULLET]    = "Bullet",
+                        [Balls.TYPES.ICE_BALL]  = "Ice"
                     }
                     local ballName = ballTypeToName[ballInfo.type] or "Unknown"
                     print("Switched to " .. ballName .. " Ball")

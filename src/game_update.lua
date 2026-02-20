@@ -8,6 +8,7 @@ local UI = require("src.ui")
 local Menu = require("src.menu")
 local Editor = require("src.editor")
 local Balls = require("src.balls") -- Added require for Balls
+local CellTypes = require("src.cell_types")
 
 local GameUpdate = {}
 
@@ -28,6 +29,12 @@ function GameUpdate.update(Game, dt)
     -- Process sand cells that need to be converted to visual sand
     Effects.processSandConversion(Collision.sandToConvert, Game.level)
     Collision.sandToConvert = {} -- Clear the queue
+
+    -- Process ICE cells that shattered to WATER (deferred to avoid Box2D world-lock)
+    for _, cell in ipairs(Collision.iceToMelt) do
+        Game.level:setCellType(cell.x, cell.y, CellTypes.TYPES.WATER)
+    end
+    Collision.iceToMelt = {}
 
     -- Update the physics world
     if Game.world then

@@ -11,7 +11,9 @@ Ball.TYPES = {
     HEAVY = 2,
     EXPLODING = 3,
     STICKY = 4,
-    SPRAYING = 5
+    SPRAYING = 5,
+    BULLET = 6,
+    ICE_BALL = 7
 }
 
 -- Colors
@@ -22,7 +24,9 @@ Ball.COLORS = {
     HEAVY_COLOR = {0.6, 0.6, 0.8, 1}, -- Dark blue for heavy ball
     EXPLODING_COLOR = {1, 0.4, 0.2, 1}, -- Orange-red for exploding ball
     STICKY_COLOR = {0.3, 0.8, 0.3, 1}, -- Green for sticky ball
-    SPRAYING_COLOR = {0.9, 0.8, 0.3, 1} -- Yellow-orange for spraying ball
+    SPRAYING_COLOR = {0.9, 0.8, 0.3, 1},  -- Yellow-orange for spraying ball
+    BULLET_COLOR   = {0.25, 0.25, 0.28, 1}, -- Dark metallic grey for bullet ball
+    ICE_COLOR      = {0.5, 0.85, 1.0, 1}    -- Light cyan for ice ball
 }
 
 -- Base constructor for all ball types

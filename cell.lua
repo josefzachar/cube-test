@@ -64,7 +64,7 @@ function Cell.new(world, x, y, type)
     
     -- Create physics bodies for stone and dirt (always need bodies)
     -- Sand and water bodies are created dynamically based on surface detection
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.DIRT then
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.DIRT or self.type == Cell.TYPES.ICE then
         self:createPhysics(world)
     elseif self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER then
         -- Skip body creation initially - will be created dynamically
@@ -84,6 +84,15 @@ function Cell:createPhysics(world, skipBody)
         Water.createPhysics(self, world, skipBody)
     elseif self.type == Cell.TYPES.DIRT then
         Dirt.createPhysics(self, world)
+    elseif self.type == Cell.TYPES.ICE then
+        -- ICE: static like stone but extremely slippery
+        self.body = love.physics.newBody(world, self.x * self.SIZE + self.SIZE/2, self.y * self.SIZE + self.SIZE/2, "static")
+        self.shape = love.physics.newRectangleShape(self.SIZE, self.SIZE)
+        self.fixture = love.physics.newFixture(self.body, self.shape)
+        self.fixture:setFriction(0.02)    -- Nearly frictionless
+        self.fixture:setRestitution(0.5)  -- Slight bounce
+        self.fixture:setUserData("ice")  -- Treated as ice for collision (breakable)
+        self.hasPhysicsBody = true
     end
 end
 
@@ -237,7 +246,7 @@ function Cell:setType(world, newType)
     self.type = newType
     
     -- Create physics if needed
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT then
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT or self.type == Cell.TYPES.ICE then
         self:createPhysics(world)
     end
     

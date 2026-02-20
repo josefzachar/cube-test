@@ -44,6 +44,7 @@ function Renderer.initSpriteBatches()
     spriteBatches[CellTypes.TYPES.FIRE] = love.graphics.newSpriteBatch(cellTexture, 1000, "dynamic")
     spriteBatches[CellTypes.TYPES.SMOKE] = love.graphics.newSpriteBatch(cellTexture, 1000, "dynamic")
     spriteBatches[CellTypes.TYPES.WIN_HOLE] = love.graphics.newSpriteBatch(cellTexture, 100, "dynamic")
+    spriteBatches[CellTypes.TYPES.ICE] = love.graphics.newSpriteBatch(cellTexture, 5000, "dynamic")
     
     -- Create quad for a single cell (covers entire 1x1 texture)
     quadCache.cell = love.graphics.newQuad(0, 0, 1, 1, 1, 1)

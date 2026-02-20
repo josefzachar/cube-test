@@ -9,6 +9,7 @@ local Collision = {}
 
 -- Tables to track sand cells
 Collision.sandToConvert = {} -- Table to store sand cells that need to be converted to flying sand
+Collision.iceToMelt = {}    -- Table to store ICE cells that need to convert to WATER (deferred, outside physics lock)
 
 function Collision.beginContact(a, b, coll, level, ball)
     -- Don't clear the sandToConvert array here, it's cleared in main.lua
@@ -143,6 +144,8 @@ function Collision.beginContact(a, b, coll, level, ball)
             cellType = CellTypes.TYPES.DIRT
         elseif otherData == "stone" then
             cellType = CellTypes.TYPES.STONE
+        elseif otherData == "ice" then
+            cellType = CellTypes.TYPES.ICE
         end
         
         -- Check if the material has properties
@@ -161,6 +164,10 @@ function Collision.beginContact(a, b, coll, level, ball)
                 elseif ballObject.ballType == Balls.TYPES.STICKY then
                     -- Sticky ball has higher threshold (harder to displace terrain)
                     threshold = threshold * 2.0
+                elseif ballObject.ballType == Balls.TYPES.BULLET then
+                    -- Bullet ball skips the standard crater system entirely;
+                    -- penetration is handled in bullet_ball:update()
+                    threshold = math.huge
                 end
             end
             
@@ -217,9 +224,15 @@ function Collision.beginContact(a, b, coll, level, ball)
             local nx, ny = coll:getNormal()
             local x1, y1, x2, y2 = coll:getPositions()
             
-            -- Use the collision position if available, otherwise use the fixture position
+            -- Use the collision position if available, otherwise use the fixture position.
+            -- For ICE we always use the body center: the contact point lands on the cell's
+            -- top edge and floor() maps it to the empty row above, causing water to spawn
+            -- in the wrong cell instead of replacing the ice.
             local hitX, hitY
-            if x1 and y1 then
+            if cellType == CellTypes.TYPES.ICE then
+                local iceBody = otherFixture:getBody()
+                hitX, hitY = iceBody:getPosition()
+            elseif x1 and y1 then
                 hitX, hitY = x1, y1
             else
                 local hitBody = otherFixture:getBody()
@@ -244,13 +257,20 @@ function Collision.beginContact(a, b, coll, level, ball)
                     end
                 end
                 
-                -- Only sand and dirt can be displaced on direct hit (stone is never affected)
-                local canDirectHit = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT)
+                -- Only sand, dirt and ice can be displaced on direct hit (stone is never affected)
+                -- ICE can only be broken by the heavy ball
+                local isHeavyBall = ballObject and ballObject.ballType == Balls.TYPES.HEAVY
+                local canDirectHit = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT
+                                      or (cellType == CellTypes.TYPES.ICE and isHeavyBall))
                 
                 if canDirectHit and CellTypes.PROPERTIES[cellType] and speed > directHitThreshold then
                 
                 local cellTypeName = cellType == CellTypes.TYPES.SAND and "sand" or "dirt"
                 
+                -- Ice shatters back to water instead of becoming a particle
+                if cellType == CellTypes.TYPES.ICE then
+                    table.insert(Collision.iceToMelt, {x = gridX, y = gridY})
+                else
                 -- Clear the cell directly
                 level:setCellType(gridX, gridY, CellTypes.TYPES.EMPTY)
                 
@@ -266,12 +286,14 @@ function Collision.beginContact(a, b, coll, level, ball)
                         shouldConvert = true -- Flag to indicate this cell should be converted
                     })
                 end
+                end
             end
             
             -- Slow down the ball more when it hits sand
             if otherData == "sand" then
-                -- Special case for spraying ball - don't slow down if it's a spraying ball
-                if not (ballObject and ballObject.ballType == Balls.TYPES.SPRAYING) then
+                -- Special case for spraying/bullet balls - don't slow down
+                if not (ballObject and (ballObject.ballType == Balls.TYPES.SPRAYING or
+                                        ballObject.ballType == Balls.TYPES.BULLET)) then
                     -- Damping amount is ball-type specific (heavy ball carries more momentum)
                     local dampingFactor = (ballObject and ballObject.getSandCollisionDamping)
                                          and ballObject:getSandCollisionDamping() or 0.35
@@ -337,7 +359,10 @@ function Collision.beginContact(a, b, coll, level, ball)
                             local distance = math.sqrt(dx*dx + dy*dy)
                             
                             -- Only sand and dirt are displaced by crater physics (stone is never blasted)
-                            local canAffectCell = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT)
+                            -- Ice in crater radius also shatters to water, but only for heavy ball
+                            local isHeavyBall = ballObject and ballObject.ballType == Balls.TYPES.HEAVY
+                            local canAffectCell = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT
+                                                   or (cellType == CellTypes.TYPES.ICE and isHeavyBall))
                             
                             if canAffectCell then
                                 
@@ -390,9 +415,13 @@ function Collision.beginContact(a, b, coll, level, ball)
                                     local canConvert = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and
                                                       CellTypes.PROPERTIES[cellType] and
                                                       speed > CellTypes.PROPERTIES[cellType].displacementThreshold
-                                    
-                                    -- Heavy ball does NOT convert stone cells to particles
-                                    -- (stone is structurally too hard to be blasted away)
+
+                                    -- Ice shatters to water inside the crater radius
+                                    if cellType == CellTypes.TYPES.ICE and
+                                       CellTypes.PROPERTIES[cellType] and
+                                       speed > CellTypes.PROPERTIES[cellType].displacementThreshold then
+                                        table.insert(Collision.iceToMelt, {x = checkX, y = checkY})
+                                    end
                                     
                                     if canConvert then
                                         
@@ -530,6 +559,17 @@ function Collision.preSolve(a, b, coll)
         local ballObject = ballBody:getUserData() -- Get the ball object
         local otherData = otherFixture:getUserData()
         
+        -- If it's a bullet ball that has been launched, disable collisions with
+        -- sand, dirt and water so it physically passes through them.
+        -- When NOT launched (ball resting on terrain) collisions are kept enabled.
+        if ballObject and ballObject.ballType == Balls.TYPES.BULLET
+                and ballObject.isLaunched and (ballObject.penetrationEnergy or 0) > 0 then
+            if otherData == "sand" or otherData == "dirt" or otherData == "water" or otherData == "ice" then
+                coll:setEnabled(false)
+                return
+            end
+        end
+
         -- If it's a spraying ball, only disable collisions with the material it's currently spraying
         if ballObject and ballObject.ballType == Balls.TYPES.SPRAYING then
             -- Get the current material the ball is spraying

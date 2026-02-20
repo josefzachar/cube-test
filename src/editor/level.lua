@@ -70,7 +70,9 @@ function EditorLevel.saveLevel(filename)
             heavy = EditorLevel.editor.availableBalls.heavy,
             exploding = EditorLevel.editor.availableBalls.exploding,
             sticky = EditorLevel.editor.availableBalls.sticky,
-            spraying = EditorLevel.editor.availableBalls.spraying
+            spraying = EditorLevel.editor.availableBalls.spraying,
+            bullet = EditorLevel.editor.availableBalls.bullet,
+            ice = EditorLevel.editor.availableBalls.ice
         },
         cells = {},
         boulders = {}

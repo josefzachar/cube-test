@@ -1,11 +1,13 @@
 -- balls/init.lua - Entry point for ball types
 
-local BaseBall = require("src.balls.ball_base")
+local BaseBall    = require("src.balls.ball_base")
 local StandardBall = require("src.balls.standard_ball")
-local HeavyBall = require("src.balls.heavy_ball")
+local HeavyBall   = require("src.balls.heavy_ball")
 local ExplodingBall = require("src.balls.exploding_ball")
-local StickyBall = require("src.balls.sticky_ball")
+local StickyBall  = require("src.balls.sticky_ball")
 local SprayingBall = require("src.balls.spraying_ball")
+local BulletBall  = require("src.balls.bullet_ball")
+local IceBall     = require("src.balls.ice_ball")
 
 local Balls = {
     -- Ball types enum
@@ -17,6 +19,8 @@ local Balls = {
     ExplodingBall = ExplodingBall,
     StickyBall = StickyBall,
     SprayingBall = SprayingBall,
+    BulletBall = BulletBall,
+    IceBall = IceBall,
     
     -- Factory function to create a ball of the specified type
     createBall = function(world, x, y, ballType)
@@ -30,6 +34,10 @@ local Balls = {
             return StickyBall.new(world, x, y)
         elseif ballType == BaseBall.TYPES.SPRAYING then
             return SprayingBall.new(world, x, y)
+        elseif ballType == BaseBall.TYPES.BULLET then
+            return BulletBall.new(world, x, y)
+        elseif ballType == BaseBall.TYPES.ICE_BALL then
+            return IceBall.new(world, x, y)
         else
             return StandardBall.new(world, x, y)
         end
@@ -54,6 +62,10 @@ local Balls = {
             newBall = StickyBall.new(world, x, y)
         elseif newType == BaseBall.TYPES.SPRAYING then
             newBall = SprayingBall.new(world, x, y)
+        elseif newType == BaseBall.TYPES.BULLET then
+            newBall = BulletBall.new(world, x, y)
+        elseif newType == BaseBall.TYPES.ICE_BALL then
+            newBall = IceBall.new(world, x, y)
         else
             newBall = StandardBall.new(world, x, y)
         end

@@ -523,6 +523,8 @@ local function drawRightPanel(L)
         {id="exploding", label="Exploding"},
         {id="sticky",    label="Sticky"   },
         {id="spraying",  label="Spraying" },
+        {id="bullet",    label="Bullet"   },
+        {id="ice",       label="Ice"      },
     }
     EditorUI._ballBtns = {}
 

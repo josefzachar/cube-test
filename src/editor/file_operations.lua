@@ -232,6 +232,9 @@ function FileOperations.loadLevel(editor)
         editor.availableBalls.heavy = levelData.availableBalls.heavy or false
         editor.availableBalls.exploding = levelData.availableBalls.exploding or false
         editor.availableBalls.sticky = levelData.availableBalls.sticky or false
+        editor.availableBalls.spraying = levelData.availableBalls.spraying or false
+        editor.availableBalls.bullet = levelData.availableBalls.bullet or false
+        editor.availableBalls.ice = levelData.availableBalls.ice or false
     end
     
     -- Load cells
