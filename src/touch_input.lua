@@ -60,6 +60,13 @@ function TouchInput:calculateAim()
         self.aimDirection.x = self.aimDirection.x / distance
         self.aimDirection.y = self.aimDirection.y / distance
     end
+
+    -- Shift camera slightly in the shot direction while aiming
+    local Camera = require("src.camera")
+    local AIM_LOOK = 60
+    local powerFraction = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
+    Camera.aimTargetX = -self.aimDirection.x * AIM_LOOK * powerFraction
+    Camera.aimTargetY = -self.aimDirection.y * AIM_LOOK * powerFraction
 end
 
 function TouchInput:handleTouchPressed(id, x, y, ball, level)
@@ -102,6 +109,10 @@ function TouchInput:handleTouchPressed(id, x, y, ball, level)
     -- Store the touch ID and position
     self.touchId = id
     
+    -- Reset direction so no stale arrow from the previous shot is shown
+    self.aimDirection = {x = 0, y = 0}
+    self.aimPower = 0
+
     -- Use the actual touch position as the start position for aiming
     self.touchStartX = gameX
     self.touchStartY = gameY
@@ -149,9 +160,13 @@ function TouchInput:handleTouchReleased(id, x, y, ball)
     if self.isAiming and not ball:isMoving() then
         -- Stop aiming
         self.isAiming = false
-        
-        -- For slingshot, we want to fire in the direction from touch to ball
-        -- The aimDirection already points from touch start to current touch position
+
+        -- Return camera to ball-centered position
+        local Camera = require("src.camera")
+        Camera.aimTargetX = 0
+        Camera.aimTargetY = 0
+
+        -- For slingshot, fire in the direction opposite to the drag
         local slingDirection = {
             x = -self.aimDirection.x,
             y = -self.aimDirection.y
@@ -174,50 +189,45 @@ end
 function TouchInput:draw(ball, attempts)
     -- Draw aim line if ball is not moving and user is aiming
     if not ball:isMoving() and self.isAiming and self.touchId then
-        local lineLength = self.aimPower / 5 -- Scale down for visual purposes
-        local cellSize = 8  -- Size of each cell in pixels
-        local cellSpacing = 6  -- Space between cells
-        
-        -- Use touch start position as the origin for drawing
-        local startX = self.touchStartX
-        local startY = self.touchStartY
-        
-        -- Draw original aim line (dashed cells) from touch start towards current touch
-        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction (start to current)
-        local endX = startX + self.aimDirection.x * lineLength
-        local endY = startY + self.aimDirection.y * lineLength
+        -- Only draw when there is meaningful drag
+        if self.aimPower <= 0 then return end
+
+        local lineLength = self.aimPower / 5
+        local cellSize = 8
+        local cellSpacing = 6
+
+        -- Gray dashed line: from touch-start toward current finger (shows the pull)
+        love.graphics.setColor(0.4, 0.4, 0.4, 1)
         self:drawDashedCellLine(
-            startX, 
-            startY, 
-            endX, 
-            endY,
+            self.touchStartX,
+            self.touchStartY,
+            self.touchStartX + self.aimDirection.x * lineLength,
+            self.touchStartY + self.aimDirection.y * lineLength,
             cellSize,
             cellSpacing
         )
-        
-        -- Draw opposite aim line (actual shot direction) from touch start away from current touch
-        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction (current to start)
-        local shotEndX = startX - self.aimDirection.x * lineLength
-        local shotEndY = startY - self.aimDirection.y * lineLength
+
+        -- White arrow: FROM same touch-start origin, going in the shot direction (opposite of drag)
+        local shotEndX = self.touchStartX - self.aimDirection.x * lineLength
+        local shotEndY = self.touchStartY - self.aimDirection.y * lineLength
+        love.graphics.setColor(1, 1, 1, 1)
         self:drawDashedCellLine(
-            startX, 
-            startY, 
-            shotEndX, 
+            self.touchStartX,
+            self.touchStartY,
+            shotEndX,
             shotEndY,
-            8, -- Cell size for the white line
-            0  -- No spacing for the white line
+            8,
+            0
         )
-        
-        -- Draw pixelated arrow at the end of the white line (shot direction)
         self:drawPixelatedArrow(
-            shotEndX, 
-            shotEndY, 
-            -self.aimDirection.x, -- Arrow points in the shot direction
-            -self.aimDirection.y, 
-            24 -- Arrow size
+            shotEndX,
+            shotEndY,
+            -self.aimDirection.x,
+            -self.aimDirection.y,
+            24
         )
-        
-        -- Reset color to white
+
+        -- Reset color
         love.graphics.setColor(1, 1, 1, 1)
     end
 end

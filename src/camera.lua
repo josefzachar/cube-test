@@ -23,7 +23,14 @@ local Camera = {
     initialized = false,
     
     -- Flag to enable/disable automatic scaling
-    enableScaling = true
+    enableScaling = true,
+
+    -- Aim-look offset: smoothly shifts the camera in the aim direction while aiming
+    aimOffsetX = 0,
+    aimOffsetY = 0,
+    aimTargetX = 0,   -- set by input each frame while aiming
+    aimTargetY = 0,
+    aimSmoothing = 0.08  -- separate (slightly slower) smoothing for the aim shift
 }
 
 -- Initialize the camera with the ball's position
@@ -62,6 +69,10 @@ function Camera.update(ballX, ballY, dt)
     -- Smoothly move camera toward target position
     Camera.x = Camera.x + (Camera.targetX - Camera.x) * Camera.smoothing * (dt * 60) -- Normalize by framerate
     Camera.y = Camera.y + (Camera.targetY - Camera.y) * Camera.smoothing * (dt * 60)
+
+    -- Smoothly move aim offset toward its target
+    Camera.aimOffsetX = Camera.aimOffsetX + (Camera.aimTargetX - Camera.aimOffsetX) * Camera.aimSmoothing * (dt * 60)
+    Camera.aimOffsetY = Camera.aimOffsetY + (Camera.aimTargetY - Camera.aimOffsetY) * Camera.aimSmoothing * (dt * 60)
 end
 
 -- Apply camera transformation
@@ -99,9 +110,9 @@ function Camera.apply(Game)
     GAME_OFFSET_X = offsetX
     GAME_OFFSET_Y = offsetY
     
-    -- Calculate camera offset to center the ball
-    local cameraOffsetX = levelWidth / 2 - Camera.x
-    local cameraOffsetY = levelHeight / 2 - Camera.y
+    -- Calculate camera offset to center the ball (plus aim look-ahead)
+    local cameraOffsetX = levelWidth / 2 - Camera.x - Camera.aimOffsetX
+    local cameraOffsetY = levelHeight / 2 - Camera.y - Camera.aimOffsetY
     
     -- Apply camera transformation with offsets
     love.graphics.translate(offsetX + cameraOffsetX, offsetY + cameraOffsetY)

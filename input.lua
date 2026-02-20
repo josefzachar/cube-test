@@ -93,6 +93,14 @@ function Input:calculateAim(ball)
         self.aimDirection.x = self.aimDirection.x / distance
         self.aimDirection.y = self.aimDirection.y / distance
     end
+
+    -- Shift camera slightly in the shot direction (opposite of drag) so the player
+    -- can see more of where the ball is going while aiming.
+    local Camera = require("src.camera")
+    local AIM_LOOK = 60  -- max camera shift in game pixels
+    local powerFraction = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
+    Camera.aimTargetX = -self.aimDirection.x * AIM_LOOK * powerFraction
+    Camera.aimTargetY = -self.aimDirection.y * AIM_LOOK * powerFraction
     
     -- Note: We no longer update the click position here
     -- The click position stays at the original click location
@@ -201,52 +209,49 @@ function Input:draw(ball, attempts)
     
     -- Draw aim line if ball is not moving and user is aiming
     if not ball:isMoving() and self.isAiming and self.clickPosition.x ~= nil then
+        -- Only draw when there is meaningful drag distance
+        if self.aimPower <= 0 then return end
+
         local lineLength = self.aimPower / 5 -- Scale down for visual purposes
         local cellSize = 8  -- Size of each cell in pixels
         local cellSpacing = 6  -- Space between cells
-        
-        -- Use click position as the origin for drawing
-        local startX = self.clickPosition.x
-        local startY = self.clickPosition.y
-        
-        -- Draw original aim line (dashed cells) from click position towards mouse
-        love.graphics.setColor(0.4, 0.4, 0.4, 1) -- Light gray for original direction (click to mouse)
-        local endX = startX + self.aimDirection.x * lineLength
-        local endY = startY + self.aimDirection.y * lineLength
+
+        -- Gray dashed line: from press position toward finger (shows the pull/slingshot)
+        love.graphics.setColor(0.4, 0.4, 0.4, 1)
+        local dragEndX = self.clickPosition.x + self.aimDirection.x * lineLength
+        local dragEndY = self.clickPosition.y + self.aimDirection.y * lineLength
         self:drawDashedCellLine(
-            startX, 
-            startY, 
-            endX, 
-            endY,
+            self.clickPosition.x,
+            self.clickPosition.y,
+            dragEndX,
+            dragEndY,
             cellSize,
             cellSpacing
         )
-        
-        -- Draw opposite aim line (actual shot direction) from click position away from mouse
-        love.graphics.setColor(1, 1, 1, 1) -- White for shot direction (mouse to click)
-        local shotEndX = startX - self.aimDirection.x * lineLength
-        local shotEndY = startY - self.aimDirection.y * lineLength
+
+        -- White arrow: FROM same click origin, going in the shot direction (opposite of drag)
+        local shotEndX = self.clickPosition.x - self.aimDirection.x * lineLength
+        local shotEndY = self.clickPosition.y - self.aimDirection.y * lineLength
+        love.graphics.setColor(1, 1, 1, 1)
         self:drawDashedCellLine(
-            startX, 
-            startY, 
-            shotEndX, 
+            self.clickPosition.x,
+            self.clickPosition.y,
+            shotEndX,
             shotEndY,
-            8, -- Cell size for the white line
-            0  -- No spacing for the white line
+            8,
+            0
         )
-        
-        -- Draw pixelated arrow at the end of the white line (shot direction)
         self:drawPixelatedArrow(
-            shotEndX, 
-            shotEndY, 
-            -self.aimDirection.x, -- Arrow points in the shot direction
-            -self.aimDirection.y, 
-            24 -- Arrow size
+            shotEndX,
+            shotEndY,
+            -self.aimDirection.x,
+            -self.aimDirection.y,
+            24
         )
-        
+
         -- Reset color to white
         love.graphics.setColor(1, 1, 1, 1)
-        
+
         -- Draw power indicator
         local powerPercentage = (self.aimPower - self.minPower) / (self.maxPower - self.minPower)
         love.graphics.print("Power: " .. math.floor(powerPercentage * 100) .. "%", 650, 30)
@@ -262,6 +267,10 @@ function Input:handleMousePressed(button, ball, gameX, gameY)
         -- Start aiming
         self.isAiming = true
         
+        -- Reset direction so no stale arrow is shown from the previous shot
+        self.aimDirection = {x = 0, y = 0}
+        self.aimPower = 0
+
         -- Store the actual clicked position instead of the ball's position
         self.clickPosition.x = clickX
         self.clickPosition.y = clickY
@@ -292,6 +301,11 @@ function Input:handleMouseReleased(button, ball, gameX, gameY)
     if button == 1 and self.isAiming and not ball:isMoving() then -- Left mouse button
         -- Stop aiming
         self.isAiming = false
+
+        -- Return camera to ball-centered position
+        local Camera = require("src.camera")
+        Camera.aimTargetX = 0
+        Camera.aimTargetY = 0
         
         -- For slingshot, we want to fire in the direction from mouse to ball
         -- The aimDirection already points from ball to mouse, so we use the negative
