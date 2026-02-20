@@ -35,6 +35,7 @@ function Updater.updateCells(level, dt)
     local Cell = require("cell")
     local SAND = Cell.TYPES.SAND
     local WATER = Cell.TYPES.WATER
+    local SPRAY_WATER = Cell.TYPES.SPRAY_WATER
     local EMPTY = Cell.TYPES.EMPTY
     
     local cellsToCheck = {}
@@ -54,7 +55,7 @@ function Updater.updateCells(level, dt)
                         if not cellsToCheck[cellKey] then
                             if level.cells[ny] and level.cells[ny][nx] then
                                 local cellType = level.cells[ny][nx].type
-                                if cellType == SAND or cellType == WATER then
+                                if cellType == SAND or cellType == WATER or cellType == SPRAY_WATER then
                                     cellsToCheck[cellKey] = {x = nx, y = ny}
                                 end
                             end
@@ -79,7 +80,7 @@ function Updater.updateCells(level, dt)
                     if not cellsToCheck[cellKey] then
                         if level.cells[ny] and level.cells[ny][nx] then
                             local cellType = level.cells[ny][nx].type
-                            if cellType == SAND or cellType == WATER then
+                            if cellType == SAND or cellType == WATER or cellType == SPRAY_WATER then
                                 cellsToCheck[cellKey] = {x = nx, y = ny}
                             end
                         end
@@ -102,10 +103,10 @@ function Updater.updateCells(level, dt)
             for x = 0, level.width - 1 do
                 if level.cells[y] and level.cells[y][x] and level.cells[y+1] and level.cells[y+1][x] then
                     local cellType = level.cells[y][x].type
-                    if cellType == SAND or cellType == WATER then
+                    if cellType == SAND or cellType == WATER or cellType == SPRAY_WATER then
                         local belowType = level.cells[y+1][x].type
                         -- If there's empty space or water below sand, cell needs to update
-                        if belowType == EMPTY or (cellType == SAND and belowType == WATER) then
+                        if belowType == EMPTY or (cellType == SAND and (belowType == WATER or belowType == SPRAY_WATER)) then
                             local cellKey = x .. "," .. y
                             if not cellsToCheck[cellKey] then
                                 cellsToCheck[cellKey] = {x = x, y = y}

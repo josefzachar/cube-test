@@ -72,7 +72,8 @@ function EditorLevel.saveLevel(filename)
             sticky = EditorLevel.editor.availableBalls.sticky,
             spraying = EditorLevel.editor.availableBalls.spraying,
             bullet = EditorLevel.editor.availableBalls.bullet,
-            ice = EditorLevel.editor.availableBalls.ice
+            ice = EditorLevel.editor.availableBalls.ice,
+            water = EditorLevel.editor.availableBalls.water
         },
         cells = {},
         boulders = {}

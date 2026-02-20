@@ -8,6 +8,7 @@ local StickyBall  = require("src.balls.sticky_ball")
 local SprayingBall = require("src.balls.spraying_ball")
 local BulletBall  = require("src.balls.bullet_ball")
 local IceBall     = require("src.balls.ice_ball")
+local WaterBall   = require("src.balls.water_ball")
 
 local Balls = {
     -- Ball types enum
@@ -21,6 +22,7 @@ local Balls = {
     SprayingBall = SprayingBall,
     BulletBall = BulletBall,
     IceBall = IceBall,
+    WaterBall = WaterBall,
     
     -- Factory function to create a ball of the specified type
     createBall = function(world, x, y, ballType)
@@ -38,6 +40,8 @@ local Balls = {
             return BulletBall.new(world, x, y)
         elseif ballType == BaseBall.TYPES.ICE_BALL then
             return IceBall.new(world, x, y)
+        elseif ballType == BaseBall.TYPES.WATER_BALL then
+            return WaterBall.new(world, x, y)
         else
             return StandardBall.new(world, x, y)
         end
@@ -66,6 +70,8 @@ local Balls = {
             newBall = BulletBall.new(world, x, y)
         elseif newType == BaseBall.TYPES.ICE_BALL then
             newBall = IceBall.new(world, x, y)
+        elseif newType == BaseBall.TYPES.WATER_BALL then
+            newBall = WaterBall.new(world, x, y)
         else
             newBall = StandardBall.new(world, x, y)
         end

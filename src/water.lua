@@ -2,6 +2,7 @@
 
 local CellTypes = require("src.cell_types")
 local WATER = CellTypes.TYPES.WATER
+local SPRAY_WATER = CellTypes.TYPES.SPRAY_WATER
 local EMPTY = CellTypes.TYPES.EMPTY
 
 local Water = {}
@@ -50,100 +51,112 @@ function Water.createPhysics(cell, world, skipBody)
 end
 
 -- Update water cell behavior
+-- Works for both WATER and SPRAY_WATER: the moved copy keeps the source type.
 function Water.update(cell, dt, level)
     -- Cache level properties
     local levelHeight = level.height
     local levelWidth = level.width
     local x, y = cell.x, cell.y
-    
+    local myType = cell.type  -- preserve WATER or SPRAY_WATER when moving
+
     -- Early return if at bottom of level
     if y >= levelHeight - 1 then
         return false
     end
-    
+
     -- Get cell types
     local belowType = level:getCellType(x, y + 1)
-    
+
     -- Check if there's empty space below
     if belowType == EMPTY then
         -- Fall straight down
         level:setCellType(x, y, EMPTY)
-        level:setCellType(x, y + 1, WATER)
-        
+        level:setCellType(x, y + 1, myType)
+
         return true -- Cell changed
     end
-    
+
     -- Check if we're at the edges
     local canCheckLeft = x > 0
     local canCheckRight = x < levelWidth - 1
-    
+
     -- Get diagonal cell types
     local leftEmpty = canCheckLeft and level:getCellType(x - 1, y + 1) == EMPTY
     local rightEmpty = canCheckRight and level:getCellType(x + 1, y + 1) == EMPTY
-    
+
     local activeCells = level.activeCells
-    
+
     -- Water flows diagonally like sand
     if leftEmpty and rightEmpty then
         -- Both diagonal spaces are empty, choose randomly
         if math.random() < 0.5 then
             level:setCellType(x, y, EMPTY)
-            level:setCellType(x, y + 1, WATER)
+            level:setCellType(x, y + 1, myType)
         else
             level:setCellType(x, y, EMPTY)
-            level:setCellType(x + 1, y + 1, WATER)
+            level:setCellType(x + 1, y + 1, myType)
         end
-        
+
         return true -- Cell changed
     elseif leftEmpty then
         level:setCellType(x, y, EMPTY)
-        level:setCellType(x - 1, y + 1, WATER)
-        
+        level:setCellType(x - 1, y + 1, myType)
+
         return true -- Cell changed
     elseif rightEmpty then
         level:setCellType(x, y, EMPTY)
-        level:setCellType(x + 1, y + 1, WATER)
-        
+        level:setCellType(x + 1, y + 1, myType)
+
         return true -- Cell changed
     end
-    
+
     -- Water spreads horizontally more than sand
     -- Check left and right cells
     local leftType = canCheckLeft and level:getCellType(x - 1, y)
     local rightType = canCheckRight and level:getCellType(x + 1, y)
-    
+
     -- Spread horizontally if possible
     if leftType == EMPTY and rightType == EMPTY then
         -- Both sides empty, choose randomly
         if math.random() < 0.5 then
             level:setCellType(x, y, EMPTY)
-            level:setCellType(x - 1, y, WATER)
-            
+            level:setCellType(x - 1, y, myType)
+
             table.insert(activeCells, {x = x, y = y})
             table.insert(activeCells, {x = x - 1, y = y})
         else
             level:setCellType(x, y, EMPTY)
-            level:setCellType(x + 1, y, WATER)
-            
+            level:setCellType(x + 1, y, myType)
+
             table.insert(activeCells, {x = x, y = y})
             table.insert(activeCells, {x = x + 1, y = y})
         end
-        
+
         return true -- Cell changed
     elseif leftType == EMPTY then
         level:setCellType(x, y, EMPTY)
-        level:setCellType(x - 1, y, WATER)
-        
+        level:setCellType(x - 1, y, myType)
+
         return true -- Cell changed
     elseif rightType == EMPTY then
         level:setCellType(x, y, EMPTY)
-        level:setCellType(x + 1, y, WATER)
-        
+        level:setCellType(x + 1, y, myType)
+
         return true -- Cell changed
     end
-    
+
+    -- SPRAY_WATER that can't move anymore has settled → promote to real WATER
+    -- so the ball can float on it just like level-placed water.
+    if myType == SPRAY_WATER then
+        level:setCellType(x, y, WATER)
+        return true
+    end
+
     return false -- Water didn't move
 end
+
+-- Note: conversion of settled SPRAY_WATER → WATER happens here so the ball
+-- can eventually float on water it sprayed once it has come to rest.
 
 -- Check if a water cell should have a physics body (surface cell or near ball)
 function Water.shouldHaveBody(cell, level, ballX, ballY)

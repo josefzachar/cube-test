@@ -111,8 +111,11 @@ function Collision.beginContact(a, b, coll, level, ball)
             local gridX, gridY = level:getGridCoordinates(waterX, waterY)
             
             -- Tell the ball it's in water
+            -- Special case for water ball - it manages its own water detection via grid scan
             if ball and ball.enterWater then
-                ball:enterWater(gridX, gridY)
+                if not (ball.ballType == Balls.TYPES.WATER_BALL) then
+                    ball:enterWater(gridX, gridY)
+                end
             end
         -- Handle sand collisions
         elseif otherData == "sand" then
@@ -517,8 +520,11 @@ function Collision.endContact(a, b, coll, level)
             local gridX, gridY = level:getGridCoordinates(waterX, waterY)
             
             -- Tell the ball it's exiting water
+            -- Special case for water ball - it manages its own water detection via grid scan
             if ball and ball.exitWater then
-                ball:exitWater(gridX, gridY)
+                if not (ball.ballType == Balls.TYPES.WATER_BALL) then
+                    ball:exitWater(gridX, gridY)
+                end
             end
         -- Handle sand collisions
         elseif otherData == "sand" then

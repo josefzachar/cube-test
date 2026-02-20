@@ -51,7 +51,8 @@ local EditorCore = {
         sticky = false,
         spraying = false,
         bullet = false,
-        ice = false
+        ice = false,
+        water = false
     },
     
     -- Grass state

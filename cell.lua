@@ -66,7 +66,7 @@ function Cell.new(world, x, y, type)
     -- Sand and water bodies are created dynamically based on surface detection
     if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.DIRT or self.type == Cell.TYPES.ICE then
         self:createPhysics(world)
-    elseif self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER then
+    elseif self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.SPRAY_WATER then
         -- Skip body creation initially - will be created dynamically
         self:createPhysics(world, true)
     end
@@ -80,7 +80,7 @@ function Cell:createPhysics(world, skipBody)
         Stone.createPhysics(self, world)
     elseif self.type == Cell.TYPES.SAND then
         Sand.createPhysics(self, world, skipBody)
-    elseif self.type == Cell.TYPES.WATER then
+    elseif self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.SPRAY_WATER then
         Water.createPhysics(self, world, skipBody)
     elseif self.type == Cell.TYPES.DIRT then
         Dirt.createPhysics(self, world)
@@ -180,6 +180,7 @@ local STONE = CellTypes.TYPES.STONE
 local VISUAL_SAND = CellTypes.TYPES.VISUAL_SAND
 local VISUAL_DIRT = CellTypes.TYPES.VISUAL_DIRT
 local WATER = CellTypes.TYPES.WATER
+local SPRAY_WATER = CellTypes.TYPES.SPRAY_WATER
 local DIRT = CellTypes.TYPES.DIRT
 local WIN_HOLE = CellTypes.TYPES.WIN_HOLE
 
@@ -196,8 +197,8 @@ function Cell:update(dt, level)
         return Dirt.update(self, dt, level)
     end
     
-    -- Handle water
-    if cellType == WATER then
+    -- Handle water (SPRAY_WATER flows identically to WATER)
+    if cellType == WATER or cellType == SPRAY_WATER then
         return Water.update(self, dt, level)
     end
     
@@ -246,7 +247,7 @@ function Cell:setType(world, newType)
     self.type = newType
     
     -- Create physics if needed
-    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.DIRT or self.type == Cell.TYPES.ICE then
+    if self.type == Cell.TYPES.STONE or self.type == Cell.TYPES.SAND or self.type == Cell.TYPES.WATER or self.type == Cell.TYPES.SPRAY_WATER or self.type == Cell.TYPES.DIRT or self.type == Cell.TYPES.ICE then
         self:createPhysics(world)
     end
     

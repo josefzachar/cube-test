@@ -311,6 +311,7 @@ function Level:managePhysicsBodies(ball)
     local Water = require("src.water")
     local SAND = Cell.TYPES.SAND
     local WATER = Cell.TYPES.WATER
+    local SPRAY_WATER = Cell.TYPES.SPRAY_WATER
     
     local ballX, ballY
     if ball and ball.body then
@@ -338,7 +339,7 @@ function Level:managePhysicsBodies(ball)
                     if cell.hasPhysicsBody then
                         physicsBodyCount = physicsBodyCount + 1
                     end
-                elseif cellType == WATER then
+                elseif cellType == WATER or cellType == SPRAY_WATER then
                     local shouldHaveBody = Water.shouldHaveBody(cell, self, ballX, ballY)
                     if shouldHaveBody and not cell.hasPhysicsBody then
                         -- Create body

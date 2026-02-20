@@ -14,7 +14,8 @@ CellTypes.TYPES = {
     FIRE = 7,         -- Fire that acts as an energy type
     SMOKE = 8,        -- Visual effect for smoke from fire
     WIN_HOLE = 9,     -- Win hole that makes the player win when the ball enters it
-    ICE = 10          -- Frozen water (static, slippery)
+    ICE = 10,         -- Frozen water (static, slippery)
+    SPRAY_WATER = 11  -- Water sprayed by WaterBall; flows like WATER but doesn't trigger ball floating
 }
 
 -- Colors
@@ -24,6 +25,7 @@ CellTypes.COLORS = {
     [CellTypes.TYPES.STONE] = {0.5, 0.5, 0.5, 1}, -- Stone color
     [CellTypes.TYPES.VISUAL_SAND] = {1.0, 0.9, 0.6, 1}, -- Brighter sand for visual effect
     [CellTypes.TYPES.WATER] = {0.2, 0.4, 0.8, 0.8}, -- Blue with some transparency for water
+    [CellTypes.TYPES.SPRAY_WATER] = {0.2, 0.4, 0.8, 0.8}, -- Same color as water (indistinguishable visually)
     [CellTypes.TYPES.DIRT] = {0.6, 0.4, 0.2, 1}, -- Brown for dirt
     [CellTypes.TYPES.VISUAL_DIRT] = {0.7, 0.5, 0.3, 1}, -- Brighter dirt for visual effect
     [CellTypes.TYPES.FIRE] = {1.0, 0.3, 0.1, 0.9}, -- Bright orange-red for fire with some transparency

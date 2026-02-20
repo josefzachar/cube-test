@@ -55,7 +55,8 @@ function GameInit.init(Game, mode, levelNumber)
             [Balls.TYPES.STICKY] = true,
             [Balls.TYPES.SPRAYING] = true,
             [Balls.TYPES.BULLET] = true,
-            [Balls.TYPES.ICE_BALL] = true
+            [Balls.TYPES.ICE_BALL] = true,
+            [Balls.TYPES.WATER_BALL] = true
         }
 
         -- Initialize camera with ball position
@@ -86,7 +87,8 @@ function GameInit.init(Game, mode, levelNumber)
                     Balls.TYPES.STICKY,
                     Balls.TYPES.SPRAYING,
                     Balls.TYPES.BULLET,
-                    Balls.TYPES.ICE_BALL
+                    Balls.TYPES.ICE_BALL,
+                    Balls.TYPES.WATER_BALL
                 }
 
                 Game.currentBallType = ballTypes[ballTypeIndex]
@@ -95,7 +97,7 @@ function GameInit.init(Game, mode, levelNumber)
                 Game.ball = newBall
                 Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
 
-                local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice"}
+                local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice", "Water"}
                 print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
             end
 
@@ -219,7 +221,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.STICKY] = levelData.availableBalls.sticky or false,
                 [Balls.TYPES.SPRAYING] = levelData.availableBalls.spraying or false,
                 [Balls.TYPES.BULLET] = levelData.availableBalls.bullet or false,
-                [Balls.TYPES.ICE_BALL] = levelData.availableBalls.ice or false
+                [Balls.TYPES.ICE_BALL] = levelData.availableBalls.ice or false,
+                [Balls.TYPES.WATER_BALL] = levelData.availableBalls.water or false
             }
         else
             -- Default values if not specified
@@ -230,7 +233,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.STICKY] = false,
                 [Balls.TYPES.SPRAYING] = false,
                 [Balls.TYPES.BULLET] = false,
-                [Balls.TYPES.ICE_BALL] = false
+                [Balls.TYPES.ICE_BALL] = false,
+                [Balls.TYPES.WATER_BALL] = false
             }
         end
         
@@ -252,7 +256,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.STICKY] = false,
                 [Balls.TYPES.SPRAYING] = false,
                 [Balls.TYPES.BULLET] = false,
-                [Balls.TYPES.ICE_BALL] = false
+                [Balls.TYPES.ICE_BALL] = false,
+                [Balls.TYPES.WATER_BALL] = false
             }
         end
     else
@@ -300,7 +305,8 @@ function GameInit.init(Game, mode, levelNumber)
             [Balls.TYPES.STICKY] = true,
             [Balls.TYPES.SPRAYING] = true,
             [Balls.TYPES.BULLET] = true,
-            [Balls.TYPES.ICE_BALL] = true
+            [Balls.TYPES.ICE_BALL] = true,
+            [Balls.TYPES.WATER_BALL] = true
         }
     end
 
@@ -347,7 +353,8 @@ function GameInit.init(Game, mode, levelNumber)
                 Balls.TYPES.STICKY,
                 Balls.TYPES.SPRAYING,
                 Balls.TYPES.BULLET,
-                Balls.TYPES.ICE_BALL
+                Balls.TYPES.ICE_BALL,
+                Balls.TYPES.WATER_BALL
             }
 
             Game.currentBallType = ballTypes[ballTypeIndex]
@@ -356,7 +363,7 @@ function GameInit.init(Game, mode, levelNumber)
             Game.ball = newBall
             if Game.ball and Game.ball.body then Game.ball.body:setUserData(Game.ball) end -- Set the ball as the user data for the ball body
 
-            local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice"}
+            local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice", "Water"}
             print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
         end
 

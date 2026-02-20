@@ -13,7 +13,8 @@ Ball.TYPES = {
     STICKY = 4,
     SPRAYING = 5,
     BULLET = 6,
-    ICE_BALL = 7
+    ICE_BALL = 7,
+    WATER_BALL = 8
 }
 
 -- Colors
@@ -26,7 +27,8 @@ Ball.COLORS = {
     STICKY_COLOR = {0.3, 0.8, 0.3, 1}, -- Green for sticky ball
     SPRAYING_COLOR = {0.9, 0.8, 0.3, 1},  -- Yellow-orange for spraying ball
     BULLET_COLOR   = {0.25, 0.25, 0.28, 1}, -- Dark metallic grey for bullet ball
-    ICE_COLOR      = {0.5, 0.85, 1.0, 1}    -- Light cyan for ice ball
+    ICE_COLOR      = {0.5, 0.85, 1.0, 1},   -- Light cyan for ice ball
+    WATER_COLOR    = {0.1, 0.55, 1.0, 1}    -- Deep blue for water ball
 }
 
 -- Base constructor for all ball types
