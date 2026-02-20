@@ -242,12 +242,41 @@ function Updater.updateRowRightToLeft(level, y, dt)
     end
 end
 
+-- Try to place a sand grain back into the grid at (gx, gy).
+-- If that cell is occupied, try up to a few neighbours so grains pile on top.
+local function settleSandGrain(level, gx, gy, cellType)
+    -- Determine the real grid type to restore (VISUAL_SAND -> SAND, VISUAL_DIRT -> DIRT)
+    local CellTypes = require("src.cell_types")
+    local realType = CellTypes.TYPES.SAND
+    if cellType == CellTypes.TYPES.VISUAL_DIRT then
+        realType = CellTypes.TYPES.DIRT
+    end
+
+    -- Try the landing cell and a small stack above it (so grains pile up)
+    for tryY = gy, math.max(0, gy - 4), -1 do
+        if tryY >= 0 and tryY < level.height and gx >= 0 and gx < level.width then
+            if level.cells[tryY] and level.cells[tryY][gx] then
+                if level:getCellType(gx, tryY) == CellTypes.TYPES.EMPTY then
+                    level:setCellType(gx, tryY, realType)
+                    -- Wake up the new cell so sand physics kicks in
+                    if level.movingSandWater then
+                        level.movingSandWater[gx .. "," .. tryY] = true
+                    end
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- Update visual sand cells with optimized boundary checks
 function Updater.updateVisualSand(level, dt)
     -- Cache level boundaries for faster access
     local levelWidth = level.width * Cell.SIZE
     local levelHeight = level.height * Cell.SIZE
     local gravity = 500 -- Gravity constant
+    local CellTypes = require("src.cell_types")
     
     local i = 1
     while i <= #level.visualSandCells do
@@ -264,19 +293,64 @@ function Updater.updateVisualSand(level, dt)
         -- Update lifetime and alpha
         cell.lifetime = (cell.lifetime or 0) + dt
         cell.alpha = math.max(0, 1 - (cell.lifetime / maxLifetime))
-        
-        -- Fast check for lifetime first (most common reason for removal)
-        local shouldRemove = cell.lifetime >= maxLifetime
-        
-        -- Only check boundaries if lifetime hasn't expired yet
-        if not shouldRemove then
-            -- Combine boundary checks into a single condition
-            shouldRemove = cell.visualX < 0 or cell.visualX >= levelWidth or 
-                           cell.visualY < 0 or cell.visualY >= levelHeight
+
+        -- Current grid cell of the particle
+        local gx = math.floor(cell.visualX / Cell.SIZE)
+        local gy = math.floor(cell.visualY / Cell.SIZE)
+
+        -- Check whether this grain should settle:
+        -- 1. It is falling (vy > 0) and the cell directly below is solid/occupied, OR
+        -- 2. It has reached the bottom wall, OR
+        -- 3. Its lifetime has expired (safety fallback)
+        local shouldSettle = false
+        local outOfBounds = cell.visualX < 0 or cell.visualX >= levelWidth or
+                            cell.visualY >= levelHeight
+
+        if not outOfBounds then
+            -- Check if the grain is currently INSIDE a solid cell (fast-moving grain tunnelled in)
+            local currentCell = level.cells[gy] and level.cells[gy][gx]
+            local currentType = currentCell and level:getCellType(gx, gy)
+            local insideSolid = currentType ~= nil and
+                                currentType ~= CellTypes.TYPES.EMPTY and
+                                currentType ~= CellTypes.TYPES.WATER and
+                                currentType ~= CellTypes.TYPES.VISUAL_SAND and
+                                currentType ~= CellTypes.TYPES.VISUAL_DIRT
+
+            -- Check the grid cell one row below
+            local belowY = gy + 1
+            local cellBelow = (belowY < level.height) and
+                              level.cells[belowY] and level.cells[belowY][gx]
+            local belowType = cellBelow and level:getCellType(gx, belowY)
+
+            local floorIsOccupied = (belowType ~= nil) and
+                                    (belowType ~= CellTypes.TYPES.EMPTY) and
+                                    (belowType ~= CellTypes.TYPES.WATER)
+            local atBottom = (belowY >= level.height)
+
+            -- Settle if moving downward and something solid is below, OR if tunnelled into solid
+            if insideSolid or (cell.velocityY > 50 and (floorIsOccupied or atBottom)) then
+                shouldSettle = true
+            end
+
+            -- Safety: settle when lifetime expires
+            if cell.lifetime >= maxLifetime then
+                shouldSettle = true
+            end
         end
-        
+
+        local shouldRemove = false
+
+        if outOfBounds then
+            -- Out of level bounds: just discard
+            shouldRemove = true
+        elseif shouldSettle then
+            -- Try to write the grain back into the grid
+            settleSandGrain(level, gx, gy, cell.type)
+            shouldRemove = true
+        end
+
         if shouldRemove then
-            -- Remove the visual sand - use fast removal by swapping with the last element
+            -- Fast removal by swapping with the last element
             local lastIndex = #level.visualSandCells
             if i < lastIndex then
                 level.visualSandCells[i] = level.visualSandCells[lastIndex]

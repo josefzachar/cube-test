@@ -27,7 +27,7 @@ function Cell.new(world, x, y, type)
     self.velocityX = 0
     self.velocityY = 0
     self.lifetime = 0
-    self.maxLifetime = 2.0  -- Visual sand disappears after 2 seconds
+    self.maxLifetime = 6.0  -- Visual sand has enough time to arc and land
     self.alpha = 1.0        -- For fade out effect
     
     -- Flag to indicate if this dirt cell should be rendered as grass
