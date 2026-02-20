@@ -47,19 +47,30 @@ function TouchInput:update(ball, level, dt)
 end
 
 function TouchInput:calculateAim()
-    -- Calculate direction vector from touch start to current touch position
-    self.aimDirection.x = self.touchCurrentX - self.touchStartX
-    self.aimDirection.y = self.touchCurrentY - self.touchStartY
-    
-    -- Calculate power based on distance (clamped between min and max)
-    local distance = math.sqrt(self.aimDirection.x^2 + self.aimDirection.y^2)
-    self.aimPower = math.min(self.maxPower, math.max(self.minPower, distance * 2))
-    
-    -- Normalize direction vector
-    if distance > 0 then
-        self.aimDirection.x = self.aimDirection.x / distance
-        self.aimDirection.y = self.aimDirection.y / distance
+    local MIN_DRAG = 15  -- minimum drag distance (game px) before aim activates
+
+    -- Calculate raw drag vector from touch start to current touch position
+    local dx = self.touchCurrentX - self.touchStartX
+    local dy = self.touchCurrentY - self.touchStartY
+    local distance = math.sqrt(dx * dx + dy * dy)
+
+    -- Don't show anything until the finger has moved a meaningful distance
+    if distance < MIN_DRAG then
+        self.aimPower = 0
+        self.aimDirection.x = 0
+        self.aimDirection.y = 0
+        local Camera = require("src.camera")
+        Camera.aimTargetX = 0
+        Camera.aimTargetY = 0
+        return
     end
+
+    -- Set direction from drag
+    self.aimDirection.x = dx / distance
+    self.aimDirection.y = dy / distance
+
+    -- Calculate power based on distance (clamped between min and max)
+    self.aimPower = math.min(self.maxPower, math.max(self.minPower, distance * 2))
 
     -- Shift camera slightly in the shot direction while aiming
     local Camera = require("src.camera")
