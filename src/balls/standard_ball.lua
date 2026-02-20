@@ -142,7 +142,7 @@ function StandardBall:getBuoyancyForce()
 end
 
 function StandardBall:getSandDragCoefficient()
-    return 0.03 -- Default sand drag
+    return 0.015 -- Moderate sand drag: harder than grass/stone but not impossible
 end
 
 function StandardBall:getStoppedThreshold()

@@ -53,6 +53,10 @@ function HeavyBall:getSandDragCoefficient()
     return 0.015 -- Less sand drag
 end
 
+function HeavyBall:getSandCollisionDamping()
+    return 0.2 -- Heavier ball carries more momentum through sand contacts
+end
+
 function HeavyBall:getStoppedThreshold()
     return 8 -- Needs more speed to be considered "moving"
 end

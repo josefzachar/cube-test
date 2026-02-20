@@ -478,6 +478,10 @@ function Ball:getSandDragCoefficient()
     return 0.03 -- Default sand drag coefficient
 end
 
+function Ball:getSandCollisionDamping()
+    return 0.35 -- Default: ball keeps 65% of speed on each sand contact
+end
+
 function Ball:getStoppedThreshold()
     return 5 -- Default stopped threshold
 end

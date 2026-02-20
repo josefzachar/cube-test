@@ -152,14 +152,12 @@ function Collision.beginContact(a, b, coll, level, ball)
             -- Adjust threshold based on ball type
             if ballObject and ballObject.ballType then
                 if ballObject.ballType == Balls.TYPES.HEAVY then
-                    -- Heavy ball has ridiculously low threshold (ridiculously easy to displace terrain)
-                    threshold = threshold * 0.1 -- Changed from 0.2 to 0.1 (10x more effective than standard)
-                    
-                    -- Special case for stone - allow heavy ball to affect stone
-                    if cellType == CellTypes.TYPES.STONE then
-                        -- Still hard to break stone, but possible with heavy ball
-                        threshold = threshold * 0.5 -- 50% of the already reduced threshold
+                    -- Heavy ball has a lower threshold for sand/dirt (easier to displace)
+                    -- but not as absurdly low as before — sand still needs a real hit
+                    if cellType ~= CellTypes.TYPES.STONE then
+                        threshold = threshold * 0.35
                     end
+                    -- Stone is NOT easier to displace for heavy ball
                 elseif ballObject.ballType == Balls.TYPES.STICKY then
                     -- Sticky ball has higher threshold (harder to displace terrain)
                     threshold = threshold * 2.0
@@ -236,13 +234,9 @@ function Collision.beginContact(a, b, coll, level, ball)
                 -- Adjust threshold based on ball type
                 if ballObject and ballObject.ballType then
                 if ballObject.ballType == Balls.TYPES.HEAVY then
-                    -- Heavy ball has ridiculously low threshold (ridiculously easy to displace terrain)
-                    directHitThreshold = directHitThreshold * 0.1 -- Changed from 0.2 to 0.1 (10x more effective than standard)
-                    
-                    -- Special case for stone - allow heavy ball to affect stone
-                    if cellType == CellTypes.TYPES.STONE then
-                        -- Still hard to break stone, but possible with heavy ball
-                        directHitThreshold = directHitThreshold * 0.5 -- 50% of the already reduced threshold
+                    -- Heavy ball hits sand/dirt more easily, but doesn't affect stone
+                    if cellType ~= CellTypes.TYPES.STONE then
+                        directHitThreshold = directHitThreshold * 0.35
                     end
                 elseif ballObject.ballType == Balls.TYPES.STICKY then
                     -- Sticky ball has higher threshold (harder to displace terrain)
@@ -250,13 +244,8 @@ function Collision.beginContact(a, b, coll, level, ball)
                     end
                 end
                 
-                -- Allow heavy ball to affect stone on direct hit too
+                -- Only sand and dirt can be displaced on direct hit (stone is never affected)
                 local canDirectHit = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT)
-                
-                -- Special case for heavy ball - can also affect stone on direct hit
-                if ballObject and ballObject.ballType == Balls.TYPES.HEAVY and cellType == CellTypes.TYPES.STONE then
-                    canDirectHit = true
-                end
                 
                 if canDirectHit and CellTypes.PROPERTIES[cellType] and speed > directHitThreshold then
                 
@@ -283,8 +272,9 @@ function Collision.beginContact(a, b, coll, level, ball)
             if otherData == "sand" then
                 -- Special case for spraying ball - don't slow down if it's a spraying ball
                 if not (ballObject and ballObject.ballType == Balls.TYPES.SPRAYING) then
-                    -- Apply a stronger damping force to the ball when it hits sand
-                    local dampingFactor = 0.7  -- Higher value means more damping
+                    -- Damping amount is ball-type specific (heavy ball carries more momentum)
+                    local dampingFactor = (ballObject and ballObject.getSandCollisionDamping)
+                                         and ballObject:getSandCollisionDamping() or 0.35
                     local vx, vy = ballBody:getLinearVelocity()
                     ballBody:setLinearVelocity(vx * (1 - dampingFactor), vy * (1 - dampingFactor))
                     
@@ -305,10 +295,9 @@ function Collision.beginContact(a, b, coll, level, ball)
                                math.min(props.craterMaxRadius, 
                                        speed / props.craterSpeedDivisor)
                 
-                -- Heavy ball creates MASSIVE craters
+                -- Heavy ball creates noticeably bigger craters, but not an explosion
                 if ballObject and ballObject.ballType == Balls.TYPES.HEAVY then
-                    -- Triple the crater size for heavy ball
-                    directRadius = directRadius * 3
+                    directRadius = directRadius * 2
                 end
             end
             for dy = -directRadius, directRadius do
@@ -325,18 +314,8 @@ function Collision.beginContact(a, b, coll, level, ball)
                             -- Calculate distance for all cells
                             local distance = math.sqrt(dx*dx + dy*dy)
                             
-                            -- Allow heavy ball to affect stone cells too
+                            -- Only sand and dirt are displaced by crater physics (stone is never blasted)
                             local canAffectCell = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT)
-                            
-                            -- Special case for heavy ball - can also affect stone
-                            if ballObject and ballObject.ballType == Balls.TYPES.HEAVY and cellType == CellTypes.TYPES.STONE then
-                                -- Heavy ball can affect stone cells with a much higher chance
-                                -- Use a fixed threshold for stone since we don't have the original threshold here
-                                local stoneThreshold = 200 -- Lower threshold for stone (was 300)
-                                if speed > stoneThreshold and distance <= directRadius * 0.8 then -- Larger area (was 0.5)
-                                    canAffectCell = true
-                                end
-                            end
                             
                             if canAffectCell then
                                 
@@ -370,36 +349,28 @@ function Collision.beginContact(a, b, coll, level, ball)
                                     local flyVx = dirX * speed * 1.0 * impactFactor
                                     local flyVy = dirY * speed * 1.0 * impactFactor - 200 -- Extra upward boost
                                     
-                                    -- Heavy ball sends cells flying with INSANE force
+                                    -- Heavy ball sends sand flying with more force, but not chaotically
                                     if ballObject and ballObject.ballType == Balls.TYPES.HEAVY then
-                                        flyVx = flyVx * 4.0 -- Quadruple the horizontal velocity
-                                        flyVy = flyVy * 4.0 -- Quadruple the vertical velocity
+                                        flyVx = flyVx * 2.0
+                                        flyVy = flyVy * 2.0
                                     end
                                     
                                     -- Add randomness
                                     if ballObject and ballObject.ballType == Balls.TYPES.HEAVY then
-                                        -- MUCH more randomness for heavy ball - creates chaotic explosions
-                                        flyVx = flyVx + math.random(-200, 200)
-                                        flyVy = flyVy + math.random(-200, 200)
+                                        flyVx = flyVx + math.random(-100, 100)
+                                        flyVy = flyVy + math.random(-100, 100)
                                     else
-                                        -- Normal randomness for other balls
                                         flyVx = flyVx + math.random(-50, 50)
                                         flyVy = flyVy + math.random(-50, 50)
                                     end
                                     
-                                    -- Queue up cells for conversion if speed is above threshold
-                                    -- Allow heavy ball to convert stone cells to flying particles too
+                                    -- Queue up sand/dirt cells for conversion (stone is never converted)
                                     local canConvert = (cellType == CellTypes.TYPES.SAND or cellType == CellTypes.TYPES.DIRT) and
                                                       CellTypes.PROPERTIES[cellType] and
                                                       speed > CellTypes.PROPERTIES[cellType].displacementThreshold
                                     
-                                    -- Special case for heavy ball - can convert stone to flying particles
-                                    if ballObject and ballObject.ballType == Balls.TYPES.HEAVY and 
-                                       cellType == CellTypes.TYPES.STONE and
-                                       CellTypes.PROPERTIES[cellType] and
-                                       speed > 200 then -- Much lower threshold for stone (was 400)
-                                        canConvert = true
-                                    end
+                                    -- Heavy ball does NOT convert stone cells to particles
+                                    -- (stone is structurally too hard to be blasted away)
                                     
                                     if canConvert then
                                         
