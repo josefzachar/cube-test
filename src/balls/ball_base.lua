@@ -14,7 +14,8 @@ Ball.TYPES = {
     SPRAYING = 5,
     BULLET = 6,
     ICE_BALL = 7,
-    WATER_BALL = 8
+    WATER_BALL = 8,
+    GROWING_BALL = 9
 }
 
 -- Colors
@@ -28,7 +29,8 @@ Ball.COLORS = {
     SPRAYING_COLOR = {0.9, 0.8, 0.3, 1},  -- Yellow-orange for spraying ball
     BULLET_COLOR   = {0.25, 0.25, 0.28, 1}, -- Dark metallic grey for bullet ball
     ICE_COLOR      = {0.5, 0.85, 1.0, 1},   -- Light cyan for ice ball
-    WATER_COLOR    = {0.1, 0.55, 1.0, 1}    -- Deep blue for water ball
+    WATER_COLOR    = {0.1, 0.55, 1.0, 1},   -- Deep blue for water ball
+    GROWING_COLOR  = {0.5, 1.0, 0.1, 1}    -- Lime green for growing ball
 }
 
 -- Base constructor for all ball types

@@ -226,11 +226,11 @@ function UI.init(ballTypes)
     end
     
     -- Create ball type buttons
-    local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER"}
+    local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER", "GROW"}
     
     -- Create ball type buttons vertically stacked on the right
     local ballButtonY = buttonMargin + 6 * (buttonHeight + buttonMargin) + 70
-    for i = 1, 8 do
+    for i = 1, 9 do
         local button = Button.new(
             buttonX, 
             ballButtonY + (i-1) * (buttonHeight + buttonMargin), 
@@ -260,7 +260,8 @@ function UI.init(ballTypes)
                 {0.9, 0.8, 0.3, 1},   -- SPRAY: yellow
                 {0.25, 0.25, 0.28, 1},-- BULLET: dark gray
                 {0.5, 0.85, 1.0, 1},  -- ICE: light cyan
-                {0.1, 0.55, 1.0, 1}   -- WATER: deep blue
+                {0.1, 0.55, 1.0, 1},  -- WATER: deep blue
+                {0.5, 1.0, 0.1, 1}    -- GROW: lime green
             }
             
             local playModeBallButton = Button.new(
@@ -377,11 +378,12 @@ function UI.update(mouseX, mouseY)
     -- Update the separate ball buttons in PLAY mode
     if isPlayMode and #ballButtons > 0 then
         local Balls = require("src.balls")
-        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER"}
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER", "GROW"}
         
         for i, button in ipairs(ballButtons) do
             local ballName = ballTypeNames[i]
-            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName)]
+            if not ballName then break end
+            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName == "GROW" and "GROWING_BALL" or ballName)]
             
             -- Only update the ball button if it's available
             if UI.availableBalls and UI.availableBalls[ballType] then
@@ -392,7 +394,7 @@ function UI.update(mouseX, mouseY)
     
     if isUIVisible then
         local Balls = require("src.balls")
-        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER"}
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER", "GROW"}
         
         for _, button in ipairs(buttons) do
             -- Skip the "Return to Editor" button if not in test play mode
@@ -409,7 +411,7 @@ function UI.update(mouseX, mouseY)
             for j, ballName in ipairs(ballTypeNames) do
                 if button.text == ballName then
                     isBallButton = true
-                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName)]
+                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName == "GROW" and "GROWING_BALL" or ballName)]
                     
                     -- Only update the ball button if it's available
                     if UI.availableBalls and UI.availableBalls[ballType] then
@@ -471,7 +473,7 @@ function UI.draw()
     -- Draw the ball buttons in PLAY mode
     if isPlayMode and #ballButtons > 0 then
         local Balls = require("src.balls")
-        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER"}
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER", "GROW"}
         
         -- Use smaller dimensions for the ball buttons panel
         local buttonSize = 40 -- Square buttons
@@ -509,7 +511,8 @@ function UI.draw()
         -- Draw the ball buttons
         for i, button in ipairs(ballButtons) do
             local ballName = ballTypeNames[i]
-            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName)]
+            if not ballName then break end
+            local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName == "GROW" and "GROWING_BALL" or ballName)]
             
             -- Only draw the ball button if it's available
             if UI.availableBalls and UI.availableBalls[ballType] then
@@ -556,7 +559,7 @@ function UI.draw()
         
         -- Draw all buttons
         local Balls = require("src.balls")
-        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER"}
+        local ballTypeNames = {"STANDARD", "HEAVY", "EXPLODE", "STICKY", "SPRAY", "BULLET", "ICE", "WATER", "GROW"}
         
         for i, button in ipairs(buttons) do
             -- Skip the "Return to Editor" button if not in test play mode
@@ -573,7 +576,7 @@ function UI.draw()
             for j, ballName in ipairs(ballTypeNames) do
                 if button.text == ballName then
                     isBallButton = true
-                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName)]
+                    local ballType = Balls.TYPES[string.upper(ballName == "EXPLODE" and "EXPLODING" or ballName == "SPRAY" and "SPRAYING" or ballName == "ICE" and "ICE_BALL" or ballName == "WATER" and "WATER_BALL" or ballName == "GROW" and "GROWING_BALL" or ballName)]
                     
                     -- Only draw the ball button if it's available
                     if UI.availableBalls and UI.availableBalls[ballType] then

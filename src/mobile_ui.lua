@@ -104,7 +104,8 @@ function MobileUI.createMobileButtons()
         { name = "", type = Balls.TYPES.SPRAYING,     color = {0.9, 0.8, 0.3, 1} },
         { name = "", type = Balls.TYPES.BULLET,       color = {0.25, 0.25, 0.28, 1} },
         { name = "", type = Balls.TYPES.ICE_BALL,     color = {0.5, 0.85, 1.0, 1} },
-        { name = "", type = Balls.TYPES.WATER_BALL,   color = {0.1, 0.55, 1.0, 1} }
+        { name = "", type = Balls.TYPES.WATER_BALL,   color = {0.1, 0.55, 1.0, 1} },
+        { name = "", type = Balls.TYPES.GROWING_BALL,  color = {0.5, 1.0, 0.1, 1} }
     }
     
     MobileUI.ballButtons = {}
@@ -137,7 +138,8 @@ function MobileUI.createMobileButtons()
                         [Balls.TYPES.SPRAYING]   = "Spraying",
                         [Balls.TYPES.BULLET]     = "Bullet",
                         [Balls.TYPES.ICE_BALL]   = "Ice",
-                        [Balls.TYPES.WATER_BALL] = "Water"
+                        [Balls.TYPES.WATER_BALL]   = "Water",
+                        [Balls.TYPES.GROWING_BALL] = "Growing"
                     }
                     local ballName = ballTypeToName[ballInfo.type] or "Unknown"
                     print("Switched to " .. ballName .. " Ball")

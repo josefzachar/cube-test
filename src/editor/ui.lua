@@ -526,6 +526,7 @@ local function drawRightPanel(L)
         {id="bullet",    label="Bullet"   },
         {id="ice",       label="Ice"      },
         {id="water",     label="Water"    },
+        {id="growing",   label="Growing"  },
     }
     EditorUI._ballBtns = {}
 

@@ -88,7 +88,8 @@ function GameInit.init(Game, mode, levelNumber)
                     Balls.TYPES.SPRAYING,
                     Balls.TYPES.BULLET,
                     Balls.TYPES.ICE_BALL,
-                    Balls.TYPES.WATER_BALL
+                    Balls.TYPES.WATER_BALL,
+                    Balls.TYPES.GROWING_BALL
                 }
 
                 Game.currentBallType = ballTypes[ballTypeIndex]
@@ -97,7 +98,7 @@ function GameInit.init(Game, mode, levelNumber)
                 Game.ball = newBall
                 Game.ball.body:setUserData(Game.ball) -- Set the ball as the user data for the ball body
 
-                local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice", "Water"}
+                local ballTypeNames = {"Standard", "Heavy", "Exploding", "Sticky", "Spraying", "Bullet", "Ice", "Water", "Growing"}
                 print("Switched to " .. ballTypeNames[ballTypeIndex] .. " Ball")
             end
 
@@ -222,7 +223,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.SPRAYING] = levelData.availableBalls.spraying or false,
                 [Balls.TYPES.BULLET] = levelData.availableBalls.bullet or false,
                 [Balls.TYPES.ICE_BALL] = levelData.availableBalls.ice or false,
-                [Balls.TYPES.WATER_BALL] = levelData.availableBalls.water or false
+                [Balls.TYPES.WATER_BALL] = levelData.availableBalls.water or false,
+                [Balls.TYPES.GROWING_BALL] = levelData.availableBalls.growing or false
             }
         else
             -- Default values if not specified
@@ -234,7 +236,8 @@ function GameInit.init(Game, mode, levelNumber)
                 [Balls.TYPES.SPRAYING] = false,
                 [Balls.TYPES.BULLET] = false,
                 [Balls.TYPES.ICE_BALL] = false,
-                [Balls.TYPES.WATER_BALL] = false
+                [Balls.TYPES.WATER_BALL] = false,
+                [Balls.TYPES.GROWING_BALL] = false
             }
         end
         

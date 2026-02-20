@@ -53,6 +53,12 @@ function GameUpdate.update(Game, dt)
     if Game.ball then
         local ballStopped = Game.ball:update(dt)
 
+        -- Crush cells when Growing Ball lands
+        if Game.ball.pendingCrush and Game.level then
+            Game.ball.pendingCrush = false
+            Game.ball:crushCells(Game.level)
+        end
+
         -- Check if the exploding ball should switch to standard ball
         if Game.ball.shouldSwitchToStandard then
             Game.currentBallType = Balls.TYPES.STANDARD

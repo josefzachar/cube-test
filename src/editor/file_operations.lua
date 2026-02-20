@@ -236,6 +236,7 @@ function FileOperations.loadLevel(editor)
         editor.availableBalls.bullet = levelData.availableBalls.bullet or false
         editor.availableBalls.ice = levelData.availableBalls.ice or false
         editor.availableBalls.water = levelData.availableBalls.water or false
+        editor.availableBalls.growing = levelData.availableBalls.growing or false
     end
     
     -- Load cells
