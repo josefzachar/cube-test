@@ -300,6 +300,28 @@ function Collision.beginContact(a, b, coll, level, ball)
                     directRadius = directRadius * 2
                 end
             end
+
+            -- For sand: cap the crater radius to the actual sand density in the area.
+            -- This prevents a single grain of sand on dirt from producing a huge blast.
+            if cellType == CellTypes.TYPES.SAND then
+                local sandCount = 0
+                local scanR = math.ceil(directRadius)
+                for sy = -scanR, scanR do
+                    for sx = -scanR, scanR do
+                        local cx2, cy2 = gridX + sx, gridY + sy
+                        if cx2 >= 0 and cx2 < level.width and cy2 >= 0 and cy2 < level.height then
+                            if level.cells[cy2] and level.cells[cy2][cx2] and
+                               level:getCellType(cx2, cy2) == CellTypes.TYPES.SAND then
+                                sandCount = sandCount + 1
+                            end
+                        end
+                    end
+                end
+                -- Radius grows with sqrt of sand volume; minimum 1 so single cells
+                -- still get a small displacement effect.
+                local densityRadius = math.sqrt(sandCount) * 0.8
+                directRadius = math.min(directRadius, math.max(densityRadius, 1))
+            end
             for dy = -directRadius, directRadius do
                 for dx = -directRadius, directRadius do
                     local checkX = gridX + dx

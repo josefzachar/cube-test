@@ -72,6 +72,9 @@ function Effects.processSandConversion(sandToConvert, level)
                         visualParticle.velocityY = cell.vy
                     end
                     
+                    -- ~40 % of grains settle back as real cells; the rest just fly away and fade
+                    visualParticle.willSettle = math.random() < 0.40
+
                     -- Add the visual particle to the level's cells array
                     table.insert(level.visualSandCells, visualParticle)
                 end
