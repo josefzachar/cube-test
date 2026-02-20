@@ -89,22 +89,49 @@ function WinHoleGenerator.createDiamondWinHole(level, holeX, holeY, startX, star
         local ballStartY = startY or 20
         local minDistanceFromBall = 10 -- Minimum distance from ball starting position
         
-        -- If no position is provided, choose a consistent position
+        -- If no position is provided, pick a random candidate far from the ball start
         if not holeX or not holeY then
-            -- Choose a consistent position based on level dimensions and ball starting position
-            -- Always use bottom right corner for consistency
-            holeX = level.width - 20
-            holeY = level.height - 20
-            
-            -- Log the position for debugging
-            print("Win hole position: Using consistent position (" .. holeX .. "," .. holeY .. ")")
+            local margin = 18
+            local all = {
+                {x = margin,                  y = margin},
+                {x = level.width  - margin,   y = margin},
+                {x = margin,                  y = level.height - margin},
+                {x = level.width  - margin,   y = level.height - margin},
+                {x = math.floor(level.width  / 2), y = margin},
+                {x = math.floor(level.width  / 2), y = level.height - margin},
+                {x = margin,                  y = math.floor(level.height / 2)},
+                {x = level.width  - margin,   y = math.floor(level.height / 2)},
+            }
+            -- Keep only candidates that are far enough from the ball start
+            -- AND not directly below/above it (within 30 cells horizontally),
+            -- to prevent the ball from falling straight in on spawn.
+            local valid = {}
+            for _, c in ipairs(all) do
+                local dx = math.abs(c.x - ballStartX)
+                local dy = math.abs(c.y - ballStartY)
+                local d  = math.sqrt(dx * dx + dy * dy)
+                local directlyAligned = (dx < 30)  -- same vertical column ± 30 cells
+                if d >= 40 and not directlyAligned then
+                    table.insert(valid, c)
+                end
+            end
+            -- Relax the alignment constraint if nothing qualifies
+            if #valid == 0 then
+                for _, c in ipairs(all) do
+                    local d = math.sqrt((c.x - ballStartX)^2 + (c.y - ballStartY)^2)
+                    if d >= 40 then table.insert(valid, c) end
+                end
+            end
+            if #valid == 0 then valid = all end  -- last-resort fallback
+            local chosen = valid[math.random(1, #valid)]
+            holeX = chosen.x
+            holeY = chosen.y
+
+            print("Win hole position: Random candidate (" .. holeX .. "," .. holeY .. ")")
+            print("(ball start was " .. ballStartX .. "," .. ballStartY .. ")")
         else
-            -- If position is provided, use it exactly as specified
-            -- Log the position for debugging
+            -- holeX/holeY were provided explicitly (loading from level file)
             print("Win hole position: Using exact position from level file (" .. holeX .. "," .. holeY .. ")")
-            
-            -- Ensure we're using the exact position from the level file
-            -- without any modifications
         end
         
         -- The pattern is:

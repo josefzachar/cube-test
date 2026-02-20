@@ -526,12 +526,16 @@ end
 
 -- Create a procedural level with tunnels, dirt, stone, water ponds, and sand traps
 -- difficulty: 1 = easy, 2 = medium, 3 = hard, 4 = expert, 5 = insane
-function Level:createProceduralLevel(difficulty)
+function Level:createProceduralLevel(difficulty, startX, startY)
     -- Clear all existing cells first
     self:clearAllCells()
-    
-    -- Delegate to the LevelGenerator with the specified difficulty
-    LevelGenerator.createProceduralLevel(self, difficulty)
+
+    -- Ensure physics-object tables exist before the generator runs
+    self.boulders = self.boulders or {}
+    self.barrels  = self.barrels  or {}
+
+    -- Delegate to the LevelGenerator with the specified difficulty and start position
+    LevelGenerator.createProceduralLevel(self, difficulty, startX, startY)
 end
 
 function Level:getWorldCoordinates(gridX, gridY)

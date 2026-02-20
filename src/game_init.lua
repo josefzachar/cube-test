@@ -12,7 +12,8 @@ local WinHoleGenerator = require("src.win_hole_generator")
 local Camera = require("src.camera")
 local UI = require("src.ui")
 local WinHole = require("src.win_hole")
-local GameState = require("src.game_state") -- Add require for GameState
+local GameState      = require("src.game_state")       -- Add require for GameState
+local LevelGenerator = require("src.level_generator")  -- Used for varying level dimensions
 
 local GameInit = {}
 
@@ -247,11 +248,22 @@ function GameInit.init(Game, mode, levelNumber)
             print("Ball type", ballType, "is available:", isAvailable)
         end
         else
-            -- Fallback to procedural level if level file not found
-            Game.level = Level.new(Game.world, 160, 100) -- Default dimensions
-            Game.level:createProceduralLevel(currentDifficulty)
-            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
-            Game.ball = Balls.createBall(Game.world, 20 * Cell.SIZE, 20 * Cell.SIZE, Balls.TYPES.STANDARD)
+            -- Fallback: procedural level if level file not found
+            local procW, procH = LevelGenerator.getProceduralDimensions(currentDifficulty)
+            Game.level = Level.new(Game.world, procW, procH)
+            local margin = math.max(8, math.min(22, math.floor(math.min(procW, procH) * 0.15)))
+            local cornerCandidates = {
+                {x = margin,         y = margin},
+                {x = procW - margin, y = margin},
+                {x = margin,         y = procH - margin},
+                {x = procW - margin, y = procH - margin},
+            }
+            local sc = cornerCandidates[math.random(1, #cornerCandidates)]
+            Game.level:createProceduralLevel(currentDifficulty, sc.x, sc.y)
+            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, sc.x, sc.y)
+            local sgx = Game.level._procStartX or sc.x
+            local sgy = Game.level._procStartY or sc.y
+            Game.ball = Balls.createBall(Game.world, sgx * Cell.SIZE, sgy * Cell.SIZE, Balls.TYPES.STANDARD)
             UI.availableBalls = {
                 [Balls.TYPES.STANDARD] = true,
                 [Balls.TYPES.HEAVY] = false,
@@ -273,32 +285,36 @@ function GameInit.init(Game, mode, levelNumber)
             -- Always use the editor's level dimensions if available
             local Editor = require("src.editor") -- Re-require locally
 
-            -- If editor has a level, use its dimensions
-            if Editor.level and Editor.level.width and Editor.level.height then
-                print("Using editor's level dimensions: " .. Editor.level.width .. "x" .. Editor.level.height)
-                Game.level = Level.new(Game.world, Editor.level.width, Editor.level.height)
-            else
-                -- Fallback dimensions
-                print("WARNING: No editor level dimensions available, using default dimensions")
-                if Game.currentMode == GameState.MODES.SANDBOX then -- Use GameState.MODES for comparison
-                    print("Using 160x100 cells for SANDBOX mode")
-                    Game.level = Level.new(Game.world, 160, 100)
-                else
-                    Game.level = Level.new(Game.world, 160, 100) -- Default dimensions for other modes
-                end
-            end
+            -- Always use procedural dimensions so level size varies every game
+            local procW, procH = LevelGenerator.getProceduralDimensions(currentDifficulty)
+            print("Using procedural level size " .. procW .. "x" .. procH)
+            Game.level = Level.new(Game.world, procW, procH)
 
-            -- Create a procedural level with the current difficulty
-            -- local LevelGenerator = require("src.level_generator") -- Not used directly here
-            print("Creating level with difficulty:", currentDifficulty)
-            Game.level:createProceduralLevel(currentDifficulty)
+            -- Pick a random ball start from the 4 corner regions.
+            -- Margin is adaptive so narrow levels still have well-separated corners.
+            local margin = math.max(8, math.min(22, math.floor(math.min(procW, procH) * 0.15)))
+            local cornerCandidates = {
+                {x = margin,         y = margin},
+                {x = procW - margin, y = margin},
+                {x = margin,         y = procH - margin},
+                {x = procW - margin, y = procH - margin},
+            }
+            local startCandidate = cornerCandidates[math.random(1, #cornerCandidates)]
+            local startGridX = startCandidate.x
+            local startGridY = startCandidate.y
 
-            -- Create a diamond-shaped win hole at a random position
-            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, 20, 20)
+            -- Create a procedural level with the current difficulty and the chosen start
+            print("Creating level with difficulty:", currentDifficulty, "start:", startGridX, startGridY)
+            Game.level:createProceduralLevel(currentDifficulty, startGridX, startGridY)
+
+            -- Place the win hole, passing the start so the generator can avoid it
+            WinHoleGenerator.createDiamondWinHole(Game.level, nil, nil, startGridX, startGridY)
         end
 
-        -- Create the square ball at the starting position (matching the level generator)
-        Game.ball = Balls.createBall(Game.world, 20 * Cell.SIZE, 20 * Cell.SIZE, Game.currentBallType)
+        -- Create the square ball at the chosen start position
+        local _startGX = (Game.level._procStartX or 20)
+        local _startGY = (Game.level._procStartY or 20)
+        Game.ball = Balls.createBall(Game.world, _startGX * Cell.SIZE, _startGY * Cell.SIZE, Game.currentBallType)
 
         -- In sandbox mode, all balls are available
         UI.availableBalls = {

@@ -22,52 +22,134 @@ print("Dirt module loaded:", Dirt, "type:", type(Dirt))
 
 local LevelGenerator = {}
 
--- Create a procedural level with tunnels, dirt, stone, water ponds, and sand traps
+-- Returns recommended (width, height) dimensions for a procedural level.
+-- Rolls a shape preset first, then scales by difficulty.
+function LevelGenerator.getProceduralDimensions(difficulty)
+    difficulty = math.max(1, math.min(5, difficulty or 1))
+
+    -- Weighted shape presets (cumulative probability out of 100)
+    --   normal      55 %  – modestly varied rectangle
+    --   long-narrow 25 %  – wide but short (scrolling corridor feel)
+    --   tall-narrow 10 %  – tall but thin (vertical shaft feel)
+    --   oversized   10 %  – extra large in both axes
+    local roll = math.random(1, 100)
+    local shape
+    if     roll <= 55 then shape = "normal"
+    elseif roll <= 80 then shape = "long"
+    elseif roll <= 90 then shape = "tall"
+    else                    shape = "big"
+    end
+
+    -- Difficulty scale nudges the base up slightly on harder levels
+    local ds = difficulty * 0.06  -- 0.06 … 0.30 extra scaling factor
+
+    local w, h
+    if shape == "normal" then
+        w = math.floor((150 + difficulty * 10) * (1 + ds * 0.5)) + math.random(-10, 10)
+        h = math.floor(( 95 + difficulty *  6) * (1 + ds * 0.5)) + math.random(-6,   6)
+    elseif shape == "long" then
+        -- Wide and short – at least 2.5× aspect ratio
+        w = math.floor((220 + difficulty * 14) * (1 + ds)) + math.random(-15, 15)
+        h = math.floor(( 60 + difficulty *  4) * (1 + ds)) + math.random(-4,   4)
+        h = math.max(h, 50)   -- never too thin to play
+    elseif shape == "tall" then
+        -- Tall and narrow – at least 2× aspect ratio the other way
+        w = math.floor(( 65 + difficulty *  4) * (1 + ds)) + math.random(-5,   5)
+        w = math.max(w, 55)
+        h = math.floor((190 + difficulty * 12) * (1 + ds)) + math.random(-10, 10)
+    else -- "big"
+        w = math.floor((220 + difficulty * 18) * (1 + ds)) + math.random(-15, 15)
+        h = math.floor((145 + difficulty * 12) * (1 + ds)) + math.random(-8,   8)
+    end
+
+    print("Level shape preset: " .. shape .. "  →  " .. w .. "x" .. h)
+    return w, h
+end
+
+-- Create a procedural level with a randomly chosen archetype for variety.
 -- difficulty: 1 = easy, 2 = medium, 3 = hard, 4 = expert, 5 = insane
-function LevelGenerator.createProceduralLevel(level, difficulty)
-    -- Default to difficulty 1 (easy) if not specified
-    difficulty = difficulty or 1
-    
-    -- Clamp difficulty between 1 and 5
-    difficulty = math.max(1, math.min(5, difficulty))
-    
-    -- Print the current difficulty level
-    print("Creating level with difficulty:", difficulty)
-    -- Create stone walls around the level
+function LevelGenerator.createProceduralLevel(level, difficulty, startX, startY)
+    difficulty = math.max(1, math.min(5, difficulty or 1))
+
+    -- Archetype selection is driven by the level's aspect ratio.
+    -- Tall levels (height >> width) get dense archetypes so the ball has
+    -- things to interact with while falling; wide/square levels stay open.
+    local isTall = (level.height > level.width * 1.3)
+    local roll = math.random(1, 100)
+    local archetype
+    if isTall then
+        -- Dense archetypes only: underground 55%, cavern 45%
+        if roll <= 55 then archetype = "underground"
+        else               archetype = "cavern"
+        end
+    else
+        -- Open archetypes dominate; cavy ones are rare
+        if     roll <= 35 then archetype = "canyon"
+        elseif roll <= 68 then archetype = "highlands"
+        elseif roll <= 83 then archetype = "wetlands"
+        elseif roll <= 92 then archetype = "cavern"
+        else                   archetype = "underground"
+        end
+    end
+    level.archetype = archetype
+    print("Creating level | difficulty:", difficulty, "| archetype:", archetype, "| isTall:", isTall)
+
+    -- Stone border walls
     Stone.createWalls(level)
-    
-    -- Define start and goal positions
-    local startX, startY = 20, 20
-    local goalX, goalY = level.width - 20, level.height - 20
-    
-    -- Create a dense dirt terrain that looks like a landscape
-    createDirtPatches(level)
-    
-    -- Create a main path from start to goal (essential for gameplay)
+
+    -- Start/goal reference points - use provided values or default corner
+    startX = startX or 20
+    startY = startY or 20
+    -- Store on the level so game_init can read back the actual start used
+    level._procStartX = startX
+    level._procStartY = startY
+    local goalX = level.width  - 20
+    local goalY = level.height - 20
+
+    -- Generate archetype-specific terrain
+    if archetype == "canyon" then
+        createCanyonTerrain(level, difficulty)
+    elseif archetype == "cavern" then
+        createCavernTerrain(level, difficulty)
+    elseif archetype == "highlands" then
+        createHighlandsTerrain(level, difficulty)
+    elseif archetype == "underground" then
+        createUndergroundTerrain(level, difficulty)
+    elseif archetype == "wetlands" then
+        createWetlandsTerrain(level, difficulty)
+    else
+        createHighlandsTerrain(level, difficulty)
+    end
+
+    -- Always carve a traversable main path (guarantees playability)
     createMainPath(level, startX, startY, goalX, goalY)
-    
-    -- Create just a few additional tunnels (reduced for more dense terrain)
+
+    -- Secondary exploration tunnels
     createFewerTunnels(level, difficulty)
-    
-    -- Add some stone structures
-    addStoneStructures(level, difficulty)
-    
-    -- Add occasional water ponds
-    addWaterPonds(level, difficulty)
-    
-    -- Add occasional sand traps
+
+    -- Stone obstacles (canyon already places its own)
+    if archetype ~= "canyon" then
+        addStoneStructures(level, difficulty)
+    end
+
+    -- Water (wetlands manages its own large water bodies)
+    if archetype ~= "wetlands" then
+        addWaterPonds(level, difficulty)
+    end
+
+    -- Sand traps
     addSandTraps(level, difficulty)
-    
-    -- Create a goal area
+
+    -- Physics objects: boulders and explosive barrels
+    addBoulders(level, difficulty)
+    addBarrels(level, difficulty)
+
+    -- Win-hole anchor point
     createGoalArea(level, goalX, goalY)
-    
-    -- Initialize grass on top of dirt cells
+
+    -- Finalise terrain
     level:initializeGrass()
-    
-    -- Activate clusters with falling materials so they start updating immediately
     level:activateFallingMaterialClusters()
-    
-    -- Final pass to remove any isolated dirt cells
     removeIsolatedDirtCells(level)
 end
 
@@ -575,73 +657,97 @@ end
 
 -- Add stone structures to the level based on difficulty
 function addStoneStructures(level, difficulty)
-    -- Default to difficulty 1 if not provided
     difficulty = difficulty or 1
-    
-    -- Adjust structure count based on difficulty (more structures = harder)
-    local minStructures = math.min(6, 2 + difficulty) -- 3, 4, 5, 6, 7
-    local maxStructures = math.min(10, 4 + difficulty) -- 5, 6, 7, 8, 9
+
+    local minStructures = math.min(6, 2 + difficulty)
+    local maxStructures = math.min(10, 4 + difficulty)
     local structureCount = math.random(minStructures, maxStructures)
-    
+
     print("Creating", structureCount, "stone structures (difficulty:", difficulty, ")")
-    
+
     for i = 1, structureCount do
-        local structureType = math.random(1, 3)
-        
-        -- Place structures more strategically at higher difficulties
+        -- Placement
         local x, y
-        if difficulty <= 2 then
-            -- Random placement for easy/medium
-            x = math.random(10, level.width - 20)
+        if difficulty <= 2 or math.random() < 0.35 then
+            x = math.random(10, level.width  - 20)
             y = math.random(20, level.height - 20)
         else
-            -- More strategic placement for harder difficulties
-            -- Place structures along common paths
-            if math.random() < 0.7 then
-                -- Place near the middle of the level
-                x = math.random(math.floor(level.width / 4), math.floor(3 * level.width / 4))
-                y = math.random(math.floor(level.height / 4), math.floor(3 * level.height / 4))
-            else
-                -- Random placement
-                x = math.random(10, level.width - 20)
-                y = math.random(20, level.height - 20)
-            end
+            x = math.random(math.floor(level.width  / 4), math.floor(3 * level.width  / 4))
+            y = math.random(math.floor(level.height / 4), math.floor(3 * level.height / 4))
         end
-        
-        -- Ensure x and y are within valid bounds
-        x = math.max(10, math.min(level.width - 20, x))
+        x = math.max(10, math.min(level.width  - 20, x))
         y = math.max(20, math.min(level.height - 20, y))
-        
+
+        local structureType = math.random(1, 4)
+
         if structureType == 1 then
-            -- Stone block
-            -- Adjust size based on difficulty (larger blocks = harder)
-            local minWidth = math.min(8, 2 + difficulty) -- 3, 4, 5, 6, 7
-            local maxWidth = math.min(12, 4 + difficulty) -- 5, 6, 7, 8, 9
-            local width = math.random(minWidth, maxWidth)
-            
-            local minHeight = math.min(8, 2 + difficulty) -- 3, 4, 5, 6, 7
-            local maxHeight = math.min(12, 4 + difficulty) -- 5, 6, 7, 8, 9
-            local height = math.random(minHeight, maxHeight)
-            
-            Stone.createBlock(level, x, y, width, height)
+            -- Rocky blob: an ellipse with per-column height jitter; fully solid interior
+            local bw = math.random(4 + difficulty, 8 + difficulty)
+            local bh = math.random(3 + difficulty, 6 + difficulty)
+            for bx = -bw, bw do
+                -- Jitter only the silhouette height of each column, interior is always filled
+                local colJitter = math.random(-2, 2)
+                local colH = math.max(0, math.floor(bh * math.sqrt(math.max(0, 1 - (bx / bw)^2)) + colJitter))
+                for by = -colH, colH do
+                    local px, py = x + bx, y + by
+                    if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                        level:setCellType(px, py, CellTypes.TYPES.STONE)
+                    end
+                end
+            end
+
         elseif structureType == 2 then
-            -- Stone platform
-            -- Adjust width based on difficulty (wider platforms = harder)
-            local minWidth = math.min(15, 5 + difficulty * 2) -- 7, 9, 11, 13, 15
-            local maxWidth = math.min(25, 10 + difficulty * 3) -- 13, 16, 19, 22, 25
-            local width = math.random(minWidth, maxWidth)
-            
-            Stone.createPlatform(level, x, y, width)
+            -- Jagged ledge: a platform whose thickness varies column-by-column
+            local width    = math.random(8 + difficulty * 2, 14 + difficulty * 3)
+            local baseThick = math.random(2, 4)
+            -- Generate a random-walk thickness profile
+            local thick = {}
+            thick[1] = baseThick
+            for bx = 2, width do
+                thick[bx] = math.max(1, math.min(6, thick[bx - 1] + math.random(-1, 1)))
+            end
+            for bx = 0, width - 1 do
+                for by = 0, thick[bx + 1] - 1 do
+                    local px, py = x + bx, y + by
+                    if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                        level:setCellType(px, py, CellTypes.TYPES.STONE)
+                    end
+                end
+            end
+
+        elseif structureType == 3 then
+            -- Craggy pillar: width oscillates as it rises
+            local height   = math.random(5 + difficulty, 10 + difficulty * 2)
+            local baseW    = math.random(2, 4)
+            for by = 0, height - 1 do
+                -- Width wiggles ±1 every few rows
+                local w = math.max(1, baseW + math.floor(math.sin(by * 1.3) * 1.5) + math.random(-1, 1))
+                local offset = math.random(0, 1)  -- slight horizontal drift
+                for bx = offset, offset + w - 1 do
+                    local px, py = x + bx, y - by
+                    if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                        level:setCellType(px, py, CellTypes.TYPES.STONE)
+                    end
+                end
+            end
+
         else
-            -- Stone pillar
-            -- Adjust height based on difficulty (taller pillars = harder)
-            local minHeight = math.min(10, 3 + difficulty) -- 4, 5, 6, 7, 8
-            local maxHeight = math.min(15, 6 + difficulty * 2) -- 8, 10, 12, 14, 16
-            local height = math.random(minHeight, maxHeight)
-            
-            for py = y, y + height - 1 do
-                if py >= 0 and py < level.height then
-                    level:setCellType(x, py, CellTypes.TYPES.STONE)
+            -- Boulder cluster: 3-5 overlapping small blobs close together; solid circles
+            local clusterR = math.random(3, 5 + difficulty)
+            local blobCount = math.random(3, 5)
+            for b = 1, blobCount do
+                local bx = x + math.random(-clusterR, clusterR)
+                local by = y + math.random(-clusterR, clusterR)
+                local r  = math.random(2, 4)
+                for dy = -r, r do
+                    for dx = -r, r do
+                        if dx * dx + dy * dy <= r * r then
+                            local px, py = bx + dx, by + dy
+                            if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                                level:setCellType(px, py, CellTypes.TYPES.STONE)
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -886,6 +992,478 @@ function LevelGenerator.createDirtWaterTestLevel(level)
     
     -- Activate clusters with falling materials
     level:activateFallingMaterialClusters()
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ARCHETYPE TERRAIN GENERATORS
+-- Each function fills / carves the level differently to give distinct looks.
+-- The main path is always carved afterwards, so playability is guaranteed.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Canyon: open upper air, uneven dirt floor with rocky outcroppings and
+-- natural stone formations rising from the ground.
+function createCanyonTerrain(level, difficulty)
+    -- Base floor sits at ~80-88% height
+    local baseFloor = math.floor(level.height * (0.80 + difficulty * 0.016))
+    baseFloor = math.max(math.floor(level.height * 0.76), math.min(math.floor(level.height * 0.88), baseFloor))
+
+    -- Generate a random-walk surface for the floor (bumpy, not flat)
+    local surfaceY = {}
+    surfaceY[1] = baseFloor
+    for x = 2, level.width do
+        local change = math.random(-2, 2)
+        surfaceY[x] = math.max(baseFloor - 8, math.min(baseFloor + 6, surfaceY[x - 1] + change))
+    end
+    -- Smooth with a 3-wide box filter (3 passes)
+    for pass = 1, 3 do
+        for x = 2, level.width - 1 do
+            surfaceY[x] = math.floor((surfaceY[x-1] + surfaceY[x] + surfaceY[x+1]) / 3)
+        end
+    end
+
+    -- Fill from the surface down with dirt
+    for x = 2, level.width - 3 do
+        for y = surfaceY[x], level.height - 3 do
+            if level:getCellType(x, y) ~= CellTypes.TYPES.STONE then
+                level:setCellType(x, y, CellTypes.TYPES.DIRT)
+            end
+        end
+    end
+
+    -- Rocky outcroppings on the surface: small stone blobs sitting on top of the dirt
+    local outcroppingCount = math.random(3, 5 + difficulty)
+    for i = 1, outcroppingCount do
+        local ox = math.random(12, level.width - 12)
+        local oy = surfaceY[math.max(1, math.min(level.width, ox))]
+        local bw = math.random(2, 5)
+        local bh = math.random(2, 4)
+        for bx = -bw, bw do
+            -- Jitter per-column height for a natural silhouette; interior always solid
+            local colJitter = math.random(-1, 1)
+            local colH = math.max(0, math.floor(bh * math.sqrt(math.max(0, 1 - (bx / (bw + 0.01))^2)) + colJitter))
+            for by = 0, colH do
+                local px, py = ox + bx, oy - by
+                if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                    level:setCellType(px, py, CellTypes.TYPES.STONE)
+                end
+            end
+        end
+    end
+
+    -- Craggy stone formations rising from the floor (replace old rectangular pillars)
+    local spacing = math.random(20, 32)
+    local x = spacing
+    while x < level.width - 15 do
+        local formationType = math.random(1, 3)
+        local groundY = surfaceY[math.max(1, math.min(level.width, x))]
+
+        if formationType == 1 then
+            -- Craggy pillar: width oscillates as it rises
+            local height = math.random(
+                math.floor(level.height * 0.06),
+                math.floor(level.height * 0.20)
+            )
+            local baseW = math.random(2, 4)
+            for by = 0, height do
+                local w = math.max(1, baseW + math.floor(math.sin(by * 1.4) * 1.5) + math.random(-1, 1))
+                local drift = math.floor(math.sin(by * 0.5) * 1.5)
+                for bx = drift, drift + w - 1 do
+                    local px, py = x + bx, groundY - by
+                    if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                        level:setCellType(px, py, CellTypes.TYPES.STONE)
+                    end
+                end
+            end
+
+        elseif formationType == 2 then
+            -- Boulder cluster on the floor; solid circles, no interior gaps
+            local clusterR = math.random(3, 4)
+            local blobCount = math.random(2, 4)
+            for b = 1, blobCount do
+                local bx = x + math.random(-clusterR, clusterR)
+                local by_center = groundY - math.random(0, 2)
+                local r = math.random(2, 3)
+                for dy = -r, r do
+                    for dx = -r, r do
+                        if dx*dx + dy*dy <= r*r then
+                            local px, py = bx + dx, by_center + dy
+                            if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                                level:setCellType(px, py, CellTypes.TYPES.STONE)
+                            end
+                        end
+                    end
+                end
+            end
+
+        else
+            -- Jagged ridge: a short ledge with varying thickness
+            local width = math.random(5, 10)
+            local baseThick = math.random(1, 3)
+            local thick = {}
+            thick[1] = baseThick
+            for bx = 2, width do
+                thick[bx] = math.max(1, math.min(5, thick[bx-1] + math.random(-1, 1)))
+            end
+            for bx = 0, width - 1 do
+                for by = 0, thick[bx+1] - 1 do
+                    local px, py = x + bx, groundY - by
+                    if px > 1 and px < level.width - 2 and py > 1 and py < level.height - 3 then
+                        level:setCellType(px, py, CellTypes.TYPES.STONE)
+                    end
+                end
+            end
+        end
+
+        x = x + spacing + math.random(-6, 6)
+    end
+
+    -- A few floating stone platforms at varied heights
+    local platformCount = math.min(5, 1 + difficulty)
+    for i = 1, platformCount do
+        local px = math.random(15, level.width - 25)
+        local py = math.random(
+            math.floor(level.height * 0.15),
+            math.floor(level.height * 0.58)
+        )
+        -- Jagged floating ledge
+        local width = math.random(5, 12)
+        local thick = {}
+        thick[1] = math.random(1, 2)
+        for bx = 2, width do
+            thick[bx] = math.max(1, math.min(3, thick[bx-1] + math.random(-1, 1)))
+        end
+        for bx = 0, width - 1 do
+            for by = 0, thick[bx+1] - 1 do
+                local fpx, fpy = px + bx, py + by
+                if fpx > 1 and fpx < level.width - 2 and fpy > 1 and fpy < level.height - 3 then
+                    level:setCellType(fpx, fpy, CellTypes.TYPES.STONE)
+                end
+            end
+        end
+    end
+end
+
+-- Cavern: entire level packed with dirt; large circular chambers are carved out
+-- and connected by extra tunnels, creating an underground cave system.
+function createCavernTerrain(level, difficulty)
+    -- Fill with dirt
+    for y = 2, level.height - 3 do
+        for x = 2, level.width - 3 do
+            if level:getCellType(x, y) ~= CellTypes.TYPES.STONE then
+                level:setCellType(x, y, CellTypes.TYPES.DIRT)
+            end
+        end
+    end
+
+    -- Carve large chambers (generous radius ensures the ball can navigate)
+    local chamberCount = math.random(6, 10)
+    for i = 1, chamberCount do
+        local cx = math.random(20, level.width  - 20)
+        local cy = math.random(15, level.height - 15)
+        createClearArea(level, cx, cy, math.random(10, 16))
+    end
+
+    -- Extra tunnel connections between arbitrary points
+    for i = 1, math.random(4, 6) do
+        connectPoints(level,
+            math.random(15, level.width  - 15), math.random(15, level.height - 15),
+            math.random(15, level.width  - 15), math.random(15, level.height - 15))
+    end
+
+    -- A few stone pillars inside open chambers for added challenge
+    local pillarCount = math.max(0, difficulty - 1)
+    for i = 1, pillarCount do
+        local px = math.random(15, level.width  - 15)
+        local py = math.random(15, level.height - 15)
+        if level:getCellType(px, py) == CellTypes.TYPES.EMPTY then
+            Stone.createBlock(level, px, py, math.random(2, 4), math.random(4, 8))
+        end
+    end
+end
+
+-- Highlands: noise-layered rolling terrain with exposed stone ridges on high
+-- peaks. Uses two sine-wave octaves + a random-walk detail layer.
+function createHighlandsTerrain(level, difficulty)
+    -- Surface sits at ~78% of height – terrain covers only the bottom ~22%.
+    local baseH = math.floor(level.height * 0.78)
+
+    -- Random octave parameters – gentle amplitude keeps hills shallow
+    local s1   = math.random(0, 628)
+    local s2   = math.random(0, 628)
+    local amp1 = math.floor(level.height * 0.07)  -- very gentle hills
+    local amp2 = math.floor(level.height * 0.03)
+    local f1   = 0.02 + math.random() * 0.02
+    local f2   = 0.06 + math.random() * 0.04
+
+    -- Random-walk detail (±3 cells for slight texture)
+    local detail = {}
+    detail[1] = 0
+    for x = 2, level.width do
+        detail[x] = math.max(-3, math.min(3, detail[x - 1] + math.random(-1, 1)))
+    end
+
+    local surfaceHeight = {}
+    for x = 1, level.width do
+        local h = baseH
+            + math.floor(math.sin(x * f1 + s1 * 0.01) * amp1)
+            + math.floor(math.sin(x * f2 + s2 * 0.01) * amp2)
+            + detail[x]
+        surfaceHeight[x] = math.max(
+            math.floor(level.height * 0.58),  -- peaks never higher than 58% from top
+            math.min(math.floor(level.height * 0.90), h)
+        )
+    end
+
+    -- Smooth (3 passes of box filter)
+    for pass = 1, 3 do
+        for x = 2, level.width - 1 do
+            surfaceHeight[x] = math.floor(
+                (surfaceHeight[x - 1] + surfaceHeight[x] + surfaceHeight[x + 1]) / 3
+            )
+        end
+    end
+
+    -- Apply terrain
+    for x = 2, level.width - 3 do
+        local sh = surfaceHeight[x]
+        for y = sh, level.height - 3 do
+            if level:getCellType(x, y) ~= CellTypes.TYPES.STONE then
+                level:setCellType(x, y, CellTypes.TYPES.DIRT)
+            end
+        end
+        -- Exposed stone cap on very high peaks
+        if sh < math.floor(level.height * 0.30) then
+            for y = sh, math.min(sh + 4, level.height - 3) do
+                if level:getCellType(x, y) == CellTypes.TYPES.DIRT then
+                    level:setCellType(x, y, CellTypes.TYPES.STONE)
+                end
+            end
+        end
+    end
+end
+
+-- Underground: the entire level is solid dirt; wide horizontal corridors and
+-- vertical shafts are carved to create a mine-like network. Always playable
+-- because corridors are at least 7 cells tall.
+function createUndergroundTerrain(level, difficulty)
+    -- Fill with dirt
+    for y = 2, level.height - 3 do
+        for x = 2, level.width - 3 do
+            if level:getCellType(x, y) ~= CellTypes.TYPES.STONE then
+                level:setCellType(x, y, CellTypes.TYPES.DIRT)
+            end
+        end
+    end
+
+    -- Horizontal corridors spaced evenly.
+    -- On tall levels add extra corridors so the ball has things to land on.
+    local isTall = (level.height > level.width * 1.3)
+    local corridorCount = isTall
+        and math.min(12, 5 + math.floor(difficulty * 1.2))
+        or  math.min(7,  3 + math.floor(difficulty * 0.8))
+    for i = 1, corridorCount do
+        local cy  = math.floor(level.height * (0.12 + (i / (corridorCount + 1)) * 0.76))
+        cy = cy + math.random(-4, 4)
+        cy = math.max(8, math.min(level.height - 8, cy))
+        local halfH = 3  -- corridor is 7 cells tall (2*3+1)
+        for y = cy - halfH, cy + halfH do
+            for xc = 5, level.width - 5 do
+                if y > 1 and y < level.height - 3 then
+                    level:setCellType(xc, y, CellTypes.TYPES.EMPTY)
+                end
+            end
+        end
+    end
+
+    -- Vertical shafts connecting corridors.
+    -- Wider / more of them on tall levels so ball can pass through floors.
+    local isTall2 = (level.height > level.width * 1.3)
+    local shaftCount = isTall2
+        and math.min(14, 7 + difficulty)
+        or  math.min(10, 4 + difficulty)
+    local shaftHalfW = isTall2 and math.random(3, 6) or math.random(2, 4)
+    for i = 1, shaftCount do
+        local sx = math.random(10, level.width - 10)
+        for xc = sx, sx + shaftHalfW - 1 do
+            for y = 5, level.height - 5 do
+                if xc > 1 and xc < level.width - 2 then
+                    level:setCellType(xc, y, CellTypes.TYPES.EMPTY)
+                end
+            end
+        end
+    end
+
+    -- A few extra chambers at interesting intersections
+    for i = 1, math.random(2, 4) do
+        createClearArea(level,
+            math.random(15, level.width  - 15),
+            math.random(10, level.height - 10),
+            math.random(6, 10))
+    end
+end
+
+-- Wetlands: rolling upper terrain transitions into water-filled basins in the
+-- lower half, with dirt islands bridging the basins.
+function createWetlandsTerrain(level, difficulty)
+    -- Surface sits at ~65% of height so the upper 65% is open air.
+    local upperBaseH = math.floor(level.height * 0.60)
+    local basinStart = math.floor(level.height * 0.68)
+
+    -- Noise-based upper surface (gentle)
+    local seed = math.random(0, 628)
+    local amp  = math.floor(level.height * 0.07)
+    local freq = 0.04 + math.random() * 0.03
+    local surfaceHeight = {}
+    for x = 1, level.width do
+        local h = upperBaseH + math.floor(math.sin(x * freq + seed * 0.01) * amp) + math.random(-2, 2)
+        surfaceHeight[x] = math.max(
+            math.floor(level.height * 0.50),
+            math.min(math.floor(level.height * 0.78), h)
+        )
+    end
+    -- Smooth pass
+    for pass = 1, 4 do
+        for x = 2, level.width - 1 do
+            surfaceHeight[x] = math.floor(
+                (surfaceHeight[x - 1] + surfaceHeight[x] + surfaceHeight[x + 1]) / 3
+            )
+        end
+    end
+
+    -- Fill upper terrain with dirt below the surface line
+    for x = 2, level.width - 3 do
+        for y = surfaceHeight[x], level.height - 3 do
+            if level:getCellType(x, y) ~= CellTypes.TYPES.STONE then
+                level:setCellType(x, y, CellTypes.TYPES.DIRT)
+            end
+        end
+    end
+
+    -- Water basins in lower half
+    local basinCount = math.min(8, 3 + difficulty)
+    for i = 1, basinCount do
+        local bx = math.random(8, level.width  - 25)
+        local by = math.random(basinStart, level.height - 18)
+        local bw = math.random(18, 38)
+        local bh = math.random(7, 14)
+        for y = by, by + bh do
+            for xc = bx, bx + bw do
+                if xc > 1 and xc < level.width - 2 and y > 1 and y < level.height - 3 then
+                    level:setCellType(xc, y, CellTypes.TYPES.WATER)
+                end
+            end
+        end
+    end
+
+    -- Dirt islands / ledges near the basin surface
+    local islandCount = math.min(8, 3 + difficulty)
+    for i = 1, islandCount do
+        local ix = math.random(10, level.width  - 20)
+        local iy = math.random(basinStart - 8, basinStart + 6)
+        local iw = math.random(7, 15)
+        local it = math.random(2, 4)
+        for y = iy, iy + it do
+            for xc = ix, ix + iw do
+                if xc > 1 and xc < level.width - 2 and y > 1 and y < level.height - 3 then
+                    level:setCellType(xc, y, CellTypes.TYPES.DIRT)
+                end
+            end
+        end
+    end
+
+    -- A few tunnels in the upper portion for exploration
+    createFewerTunnels(level, math.max(1, difficulty - 1))
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PHYSICS-OBJECT SPAWNERS  (boulders & explosive barrels)
+-- Both use level.world which is stored on the Level object by Level.new.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Spawn boulders into empty cells, scaling count with difficulty.
+function addBoulders(level, difficulty)
+    if not level.world then
+        print("addBoulders: level.world is nil, skipping")
+        return
+    end
+    if not level.boulders then level.boulders = {} end
+
+    local Boulder   = require("src.boulder")
+    local CELL_SIZE = 10
+
+    -- Base: 1-2 at easy, 2-3 at medium, 3-4 at hard+
+    local count = math.random(
+        1 + math.floor(difficulty / 2),
+        2 + math.floor(difficulty / 2)
+    )
+    -- Surge: 15% double, 5% triple
+    local surge = math.random(1, 100)
+    if     surge <= 5  then count = count * 3 ; print("Boulder TRIPLE surge!")
+    elseif surge <= 20 then count = count * 2 ; print("Boulder DOUBLE surge!")
+    end
+    count = math.min(count, 10)  -- hard cap so the level doesn't get silly
+
+    local placed, attempts = 0, 0
+    while placed < count and attempts < 300 do
+        attempts = attempts + 1
+        local gx = math.random(10, level.width  - 10)
+        local gy = math.random(8,  math.floor(level.height * 0.70))
+
+        -- Only spawn in empty cells well away from the player start
+        if level:getCellType(gx, gy) == CellTypes.TYPES.EMPTY then
+            local distFromStart = math.sqrt((gx - 20)^2 + (gy - 20)^2)
+            if distFromStart > 25 then
+                local wx = gx * CELL_SIZE + CELL_SIZE / 2
+                local wy = gy * CELL_SIZE + CELL_SIZE / 2
+                local boulder = Boulder.new(level.world, wx, wy, 60)
+                table.insert(level.boulders, boulder)
+                placed = placed + 1
+                print("Boulder placed at grid (" .. gx .. "," .. gy .. ")")
+            end
+        end
+    end
+    print("addBoulders: placed " .. placed .. " (tried " .. attempts .. ")")
+end
+
+-- Spawn explosive barrels into empty cells, scaling count with difficulty.
+function addBarrels(level, difficulty)
+    if not level.world then
+        print("addBarrels: level.world is nil, skipping")
+        return
+    end
+    if not level.barrels then level.barrels = {} end
+
+    local Barrel    = require("src.barrel")
+    local CELL_SIZE = 10
+
+    -- Base: 1 at easy, up to 3 at hard+
+    local count = math.random(1, 1 + math.floor(difficulty / 2))
+    -- Surge: 15% double, 5% triple
+    local surge = math.random(1, 100)
+    if     surge <= 5  then count = count * 3 ; print("Barrel TRIPLE surge!")
+    elseif surge <= 20 then count = count * 2 ; print("Barrel DOUBLE surge!")
+    end
+    count = math.min(count, 8)  -- hard cap
+
+    local placed, attempts = 0, 0
+    while placed < count and attempts < 300 do
+        attempts = attempts + 1
+        local gx = math.random(10, level.width  - 10)
+        local gy = math.random(8,  math.floor(level.height * 0.80))
+
+        if level:getCellType(gx, gy) == CellTypes.TYPES.EMPTY then
+            local distFromStart = math.sqrt((gx - 20)^2 + (gy - 20)^2)
+            if distFromStart > 30 then
+                local wx = gx * CELL_SIZE + CELL_SIZE / 2
+                local wy = gy * CELL_SIZE + CELL_SIZE / 2
+                local barrel = Barrel.new(level.world, wx, wy)
+                table.insert(level.barrels, barrel)
+                placed = placed + 1
+                print("Barrel placed at grid (" .. gx .. "," .. gy .. ")")
+            end
+        end
+    end
+    print("addBarrels: placed " .. placed .. " (tried " .. attempts .. ")")
 end
 
 return LevelGenerator
