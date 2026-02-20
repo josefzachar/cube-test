@@ -58,15 +58,27 @@ function GameUpdate.update(Game, dt)
 
         -- Check for win condition — wait for the spiral animation to finish before showing the win screen
         if Game.ball.hasWon and not Game.gameWon then
-            -- winAnimTimer is set on the first animation frame; scale reaches 0 when done
+            -- Stage 1: animation done → start screen fade
             if Game.ball.winAnimTimer and Game.ball.scale and Game.ball.scale <= 0 then
-                Game.gameWon = true
-                Game.winMessageTimer = 999999.0 -- Display win message until user dismisses it
-                print("GAME WON! Congratulations!")
-
-                -- If in PLAY mode, advance to next level
-                if Game.currentMode == Game.MODES.PLAY and Menu.currentLevel < Menu.totalLevels then
-                    Menu.currentLevel = Menu.currentLevel + 1
+                if not Game.winFadeTimer then
+                    Game.winFadeTimer = 0  -- begin fade
+                end
+            end
+            -- Stage 2: advance fade
+            if Game.winFadeTimer then
+                local FADE_DURATION = 0.65
+                Game.winFadeTimer = Game.winFadeTimer + dt
+                Game.winFadeAlpha = math.min(Game.winFadeTimer / FADE_DURATION, 1.0)
+                Game.winFadeAlpha = Game.winFadeAlpha * Game.winFadeAlpha  -- ease-in
+                if Game.winFadeTimer >= FADE_DURATION then
+                    Game.winFadeTimer = nil
+                    Game.winFadeAlpha = 1.0  -- stay fully black under modal
+                    Game.gameWon = true
+                    Game.winMessageTimer = 999999.0
+                    print("GAME WON! Congratulations!")
+                    if Game.currentMode == Game.MODES.PLAY and Menu.currentLevel < Menu.totalLevels then
+                        Menu.currentLevel = Menu.currentLevel + 1
+                    end
                 end
             end
         end

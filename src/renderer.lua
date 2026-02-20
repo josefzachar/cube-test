@@ -600,6 +600,42 @@ function Renderer.drawWinHoleBatch(level, winHoleBatch, debug)
             alpha)
         love.graphics.rectangle("fill", sx, sy, CS, CS)
     end
+
+    -- Pixelated rotating ring just outside the orbiting cloud
+    -- Two rings: outer slow clockwise, inner faster counter-clockwise
+    local ringAlpha = delayedProg > 0.60
+        and (1.0 - (delayedProg - 0.60) / 0.40)
+        or  1.0
+    local ringScale = delayedProg > 0
+        and math.max(0.0, 1.0 - delayedProg ^ 0.75)
+        or  1.0
+
+    local rings = {
+        { radius = 82,  speed =  0.28, dots = 20, r = 0.50, g = 0.00, b = 0.72, a = 0.55 },
+        { radius = 96,  speed = -0.18, dots = 14, r = 0.70, g = 0.10, b = 0.95, a = 0.35 },
+    }
+    for _, ring in ipairs(rings) do
+        local ringRot = time * ring.speed
+        local ringR   = ring.radius * ringScale
+        local seen    = {}  -- deduplicate snapped positions
+        for i = 0, ring.dots - 1 do
+            local a = ringRot + (i / ring.dots) * math.pi * 2
+            local wx = centerX + math.cos(a) * ringR
+            local wy = centerY + math.sin(a) * ringR
+            local sx = math.floor(wx / CS) * CS
+            local sy = math.floor(wy / CS) * CS
+            local key = sx .. "," .. sy
+            if not seen[key] then
+                seen[key] = true
+                -- Individual dot brightness: slow twinkle
+                local twinkle = math.sin(time * 3.0 + i * 1.3) * 0.5 + 0.5
+                local b = 0.30 + twinkle * 0.55
+                love.graphics.setColor(ring.r * b, ring.g * b, ring.b * b,
+                                       ring.a * ringAlpha)
+                love.graphics.rectangle("fill", sx, sy, CS, CS)
+            end
+        end
+    end
 end
 
 -- Draw grid lines

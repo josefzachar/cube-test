@@ -65,6 +65,8 @@ function GameInit.init(Game, mode, levelNumber)
 
         -- Reset game state
         Game.gameWon = false
+        Game.winFadeTimer = nil
+        Game.winFadeAlpha = 0
         Game.winMessageTimer = 0
         Game.attempts = 0
 
@@ -314,6 +316,8 @@ function GameInit.init(Game, mode, levelNumber)
 
     -- Reset game state
     Game.gameWon = false
+    Game.winFadeTimer = nil
+    Game.winFadeAlpha = 0
     Game.winMessageTimer = 0
     Game.attempts = 0
 

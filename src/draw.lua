@@ -145,6 +145,19 @@ function Draw.draw(Game)
         end
     end
     
+    -- Black underlay: visible during fade AND while modal is shown
+    local fadeAlpha = Game.winFadeAlpha or 0
+    if Game.winFadeTimer then
+        local FADE_DURATION = 0.65
+        local a = math.min(Game.winFadeTimer / FADE_DURATION, 1.0)
+        fadeAlpha = a * a
+    end
+    if fadeAlpha > 0 then
+        love.graphics.setColor(0, 0, 0, fadeAlpha)
+        local sw, sh = love.graphics.getDimensions()
+        love.graphics.rectangle("fill", 0, 0, sw, sh)
+    end
+
     -- Draw win message if the game is won
     if Game.gameWon and Game.winMessageTimer > 0 then
         Draw.drawWinScreen(Game)
@@ -170,23 +183,7 @@ function Draw.drawWinScreen(Game)
     local screenWidth, screenHeight = love.graphics.getDimensions()
     
     -- Draw a retro-styled background panel
-    love.graphics.setColor(0.1, 0.1, 0.2, 0.9) -- Dark blue background
-    love.graphics.rectangle("fill", 0, 0, screenWidth, screenHeight)
-    
-    -- Draw grid pattern for retro computer look
-    love.graphics.setColor(0, 0, 0, 0.05)
-    for i = 0, screenWidth, 16 do
-        love.graphics.line(i, 0, i, screenHeight)
-    end
-    for i = 0, screenHeight, 16 do
-        love.graphics.line(0, i, screenWidth, i)
-    end
-    
-    -- Draw scanlines for CRT effect
-    love.graphics.setColor(0, 0, 0, 0.1)
-    for i = 0, screenHeight, 2 do
-        love.graphics.line(0, i, screenWidth, i)
-    end
+    -- (full-screen black is already drawn by the win-fade underlay)
     
     -- Draw a centered terminal-like window
     local windowWidth = 600
